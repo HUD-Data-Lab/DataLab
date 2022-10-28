@@ -720,12 +720,10 @@ recent_household_enrollment <- recent_program_enrollment %>%
            IncomeFromAnySource, number_of_sources, IncomeBenefitsID)
            
   income_annual <- recent_program_enrollment %>%
-    inner_join(income_sources %>%
-                 filter(DataCollectionStage == 5) %>%
-                 select(EnrollmentID, InformationDate, IncomeBenefitsID),
-               by = c("EnrollmentID" = "EnrollmentID")) %>%
-    get_annual_id(., "IncomeBenefitsID") %>%
-    left_join(income_sources, by = "IncomeBenefitsID") %>%
+    get_annual_id(., IncomeBenefits, "IncomeBenefitsID") %>%
+    left_join(income_sources %>%
+                select(colnames(income_sources)[colnames(income_sources) %nin% colnames(recent_program_enrollment)]), 
+              by = "IncomeBenefitsID") %>%
     rename(annual_number_of_sources = number_of_sources,
            annual_IncomeFromAnySource = IncomeFromAnySource) %>%
     select(EnrollmentID, annual_IncomeFromAnySource, annual_number_of_sources)
@@ -806,9 +804,8 @@ recent_household_enrollment <- recent_program_enrollment %>%
 {
   Q6d <- recent_program_enrollment_dq %>%
     left_join(client_plus, by = "PersonalID") %>%
-    filter(EntryDate >= mdy("10/1/2016") &
-             (RelationshipToHoH == 1 |
-                age_group == "adult")) %>%
+    filter(EntryDate >= mdy("10/1/2016")) %>%
+    keep_adults_and_hoh_only() %>%
     mutate(project_type_group = case_when(
       ProjectType %in% c(1, 4, 8) ~ "ES_SH_SO",
       ProjectType == 2 ~ "TH",
@@ -1135,9 +1132,8 @@ recent_household_enrollment <- recent_program_enrollment %>%
                    TrackingMethod == 3)) &
                (PersonalID %in% recent_CLS_for_Q9$PersonalID |
                   (DateOfEngagement >= report_start_date &
-                     DateOfEngagement <= report_end_date)) &
-               (RelationshipToHoH == 1 |
-                  age_group == "adult")) %>%
+                     DateOfEngagement <= report_end_date))) %>%
+      keep_adults_and_hoh_only() %>%
       Q9_logic()
   }
 }
@@ -1154,9 +1150,8 @@ recent_household_enrollment <- recent_program_enrollment %>%
                 (ProjectType == 1 &
                    TrackingMethod == 3)) &
                (DateOfEngagement >= report_start_date &
-                  DateOfEngagement <= report_end_date) &
-               (RelationshipToHoH == 1 |
-                  age_group == "adult")) %>%
+                  DateOfEngagement <= report_end_date)) %>%
+      keep_adults_and_hoh_only() %>%
       Q9_logic()
     
     rate_of_engagement <- c("EngagementRate")
@@ -1191,7 +1186,7 @@ recent_household_enrollment <- recent_program_enrollment %>%
     select(PersonalID, gender_combined)
   
   Q10a <- recent_household_enrollment %>%
-    filter(age_group == "adult") %>%
+    keep_adults_only() %>%
     left_join(Q10_genders, by = "PersonalID") %>%
     return_household_groups(., gender_combined) %>%
     adorn_totals("row")
@@ -1421,8 +1416,7 @@ recent_household_enrollment <- recent_program_enrollment %>%
                !is.na(LocationDescription)) 
     
     group_of_residences <- recent_household_enrollment %>%
-      filter(age_group == "adult" |
-               RelationshipToHoH == 1) %>%
+      keep_adults_and_hoh_only() %>%
       inner_join(residences_to_include, by = c("LivingSituation" = "Location")) %>%
       return_household_groups(., LocationDescription, residences_to_include$LocationDescription[1]) %>%
       full_join(residences_to_include, by = "LocationDescription") %>%
@@ -1461,31 +1455,45 @@ recent_household_enrollment <- recent_program_enrollment %>%
 # Q16
 {
   entry_income_groups <- recent_household_enrollment %>%
+    keep_adults_only() %>%
     left_join(IncomeBenefits %>%
                 select(-PersonalID) %>%
                 filter(DataCollectionStage == 1),
               by = c("EnrollmentID", "EntryDate" = "InformationDate")) %>%
     determine_total_income() %>%
-    create_income_groups()
+    create_income_groups() %>%
+    rename(StartIncome = Income)
     
-  # currently has two too many folx in the 501-1000 group
   annual_income_groups <- recent_household_enrollment %>%
+    keep_adults_only() %>%
+    filter(is.na(ExitDate)) %>%
+    get_annual_id(., IncomeBenefits, IncomeBenefitsID) %>%
+    left_join(IncomeBenefits %>%
+                select(colnames(IncomeBenefits)[colnames(IncomeBenefits) %nin% colnames(recent_household_enrollment)]),
+              by = c("IncomeBenefitsID" = "IncomeBenefitsID")) %>%
+    determine_total_income(., annual = TRUE) %>%
+    create_income_groups(., annual = TRUE) %>%
+    rename(AnnualIncome = Income)
+  
+  exit_income_groups <- recent_household_enrollment %>%
+    keep_adults_only() %>%
+    filter(!is.na(ExitDate)) %>%
     left_join(IncomeBenefits %>%
                 select(-PersonalID) %>%
-                filter(DataCollectionStage == 1),
-              by = c("EnrollmentID", "EntryDate" = "InformationDate")) %>%
+                filter(DataCollectionStage == 3),
+              by = c("EnrollmentID", "ExitDate" = "InformationDate")) %>%
     determine_total_income() %>%
-    create_income_groups()
+    create_income_groups() %>%
+    rename(ExitIncome = Income)
   
-  income_annual <- recent_program_enrollment %>%
-    inner_join(IncomeBenefits %>%
-                 select(-PersonalID) %>%
-                 filter(DataCollectionStage == 5) %>%
-                 select(EnrollmentID, InformationDate, IncomeBenefitsID),
-               by = c("EnrollmentID" = "EnrollmentID")) %>%
-    get_annual_id(., "IncomeBenefitsID") %>%
-    inner_join(IncomeBenefits %>%
-                 select(-PersonalID), by = "IncomeBenefitsID") %>%
-    determine_total_income() %>%
-    create_income_groups()
+  Q16 <- entry_income_groups %>%
+    full_join(annual_income_groups, by = "total_income_group") %>%
+    left_join(exit_income_groups, by = "total_income_group") %>%
+    adorn_totals("row")
 }
+
+# Q17
+{
+  
+}
+
