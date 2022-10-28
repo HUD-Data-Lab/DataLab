@@ -154,6 +154,10 @@ return_household_groups <- function(APR_dataframe, grouped_by, missing_group_nam
   }
   
   potential_table[is.na(potential_table)] <- 0
+  # for(j in seq_along(potential_table)){
+  #   set(potential_table, i = which(is.na(potential_table[[j]]) &
+  #                                    is.numeric(potential_table[[j]])), j = j, value = 0)
+  # }
   
   potential_table %>%
     arrange({{grouped_by}})
@@ -198,4 +202,76 @@ condition_count_groups <- function(enrollments_and_conditions) {
                                       levels = c("None", "OneCondition", "TwoConditions",
                                                  "ThreeOrMoreConditions", "Unknown",
                                                  "DK/R", "DNC")))
+}
+
+determine_total_income <- function(enrollments_and_income) {
+  enrollments_and_income %>%
+    mutate(amounts_combined = if_else(Earned == 1 & EarnedAmount > 0, EarnedAmount, 0) +
+             if_else(Unemployment == 1 & UnemploymentAmount > 0, UnemploymentAmount, 0) +
+             if_else(SSI == 1 & SSIAmount > 0, SSIAmount, 0) +
+             if_else(SSDI == 1 & SSDIAmount > 0, SSDIAmount, 0) +
+             if_else(VADisabilityService == 1 & VADisabilityServiceAmount > 0, VADisabilityServiceAmount, 0) +
+             if_else(VADisabilityNonService == 1 & VADisabilityNonServiceAmount > 0, VADisabilityNonServiceAmount, 0) +
+             if_else(PrivateDisability == 1 & PrivateDisabilityAmount > 0, PrivateDisabilityAmount, 0) +
+             if_else(WorkersComp == 1 & WorkersCompAmount > 0, WorkersCompAmount, 0) +
+             if_else(TANF == 1 & TANFAmount > 0, TANFAmount, 0) +
+             if_else(GA == 1 & GAAmount > 0, GAAmount, 0) +
+             if_else(SocSecRetirement == 1 & SocSecRetirementAmount > 0, SocSecRetirementAmount, 0) +
+             if_else(Pension == 1 & PensionAmount > 0, PensionAmount, 0) +
+             if_else(ChildSupport == 1 & ChildSupportAmount > 0, ChildSupportAmount, 0) +
+             if_else(Alimony == 1 & AlimonyAmount > 0, AlimonyAmount, 0) +
+             if_else(OtherIncomeSource == 1 & OtherIncomeAmount > 0, OtherIncomeAmount, 0),
+           calculated_total_income = case_when(!is.na(TotalMonthlyIncome) &
+                                                 TotalMonthlyIncome > 0 ~ TotalMonthlyIncome,
+                                               amounts_combined > 0 ~ amounts_combined,
+                                               IncomeFromAnySource == 0 |
+                                                 (TotalMonthlyIncome <= 0 &
+                                                    (is.na(IncomeFromAnySource) |
+                                                       IncomeFromAnySource == 1)) ~ 0),
+           total_income_group = case_when(
+             is.na(calculated_total_income) ~ if_else(
+               IncomeFromAnySource %in% c(8, 9), "DK/R", "DNC"),
+             calculated_total_income == 0 ~ "No Income",
+             calculated_total_income <= 150 ~ "$1 - $150",
+             calculated_total_income <= 250 ~ "$151 - $250",
+             calculated_total_income <= 500 ~ "$251 - $500",
+             calculated_total_income <= 1000 ~ "$501 - $1,000",
+             calculated_total_income <= 1500 ~ "$1,001 - $1,500",
+             calculated_total_income <= 2000 ~ "$1,501 - $2,000",
+             TRUE ~ "$2,001"
+           ))
+}
+
+create_income_groups <- function(enrollments_total_income) {
+  income_groups <- enrollments_total_income %>%
+    group_by(total_income_group) %>%
+    summarise(IncomeAtStart = n_distinct(PersonalID)) %>%
+    full_join(as.data.frame(c("DK/R", "DNC", "No Income", "$1 - $150", "$151 - $250", "$251 - $500", 
+                              "$501 - $1,000", "$1,001 - $1,500", "$1,501 - $2,000", "$2,001")) %>%
+                `colnames<-`(c("total_income_group")),
+              by = "total_income_group") %>%
+    mutate(total_income_group = factor(total_income_group, ordered = TRUE,
+                                       levels = c("No Income", "$1 - $150", "$151 - $250", 
+                                                  "$251 - $500", "$501 - $1,000", 
+                                                  "$1,001 - $1,500", "$1,501 - $2,000", 
+                                                  "$2,001", "DK/R", "DNC")))
+  
+  income_groups[is.na(income_groups)] <- 0
+  
+  income_groups %>%
+    arrange(total_income_group)
+}
+
+get_annual_id <- function(enrollments_with_assessments, assessment_identifier) {
+  enrollments_with_assessments %>%
+    left_join(annual_assessment_dates, by = "HouseholdID") %>%
+    filter(trunc((annual_due %--% InformationDate) / days(1)) >= -30 &
+             trunc((annual_due %--% InformationDate) / days(1)) <= 30) %>%
+    # arrange(desc(number_of_sources)) %>%
+    arrange(desc(InformationDate)) %>%
+    group_by(EnrollmentID) %>%
+    slice(1L) %>%
+    ungroup() %>%
+    select(c(colnames(enrollments_with_assessments), {{assessment_identifier}})) %>%
+    select(-EnrollmentID)
 }

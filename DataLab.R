@@ -18,6 +18,8 @@
 # library(colourpicker)
 
 source("datalab_functions.R")
+residences <- read_csv("Residences.csv",
+                       col_types = "iccclllii")
 
 # combines all files
 {
@@ -656,7 +658,7 @@ recent_household_enrollment <- recent_program_enrollment %>%
     summarise(hohs = uniqueN(PersonalID[RelationshipToHoH == 1])) %>%
     filter(hohs != 1)
   
-  # accounts for test kit CoC codes, remove for real data
+  # accounts for test kit CoC codes, remove XX- values for real data
   valid_cocs <- c(valid_cocs, "XX-500", "XX-501")
   
   Q6b <- recent_program_enrollment_dq %>%
@@ -715,23 +717,19 @@ recent_household_enrollment <- recent_program_enrollment %>%
              (ChildSupport == 1) + (Alimony == 1) +
              (OtherIncomeSource == 1)) %>%
     select(EnrollmentID, DataCollectionStage, InformationDate, 
-           IncomeFromAnySource, number_of_sources)
+           IncomeFromAnySource, number_of_sources, IncomeBenefitsID)
            
   income_annual <- recent_program_enrollment %>%
-    left_join(annual_assessment_dates, by = "HouseholdID") %>%
     inner_join(income_sources %>%
-                filter(DataCollectionStage == 5) %>%
-                select(-DataCollectionStage),
-              by = c("EnrollmentID" = "EnrollmentID")) %>%
-    filter(trunc((annual_due %--% InformationDate) / days(1)) >= -30 &
-             trunc((annual_due %--% InformationDate) / days(1)) <= 30) %>%
-    arrange(desc(number_of_sources)) %>%
-    group_by(EnrollmentID) %>%
-    slice(1L) %>%
-    ungroup() %>%
+                 filter(DataCollectionStage == 5) %>%
+                 select(EnrollmentID, InformationDate, IncomeBenefitsID),
+               by = c("EnrollmentID" = "EnrollmentID")) %>%
+    get_annual_id(., "IncomeBenefitsID") %>%
+    left_join(income_sources, by = "IncomeBenefitsID") %>%
     rename(annual_number_of_sources = number_of_sources,
            annual_IncomeFromAnySource = IncomeFromAnySource) %>%
     select(EnrollmentID, annual_IncomeFromAnySource, annual_number_of_sources)
+  
   
   Q6c <- recent_program_enrollment_dq %>%
     left_join(client_plus, by = "PersonalID") %>%
@@ -1416,5 +1414,78 @@ recent_household_enrollment <- recent_program_enrollment %>%
 }
 
 # Q15
+{
+  for(residence_type in unique(na.omit(residences$APR_PriorLocationGroup))) {
+    residences_to_include <- residences %>%
+      filter(APR_PriorLocationGroup == residence_type &
+               !is.na(LocationDescription)) 
+    
+    group_of_residences <- recent_household_enrollment %>%
+      filter(age_group == "adult" |
+               RelationshipToHoH == 1) %>%
+      inner_join(residences_to_include, by = c("LivingSituation" = "Location")) %>%
+      return_household_groups(., LocationDescription, residences_to_include$LocationDescription[1]) %>%
+      full_join(residences_to_include, by = "LocationDescription") %>%
+      arrange(APR_PriorOrder) %>%
+      adorn_totals("row")
+    
+    if (exists(("Q15"))) {
+      Q15 <- Q15 %>%
+        union(group_of_residences)
+    } else {
+      Q15 <- group_of_residences
+    }
+  }
+  
+  Q15 <- Q15 %>%
+    select(LocationDescription, total, without_children,
+           children_and_adults, only_children, unknown) %>%
+    mutate(LocationDescription = if_else(
+      LocationDescription == "Total", "Subtotal", LocationDescription
+    ))
+  
+  Q15[is.na(Q15)] <- 0
+  
+  total_row <- Q15 %>%
+    filter(LocationDescription == "Subtotal") %>%
+    select(-LocationDescription) %>%
+    colSums() %>%
+    t() %>%
+    as.data.frame() %>%
+    mutate(LocationDescription = "Total") %>%
+    select(colnames(Q15))
+  
+  Q15 <- rbind(Q15, total_row)
+}
 
-
+# Q16
+{
+  entry_income_groups <- recent_household_enrollment %>%
+    left_join(IncomeBenefits %>%
+                select(-PersonalID) %>%
+                filter(DataCollectionStage == 1),
+              by = c("EnrollmentID", "EntryDate" = "InformationDate")) %>%
+    determine_total_income() %>%
+    create_income_groups()
+    
+  # currently has two too many folx in the 501-1000 group
+  annual_income_groups <- recent_household_enrollment %>%
+    left_join(IncomeBenefits %>%
+                select(-PersonalID) %>%
+                filter(DataCollectionStage == 1),
+              by = c("EnrollmentID", "EntryDate" = "InformationDate")) %>%
+    determine_total_income() %>%
+    create_income_groups()
+  
+  income_annual <- recent_program_enrollment %>%
+    inner_join(IncomeBenefits %>%
+                 select(-PersonalID) %>%
+                 filter(DataCollectionStage == 5) %>%
+                 select(EnrollmentID, InformationDate, IncomeBenefitsID),
+               by = c("EnrollmentID" = "EnrollmentID")) %>%
+    get_annual_id(., "IncomeBenefitsID") %>%
+    inner_join(IncomeBenefits %>%
+                 select(-PersonalID), by = "IncomeBenefitsID") %>%
+    determine_total_income() %>%
+    create_income_groups()
+}

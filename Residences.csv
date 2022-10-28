@@ -1,0 +1,39 @@
+Location,LocationDescription,APR_PriorLocationGroup,APR_ExitLocationGroup,PriorLivingSituation,CurrentLivingSituation,Destination,APR_PriorOrder,Apr_ExitOrder
+1,Emergency shelter,homeless,temporary,TRUE,TRUE,TRUE,3,18
+32,Host Home,homeless,temporary,TRUE,TRUE,TRUE,7,26
+16,Place not meant for habitation,homeless,temporary,TRUE,TRUE,TRUE,5,23
+18,Safe Haven ,homeless,temporary,TRUE,TRUE,TRUE,6,24
+2,Transitional housing for homeless persons,homeless,temporary,TRUE,TRUE,TRUE,4,
+15,Foster care home or foster care group home ,institution,institution,TRUE,TRUE,TRUE,14,29
+6,Hospital or other residential non-psychiatric medical facility,institution,institution,TRUE,TRUE,TRUE,12,32
+7,"Jail, prison or juvenile detention facility ",institution,institution,TRUE,TRUE,TRUE,13,33
+25,Long-term care facility or nursing home ,institution,institution,TRUE,TRUE,TRUE,15,34
+4,Psychiatric hospital or other psychiatric facility ,institution,institution,TRUE,TRUE,TRUE,10,30
+29,Residential project or halfway house with no homeless criteria ,institution,other,TRUE,TRUE,TRUE,16,37
+5,Substance abuse treatment facility or detox center ,institution,institution,TRUE,TRUE,TRUE,11,31
+8,Client doesn’t know ,other,,TRUE,TRUE,TRUE,,
+9,Client refused ,other,,TRUE,TRUE,TRUE,,
+99,Data not collected,other,,TRUE,TRUE,TRUE,,
+24,Deceased ,,other,,,TRUE,,38
+14,Hotel or motel paid for without emergency shelter voucher ,other,temporary,TRUE,TRUE,TRUE,29,25
+26,Moved from one HOPWA funded project to HOPWA PH ,other,permanent,,,TRUE,,3
+27,Moved from one HOPWA funded project to HOPWA TH ,other,temporary,,,TRUE,,19
+30,No exit interview completed ,,,,,TRUE,,
+17,Other ,,other,,TRUE,TRUE,,39
+11,"Owned by client, no ongoing housing subsidy ",other,permanent,TRUE,TRUE,TRUE,20,4
+21,"Owned by client, with ongoing housing subsidy",other,permanent,TRUE,TRUE,TRUE,21,5
+3,Permanent housing for formerly homeless persons ,other,permanent,TRUE,TRUE,TRUE,19,10
+34,Rental by client in a public housing unit ,other,permanent,TRUE,TRUE,TRUE,24,15
+10,"Rental by client, no ongoing housing subsidy ",other,permanent,TRUE,TRUE,TRUE,25,6
+28,"Rental by client, with GPD TIP housing subsidy ",other,permanent,TRUE,TRUE,TRUE,27,8
+33,"Rental by client, with HCV voucher",other,permanent,TRUE,TRUE,TRUE,23,14
+20,"Rental by client, with other ongoing housing subsidy ",other,permanent,TRUE,TRUE,TRUE,28,9
+31,"Rental by client, with RRH or equivalent subsidy ",other,permanent,TRUE,TRUE,TRUE,22,13
+19,"Rental by client, with VASH housing subsidy ",other,permanent,TRUE,TRUE,TRUE,26,7
+35,"Staying or living in a family member’s room, apartment or house ",other,,TRUE,TRUE,,31,
+36,"Staying or living in a friend’s room, apartment or house ",other,,TRUE,TRUE,,30,
+22,"Staying or living with family, permanent tenure ",,permanent,,,TRUE,,11
+12,"Staying or living with family, temporary tenure",,temporary,,,TRUE,,21
+23,"Staying or living with friends, permanent tenure ",,permanent,,,TRUE,,12
+13,"Staying or living with friends, temporary tenure",,temporary,,,TRUE,,22
+37,Worker unable to determine ,,,,TRUE,,,
