@@ -204,8 +204,14 @@ condition_count_groups <- function(enrollments_and_conditions) {
                                                  "DK/R", "DNC")))
 }
 
-determine_total_income <- function(enrollments_and_income) {
-  enrollments_and_income %>%
+determine_total_income <- function(enrollments_and_income, annual = FALSE) {
+  
+  if(annual) {
+    enrollments_and_income <- enrollments_and_income %>%
+      left_join(annual_assessment_dates, by = "HouseholdID")
+  }
+  
+  total_income <- enrollments_and_income %>%
     mutate(amounts_combined = if_else(Earned == 1 & EarnedAmount > 0, EarnedAmount, 0) +
              if_else(Unemployment == 1 & UnemploymentAmount > 0, UnemploymentAmount, 0) +
              if_else(SSI == 1 & SSIAmount > 0, SSIAmount, 0) +
@@ -238,23 +244,39 @@ determine_total_income <- function(enrollments_and_income) {
              calculated_total_income <= 1000 ~ "$501 - $1,000",
              calculated_total_income <= 1500 ~ "$1,001 - $1,500",
              calculated_total_income <= 2000 ~ "$1,501 - $2,000",
-             TRUE ~ "$2,001"
-           ))
+             TRUE ~ "$2,001"))
+  
+  if(annual) {
+    total_income <- total_income %>%
+      mutate(total_income_group = case_when(
+        is.na(annual_due) ~ "No Annual Required",
+        !is.na(annual_due) &
+          is.na(IncomeBenefitsID) ~ "Required Annual Missing",
+        TRUE ~ total_income_group))
+  }
+  total_income
 }
 
-create_income_groups <- function(enrollments_total_income) {
+create_income_groups <- function(enrollments_total_income, annual = FALSE) {
+  income_categories <- c("No Income", "$1 - $150", "$151 - $250", 
+                         "$251 - $500", "$501 - $1,000", 
+                         "$1,001 - $1,500", "$1,501 - $2,000", 
+                         "$2,001", "DK/R", "DNC")
+  
+  annual_income_categories <- c(income_categories, "No Annual Required", "Required Annual Missing")
+  
+  if(annual) {
+    income_categories <- annual_income_categories
+  }
+  
   income_groups <- enrollments_total_income %>%
     group_by(total_income_group) %>%
-    summarise(IncomeAtStart = n_distinct(PersonalID)) %>%
-    full_join(as.data.frame(c("DK/R", "DNC", "No Income", "$1 - $150", "$151 - $250", "$251 - $500", 
-                              "$501 - $1,000", "$1,001 - $1,500", "$1,501 - $2,000", "$2,001")) %>%
+    summarise(Income = n_distinct(PersonalID)) %>%
+    full_join(as.data.frame(income_categories) %>%
                 `colnames<-`(c("total_income_group")),
               by = "total_income_group") %>%
     mutate(total_income_group = factor(total_income_group, ordered = TRUE,
-                                       levels = c("No Income", "$1 - $150", "$151 - $250", 
-                                                  "$251 - $500", "$501 - $1,000", 
-                                                  "$1,001 - $1,500", "$1,501 - $2,000", 
-                                                  "$2,001", "DK/R", "DNC")))
+                                       levels = annual_income_categories))
   
   income_groups[is.na(income_groups)] <- 0
   
@@ -262,16 +284,41 @@ create_income_groups <- function(enrollments_total_income) {
     arrange(total_income_group)
 }
 
-get_annual_id <- function(enrollments_with_assessments, assessment_identifier) {
-  enrollments_with_assessments %>%
-    left_join(annual_assessment_dates, by = "HouseholdID") %>%
+get_annual_id <- function(enrollments, assessments, assessment_identifier) {
+  
+  annual_data <- enrollments %>%
+    inner_join(assessments %>%
+                 filter(DataCollectionStage == 5) %>%
+                 select(EnrollmentID, InformationDate, {{assessment_identifier}}),
+               by = c("EnrollmentID" = "EnrollmentID")) %>%
+    inner_join(annual_assessment_dates, by = "HouseholdID") %>%
     filter(trunc((annual_due %--% InformationDate) / days(1)) >= -30 &
              trunc((annual_due %--% InformationDate) / days(1)) <= 30) %>%
-    # arrange(desc(number_of_sources)) %>%
     arrange(desc(InformationDate)) %>%
     group_by(EnrollmentID) %>%
     slice(1L) %>%
     ungroup() %>%
-    select(c(colnames(enrollments_with_assessments), {{assessment_identifier}})) %>%
-    select(-EnrollmentID)
+    select(EnrollmentID, {{assessment_identifier}})
+  
+  enrollments %>%
+    left_join(annual_data, by = "EnrollmentID")
+}
+
+keep_adults_only <- function(enrollment_data) {
+  enrollment_data %>%
+    inner_join(client_plus %>%
+                 filter(age_group == "adult") %>%
+                 select(PersonalID),
+               by = "PersonalID")
+}
+
+keep_adults_and_hoh_only <- function(enrollment_data) {
+  enrollment_data %>%
+    inner_join(client_plus %>%
+                 filter(age_group == "adult") %>%
+                 select(PersonalID) %>%
+                 union(recent_household_enrollment %>%
+                         filter(RelationshipToHoH == 1) %>%
+                         select(PersonalID)),
+               by = "PersonalID")
 }
