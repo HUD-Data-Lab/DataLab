@@ -10,7 +10,7 @@ trunc_userid <- function(df) {
     mutate(UserID = substr(UserID, 1, 2))
 }
 
-
+entry_annual_exit <- c("entry", "annual", "exit")
 
 # identifies words in list to exclude
 # recommend leaving this collapsed
@@ -212,7 +212,8 @@ determine_total_income <- function(enrollments_and_income, annual = FALSE) {
   }
   
   total_income <- enrollments_and_income %>%
-    mutate(amounts_combined = if_else(Earned == 1 & EarnedAmount > 0, EarnedAmount, 0) +
+    mutate(earned_income = if_else(Earned == 1 & EarnedAmount > 0, EarnedAmount, 0),
+           amounts_combined = if_else(Earned == 1 & EarnedAmount > 0, EarnedAmount, 0) +
              if_else(Unemployment == 1 & UnemploymentAmount > 0, UnemploymentAmount, 0) +
              if_else(SSI == 1 & SSIAmount > 0, SSIAmount, 0) +
              if_else(SSDI == 1 & SSDIAmount > 0, SSDIAmount, 0) +
@@ -321,4 +322,40 @@ keep_adults_and_hoh_only <- function(enrollment_data) {
                          filter(RelationshipToHoH == 1) %>%
                          select(PersonalID)),
                by = "PersonalID")
+}
+
+# used in Q18
+categorize_income <- function(enrollments_total_income, annual = FALSE) {
+  income_categories <- c("earned_only", "other_only", "earned_and_other",
+                         "no_income", "DK/R", "DNC")
+  
+  annual_income_categories <- c(income_categories, "No Annual Required", "Required Annual Missing")
+  
+  if(annual) {
+    income_categories <- annual_income_categories
+  }
+  
+  income_category_table <- enrollments_total_income %>%
+    mutate(income_category = case_when(
+      earned_income > 0 &
+        earned_income == calculated_total_income ~ "earned_only",
+      earned_income > 0 &
+        earned_income < calculated_total_income ~ "earned_and_other",
+      earned_income == 0 &
+        calculated_total_income > 0 ~ "other_only",
+      calculated_total_income == 0 ~ "no_income",
+      TRUE ~ total_income_group
+    )) %>%
+    group_by(income_category) %>%
+    summarise(Income = n()) %>%
+    full_join(as.data.frame(income_categories) %>%
+                `colnames<-`(c("income_category")),
+              by = "income_category") %>%
+    mutate(income_category = factor(income_category, ordered = TRUE,
+                                       levels = annual_income_categories))
+  
+  income_category_table[is.na(income_category_table)] <- 0
+  
+  income_category_table %>%
+    arrange(income_category)
 }

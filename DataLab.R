@@ -257,7 +257,7 @@ project_list <- c(
   # "1544",    # DataLab - ES-EE RHY   
   # "1548",    # DataLab - ES-NbN ESG
   # "1564",    # DataLab - HP ESG
-  "1552"#,    # DataLab - PSH CoC I
+  # "1552",    # DataLab - PSH CoC I
   # "1550",    # DataLab - PSH HOWPA  
   # "1551",    # DataLab - PSH VASH  
   # "1554",    # DataLab - RRH CoC I
@@ -265,7 +265,7 @@ project_list <- c(
   # "1556",    # DataLab - RRH ESG I
   # "1553",    # Datalab - RRH VA  
   # "1557",    # DataLab - SH VA-HCHV     
-  # "1565",    # DataLab - SO CoC
+  "1565"#,    # DataLab - SO CoC
   # "1566",    # DataLab - SO ESG  
   # "1568",    # Datalab - SO PATH   
   # "1567",    # DataLab - SSO CoC  
@@ -935,17 +935,13 @@ recent_household_enrollment <- recent_program_enrollment %>%
   Q7a_moved_in <- recent_household_enrollment %>%
     filter(HoH_HMID <= report_end_date) %>% 
     mutate(client_group = "MovedIn") %>%
-    return_household_groups(., client_group) 
+    return_household_groups(., client_group, "MovedIn") 
   
   Q7a <- recent_household_enrollment %>%
     return_household_groups(., age_group) %>%
     rename(client_group = age_group) %>%
-    union(Q7a_all) 
-  
-  if(nrow(Q7a_moved_in) > 0) {
-    Q7a <- Q7a %>%
-      union(Q7a_moved_in)
-  }
+    union(Q7a_all) %>%
+    union(Q7a_moved_in)
   
   # did this one with table(), want to talk through whether this is the best call
   # Q7a <- table(Q7a$age_group, Q7a$household_type)
@@ -1004,14 +1000,10 @@ recent_household_enrollment <- recent_program_enrollment %>%
     filter(RelationshipToHoH == 1 &
              HoH_HMID <= report_end_date) %>% 
     mutate(client_group = "MovedInHouseholds") %>%
-    return_household_groups(., client_group) 
+    return_household_groups(., client_group, "MovedInHouseholds") 
   
-  if(nrow(Q8a_moved_in) > 0) {
-    Q8a <- Q8a_all %>%
-      union(Q8a_moved_in)
-  } else {
-    Q8a <- Q8a_all 
-  }
+  Q8a <- Q8a_all %>%
+    union(Q8a_moved_in)
   
 }
 
@@ -1404,7 +1396,7 @@ recent_household_enrollment <- recent_program_enrollment %>%
                                      TRUE ~ "DNC"),
            currently_fleeing = factor(currently_fleeing, ordered = TRUE,
                                   levels = c("Yes", "No", "DK/R", "DNC"))) %>%
-    return_household_groups(., currently_fleeing) %>%
+    return_household_groups(., currently_fleeing, "Yes") %>%
     adorn_totals("row")
 }
 
@@ -1454,37 +1446,38 @@ recent_household_enrollment <- recent_program_enrollment %>%
 
 # Q16
 {
-  entry_income_groups <- recent_household_enrollment %>%
+  entry_income <- recent_household_enrollment %>%
     keep_adults_only() %>%
     left_join(IncomeBenefits %>%
                 select(-PersonalID) %>%
                 filter(DataCollectionStage == 1),
-              by = c("EnrollmentID", "EntryDate" = "InformationDate")) %>%
-    determine_total_income() %>%
-    create_income_groups() %>%
-    rename(StartIncome = Income)
-    
-  annual_income_groups <- recent_household_enrollment %>%
+              by = c("EnrollmentID", "EntryDate" = "InformationDate"))
+  
+  annual_income <- recent_household_enrollment %>%
     keep_adults_only() %>%
     filter(is.na(ExitDate)) %>%
     get_annual_id(., IncomeBenefits, IncomeBenefitsID) %>%
     left_join(IncomeBenefits %>%
                 select(colnames(IncomeBenefits)[colnames(IncomeBenefits) %nin% colnames(recent_household_enrollment)]),
-              by = c("IncomeBenefitsID" = "IncomeBenefitsID")) %>%
-    determine_total_income(., annual = TRUE) %>%
-    create_income_groups(., annual = TRUE) %>%
-    rename(AnnualIncome = Income)
+              by = c("IncomeBenefitsID" = "IncomeBenefitsID"))
   
-  exit_income_groups <- recent_household_enrollment %>%
+  exit_income <- recent_household_enrollment %>%
     keep_adults_only() %>%
     filter(!is.na(ExitDate)) %>%
     left_join(IncomeBenefits %>%
                 select(-PersonalID) %>%
                 filter(DataCollectionStage == 3),
-              by = c("EnrollmentID", "ExitDate" = "InformationDate")) %>%
-    determine_total_income() %>%
-    create_income_groups() %>%
-    rename(ExitIncome = Income)
+              by = c("EnrollmentID", "ExitDate" = "InformationDate"))
+  
+  for(period in entry_annual_exit) {
+    
+    data <- get(paste0(period, "_income")) %>%
+      determine_total_income(., annual = period == "annual") %>%
+      create_income_groups(., annual = period == "annual") %>%
+      `colnames<-`(c("total_income_group", paste0(period, "Income")))
+    
+    assign(paste0(period, "_income_groups"), data)
+  }
   
   Q16 <- entry_income_groups %>%
     full_join(annual_income_groups, by = "total_income_group") %>%
@@ -1494,6 +1487,68 @@ recent_household_enrollment <- recent_program_enrollment %>%
 
 # Q17
 {
+  for(period in entry_annual_exit) {
+    
+    data <- get(paste0(period, "_income")) %>%
+      select(Earned, Unemployment, SSI, SSDI, VADisabilityService, 
+             VADisabilityNonService, PrivateDisability, WorkersComp, TANF,
+             GA, SocSecRetirement, Pension, ChildSupport, Alimony,
+             OtherIncomeSource)
+    
+    data[data != 1] <- 0
+    
+    data <- data %>%
+      mutate(total_row = "") %>%
+      select(c(total_row, colnames(data))) %>%
+      adorn_totals("row") %>%
+      filter(total_row == "Total") %>%
+      pivot_longer(!total_row, names_to = "Group", values_to = "values") %>%
+      select(-total_row) %>%
+      `colnames<-`(c("IncomeGroup", paste0(period, "Clients")))
+    
+    assign(paste0(period, "_income_sources"), data)
+  }
   
+  income_information_present <- c("income_information_present", NA,
+                                  length(intersect(
+                                    entry_income$PersonalID[entry_income$IncomeFromAnySource %in% c(0, 1)],
+                                    annual_income$PersonalID[annual_income$IncomeFromAnySource %in% c(0, 1)]
+                                  )),
+                                  length(intersect(
+                                    entry_income$PersonalID[entry_income$IncomeFromAnySource %in% c(0, 1)],
+                                    exit_income$PersonalID[exit_income$IncomeFromAnySource %in% c(0, 1)]
+                                  )))
+  
+  Q17 <- entry_income_sources %>%
+    left_join(annual_income_sources, by = "IncomeGroup") %>%
+    left_join(exit_income_sources, by = "IncomeGroup") %>%
+    rbind(., income_information_present)
+}
+
+# Q18
+{
+  for(period in entry_annual_exit) {
+    
+    data <- get(paste0(period, "_income")) %>%
+      determine_total_income(., annual = period == "annual") %>%
+      categorize_income(., annual = period == "annual") %>%
+      `colnames<-`(c("income_category", paste0(period, "Income")))
+    
+    assign(paste0(period, "_income_categories"), data)
+  }
+  
+  Q18 <- entry_income_categories %>%
+    full_join(annual_income_categories, by = "income_category") %>%
+    left_join(exit_income_categories, by = "income_category") %>%
+    adorn_totals("row")
+  
+  has_income <- Q18 %>%
+    filter(income_category %in% c("earned_only", "earned_and_other", "other_only")) %>%
+    select(-income_category) %>% 
+    colSums()
+    
+  Q18 <- Q18 %>%
+    rbind(., c("one_or_more_sources", has_income)) %>%
+    rbind(., income_information_present)
 }
 
