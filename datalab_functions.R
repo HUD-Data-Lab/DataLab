@@ -5,6 +5,19 @@ library(tidyverse)
 
 `%nin%` = Negate(`%in%`)
 
+ifnull <- function(value, replace_with) {
+  if(length(value) > 0) {
+    value[is.na(value) | is.nan(value)] <- replace_with
+    value
+  } else {
+    if(is.na(value) | is.nan(value)) {
+      replace_with
+    } else {
+      value
+    }
+  }
+}
+
 trunc_userid <- function(df) {
   df %>%
     mutate(UserID = substr(UserID, 1, 2))
@@ -358,4 +371,66 @@ categorize_income <- function(enrollments_total_income, annual = FALSE) {
   
   income_category_table %>%
     arrange(income_category)
+}
+
+# used in Q19
+get_income_type_changes <- function(income_categories, income_type, compare_to) {
+  
+  people <- income_categories %>%
+    left_join(get(paste0(compare_to, "_income_for_changes")), by = "PersonalID") %>%
+    summarise(lost_source = n_distinct(PersonalID[get(paste0("entry_", income_type, "_amount")) > 0 &
+                                                    get(paste0(compare_to, "_", income_type, "_amount")) == 0]),
+              retained_decreased = n_distinct(PersonalID[get(paste0("entry_", income_type, "_amount")) > get(paste0(compare_to, "_", income_type, "_amount")) &
+                                                           get(paste0(compare_to, "_", income_type, "_amount")) > 0]),
+              retained_same = n_distinct(PersonalID[get(paste0("entry_", income_type, "_amount")) == get(paste0(compare_to, "_", income_type, "_amount")) &
+                                                      get(paste0(compare_to, "_", income_type, "_amount")) > 0]),
+              retained_increased = n_distinct(PersonalID[get(paste0("entry_", income_type, "_amount")) < get(paste0(compare_to, "_", income_type, "_amount")) &
+                                                           get(paste0("entry_", income_type, "_amount")) > 0]),
+              gained_source = n_distinct(PersonalID[get(paste0("entry_", income_type, "_amount")) == 0 &
+                                                      get(paste0(compare_to, "_", income_type, "_amount")) > 0]),
+              did_not_have_source = n_distinct(PersonalID[get(paste0("entry_", income_type, "_amount")) == 0 &
+                                                            get(paste0(compare_to, "_", income_type, "_amount")) == 0]),
+              total_adults = n_distinct(PersonalID)
+    ) %>%
+    mutate(gained_or_increased = retained_increased + gained_source,
+           percent_accomplished = gained_or_increased / total_adults)
+  
+    amounts <- income_categories %>%
+            left_join(get(paste0(compare_to, "_income_for_changes")), by = "PersonalID") %>%
+            mutate(
+              income_change = get(paste0(compare_to, "_", income_type, "_amount")) -
+                get(paste0("entry_", income_type, "_amount")),
+              lost_source = case_when(
+                get(paste0("entry_", income_type, "_amount")) > 0 &
+                  get(paste0(compare_to, "_", income_type, "_amount")) == 0 ~ income_change),
+              retained_decreased = case_when(
+                get(paste0("entry_", income_type, "_amount")) > get(paste0(compare_to, "_", income_type, "_amount")) &
+                  get(paste0(compare_to, "_", income_type, "_amount")) > 0 ~ income_change),
+              retained_increased = case_when(
+                get(paste0("entry_", income_type, "_amount")) < get(paste0(compare_to, "_", income_type, "_amount")) &
+                  get(paste0("entry_", income_type, "_amount")) > 0 ~ income_change),
+              gained_source = case_when(
+                get(paste0("entry_", income_type, "_amount")) == 0 &
+                  get(paste0(compare_to, "_", income_type, "_amount")) > 0 ~ income_change),
+              ) %>%
+              summarise(lost_source = if_else(
+                people$lost_source > 0, mean(lost_source, na.rm = TRUE), 0),
+                        retained_decreased = if_else(
+                          people$retained_decreased > 0, mean(retained_decreased, na.rm = TRUE), 0),
+                        retained_same = NA,
+                        retained_increased = if_else(
+                          people$retained_increased > 0, mean(retained_increased, na.rm = TRUE), 0),
+                        gained_source = if_else(
+                          people$gained_source > 0, mean(gained_source, na.rm = TRUE), 0),
+                        did_not_have_source = NA,
+                        total_adults = if_else(income_type == "total",
+                                               mean(income_change, na.rm = TRUE), 0)
+              ) %>%
+      mutate(gained_or_increased = ifnull(((people$retained_increased * ifnull(retained_increased, 0)) +
+                                             (people$gained_source * ifnull(gained_source, 0))) / 
+                                            (people$retained_increased + people$gained_source), 0),
+             percent_accomplished = NA)
+    
+    people %>% 
+      union(amounts)
 }

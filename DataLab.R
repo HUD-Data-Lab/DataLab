@@ -260,12 +260,12 @@ project_list <- c(
   # "1552",    # DataLab - PSH CoC I
   # "1550",    # DataLab - PSH HOWPA  
   # "1551",    # DataLab - PSH VASH  
-  # "1554",    # DataLab - RRH CoC I
+  "1554"#,    # DataLab - RRH CoC I
   # "1555",    # DataLab - RRH CoC II
   # "1556",    # DataLab - RRH ESG I
   # "1553",    # Datalab - RRH VA  
   # "1557",    # DataLab - SH VA-HCHV     
-  "1565"#,    # DataLab - SO CoC
+  # "1565",    # DataLab - SO CoC
   # "1566",    # DataLab - SO ESG  
   # "1568",    # Datalab - SO PATH   
   # "1567",    # DataLab - SSO CoC  
@@ -1509,15 +1509,19 @@ recent_household_enrollment <- recent_program_enrollment %>%
     assign(paste0(period, "_income_sources"), data)
   }
   
+  entry_annual_income_present <- intersect(
+    entry_income$PersonalID[entry_income$IncomeFromAnySource %in% c(0, 1)],
+    annual_income$PersonalID[annual_income$IncomeFromAnySource %in% c(0, 1)]
+  ) 
+  
+  entry_exit_income_present <- intersect(
+    entry_income$PersonalID[entry_income$IncomeFromAnySource %in% c(0, 1)],
+    exit_income$PersonalID[exit_income$IncomeFromAnySource %in% c(0, 1)]
+  )
+    
   income_information_present <- c("income_information_present", NA,
-                                  length(intersect(
-                                    entry_income$PersonalID[entry_income$IncomeFromAnySource %in% c(0, 1)],
-                                    annual_income$PersonalID[annual_income$IncomeFromAnySource %in% c(0, 1)]
-                                  )),
-                                  length(intersect(
-                                    entry_income$PersonalID[entry_income$IncomeFromAnySource %in% c(0, 1)],
-                                    exit_income$PersonalID[exit_income$IncomeFromAnySource %in% c(0, 1)]
-                                  )))
+                                  length(entry_annual_income_present),
+                                  length(entry_exit_income_present))
   
   Q17 <- entry_income_sources %>%
     left_join(annual_income_sources, by = "IncomeGroup") %>%
@@ -1552,3 +1556,184 @@ recent_household_enrollment <- recent_program_enrollment %>%
     rbind(., income_information_present)
 }
 
+# Q19a1
+{
+  needed_columns <- c("earned_amount", "other_amount", "calculated_total_income")
+  
+  for(period in entry_annual_exit[1:2]) {
+    income_for_changes <- get(paste0(period, "_income")) %>%
+      filter(PersonalID %in% entry_annual_income_present) %>%
+      determine_total_income(., annual = period == "annual") %>%
+      mutate(earned_amount = if_else(calculated_total_income > 0 &
+                                       earned_income > 0, 
+                                     earned_income, 0),
+             other_amount = if_else(calculated_total_income > 0 &
+                                      earned_income < calculated_total_income,
+                                    calculated_total_income - earned_income, 0)) %>%
+      select(c(PersonalID, all_of(needed_columns))) %>%
+      `colnames<-`(c("PersonalID", paste0(period, "_", needed_columns[1:2]), 
+                     paste0(period, "_total_amount"))) 
+    
+    
+    income_for_changes[is.na(income_for_changes)] <- 0
+    
+    assign(paste0(period, "_income_for_changes"), income_for_changes)
+  }
+  
+  for(row in c("earned", "other", "total")){
+    titles <- paste(row, "income - ", c("people", "amount"))
+    data <- entry_income_for_changes %>%
+      get_income_type_changes(., row, "annual") %>%
+      cbind(titles, .)
+    
+    if(row == "earned") {
+      Q19a1 <- data
+    } else {
+      Q19a1 <- Q19a1 %>%
+        union(data)
+    }
+    rm(data)
+  }
+}
+
+# Q19a2
+{
+  for(period in entry_annual_exit[c(1, 3)]) {
+    income_for_changes <- get(paste0(period, "_income")) %>%
+      filter(PersonalID %in% entry_exit_income_present) %>%
+      determine_total_income(., annual = period == "annual") %>%
+      mutate(earned_amount = if_else(calculated_total_income > 0 &
+                                       earned_income > 0, 
+                                     earned_income, 0),
+             other_amount = if_else(calculated_total_income > 0 &
+                                      earned_income < calculated_total_income,
+                                    calculated_total_income - earned_income, 0)) %>%
+      select(c(PersonalID, all_of(needed_columns))) %>%
+      `colnames<-`(c("PersonalID", paste0(period, "_", needed_columns[1:2]), 
+                     paste0(period, "_total_amount"))) 
+    
+    
+    income_for_changes[is.na(income_for_changes)] <- 0
+    
+    assign(paste0(period, "_income_for_changes"), income_for_changes)
+  }
+  
+  for(row in c("earned", "other", "total")){
+    titles <- paste(row, "income - ", c("people", "amount"))
+    data <- entry_income_for_changes %>%
+      get_income_type_changes(., row, "exit") %>%
+      cbind(titles, .)
+    
+    if(row == "earned") {
+      Q19a2 <- data
+    } else {
+      Q19a2 <- Q19a2 %>%
+        union(data)
+    }
+    rm(data)
+  }
+}
+
+# Q19b
+{
+  income_rows_to_show <- c("Earned", "SSI", "SSDI", "VADisabilityService", 
+                           "PrivateDisability", "WorkersComp", "TANF", 
+                           "SocSecRetirement", "Pension", "ChildSupport",
+                           "other_income_created")
+  
+  for(condition_presence in c("disabling_condition",
+                              "no_disabling_condition",
+                              "all")) {
+    
+    filtered_income_information <- exit_income %>%
+      filter((condition_presence == "disabling_condition" &
+                DisablingCondition == 1) |
+               (condition_presence == "no_disabling_condition" &
+                  DisablingCondition == 0) |
+               (condition_presence == "all" &
+                  DisablingCondition %in% c(0, 1))) %>%
+      mutate(other_income_created = if_else(
+        Unemployment == 1 |
+          VADisabilityNonService == 1 |
+          GA == 1 |
+          Alimony == 1 |
+          OtherIncomeSource == 1, 1, 0)) %>%
+      select(c(PersonalID, household_type, all_of(income_rows_to_show))) %>%
+      pivot_longer(!c(PersonalID, household_type)) %>%
+      mutate(row_name = "row")
+    
+    unduplicated_total <- 
+      # filtered_income_information %>%
+      # return_household_groups(., row_name,  missing_group_name = "total") %>%
+      # cbind(name = "no_income", .[2:6])
+      cbind(name = "total_adults", 
+            filtered_income_information %>%
+              return_household_groups(., row_name,  missing_group_name = "total") %>%
+              select(-row_name))
+      
+    
+    filtered_has_income <- filtered_income_information %>%
+      filter(value == 1)
+    
+    unduplicated_with_income <- filtered_has_income %>%
+      return_household_groups(., row_name,  missing_group_name = "has income")
+    
+    unduplicated_without_income <- as.data.frame(
+      cbind(name = "no_income", unduplicated_total[2:6] - unduplicated_with_income[2:6]))
+    
+    Q19b_data <- as.data.frame(income_rows_to_show) %>%
+      rename(name = income_rows_to_show) %>%
+      left_join(filtered_has_income %>%
+                  return_household_groups(., name, missing_group_name = "grouped"),
+                by = "name") %>%
+      rbind(., unduplicated_without_income) %>%
+      rbind(., unduplicated_total) %>% 
+    `colnames<-`(c("name", paste0(condition_presence, "_", colnames(.)[2:6])))
+    
+    Q19b_data[is.na(Q19b_data)] <- 0
+    
+    if(condition_presence == "disabling_condition") {
+      Q19b <- Q19b_data
+    } else {
+      Q19b <- Q19b %>%
+        left_join(Q19b_data, by = "name")
+    }
+  }
+  
+  for(household_type in c("without_children", "children_and_adults", "unknown")) {
+    Q19b <- Q19b %>%
+      mutate(!!paste0(household_type, "_percent") := ifnull(
+        get(paste0("disabling_condition_", household_type)) / 
+          get(paste0("all_", household_type)), 0)
+        )
+  }
+  
+  Q19b <- Q19b %>%
+    select(name, disabling_condition_without_children,
+           no_disabling_condition_without_children, all_without_children,
+           without_children_percent, disabling_condition_children_and_adults,
+           no_disabling_condition_children_and_adults, all_children_and_adults,
+           children_and_adults_percent, disabling_condition_unknown,
+           no_disabling_condition_unknown, all_unknown, unknown_percent) 
+
+  no_income_row <- match(TRUE, Q19b$name == "no_income")
+  total_row <- match(TRUE, Q19b$name == "total_adults")
+  
+  Q19b$without_children_percent[c(no_income_row, total_row)] <- NA
+  Q19b$children_and_adults_percent[c(no_income_row, total_row)] <- NA
+  Q19b$unknown_percent[c(no_income_row, total_row)] <- NA
+}
+
+
+
+
+
+
+# scratchwork for cleaning environment after each program loop
+typeof(get(ls()[55]))
+ls()[c(4, 6, 66)]
+ls()[!str_detect(ls(), "Q")]
+
+for(item in 1:length(ls())) {
+  length_v <- item
+}
