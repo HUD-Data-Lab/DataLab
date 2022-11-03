@@ -434,3 +434,18 @@ get_income_type_changes <- function(income_categories, income_type, compare_to) 
     people %>% 
       union(amounts)
 }
+
+# used in Q17 and Q20
+pivot_existing_only <- function(data, group_name, client_label) {
+  data[data != 1] <- 0
+  
+  data %>%
+    mutate(total_row = "") %>%
+    select(c(total_row, colnames(data))) %>%
+    adorn_totals("row") %>%
+    filter(total_row == "Total") %>%
+    pivot_longer(!total_row, names_to = "Group", values_to = "values") %>%
+    select(-total_row) %>%
+    `colnames<-`(c(group_name, paste0(client_label, "Clients")))
+  
+}

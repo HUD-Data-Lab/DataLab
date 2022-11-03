@@ -1493,18 +1493,8 @@ recent_household_enrollment <- recent_program_enrollment %>%
       select(Earned, Unemployment, SSI, SSDI, VADisabilityService, 
              VADisabilityNonService, PrivateDisability, WorkersComp, TANF,
              GA, SocSecRetirement, Pension, ChildSupport, Alimony,
-             OtherIncomeSource)
-    
-    data[data != 1] <- 0
-    
-    data <- data %>%
-      mutate(total_row = "") %>%
-      select(c(total_row, colnames(data))) %>%
-      adorn_totals("row") %>%
-      filter(total_row == "Total") %>%
-      pivot_longer(!total_row, names_to = "Group", values_to = "values") %>%
-      select(-total_row) %>%
-      `colnames<-`(c("IncomeGroup", paste0(period, "Clients")))
+             OtherIncomeSource) %>%
+      pivot_existing_only(., "IncomeGroup", period)
     
     assign(paste0(period, "_income_sources"), data)
   }
@@ -1724,11 +1714,224 @@ recent_household_enrollment <- recent_program_enrollment %>%
   Q19b$unknown_percent[c(no_income_row, total_row)] <- NA
 }
 
+# Q20a
+{
+  
+  benefit_list <- c("SNAP", "WIC", "TANFChildCare", "TANFTransportation", 
+                    "OtherTANF", "OtherBenefitsSource")
+  
+  for(period in entry_annual_exit) {
+    
+    data <- get(paste0(period, "_income")) %>%
+      select(all_of(benefit_list)) %>%
+      pivot_existing_only(., "BenefitGroup", period)
+    
+    assign(paste0(period, "_benefit_sources"), data)
+  }
+  
+  Q20a <- entry_benefit_sources %>%
+    left_join(annual_benefit_sources, by = "BenefitGroup") %>%
+    left_join(exit_benefit_sources, by = "BenefitGroup")
+}
+
+# Q20b
+{
+  for(period in entry_annual_exit) {
+    
+    data <- get(paste0(period, "_income")) %>%
+      mutate(benefit_count = case_when(
+        BenefitsFromAnySource == 0 &
+          (is.na(SNAP) | SNAP == 0) &
+          (is.na(WIC) | WIC == 0) &
+          (is.na(TANFChildCare) | TANFChildCare == 0) &
+          (is.na(TANFTransportation) | TANFTransportation == 0) &
+          (is.na(OtherTANF) | OtherTANF == 0) &
+          (is.na(OtherBenefitsSource) | OtherBenefitsSource == 0) ~ "No sources",
+        BenefitsFromAnySource == 1 |
+          SNAP == 1 |
+          WIC == 1 |
+          TANFChildCare == 1 |
+          TANFTransportation == 1 |
+          OtherTANF == 1 |
+          OtherBenefitsSource == 1 ~ "One or more sources",
+        BenefitsFromAnySource %in% c(8, 9) ~ "Unknown or refused",
+        TRUE ~ "Not collected/annual assessment not due"))
+    
+    if(period == "annual"){
+      data <- data %>%
+        left_join(annual_assessment_dates, by = "HouseholdID") %>%
+        mutate(benefit_count = if_else(
+          is.na(annual_due), "Not collected/annual assessment not due",
+          benefit_count))
+    }
+    
+    data <- data %>%
+      group_by(benefit_count) %>%
+      summarise(!!paste0(period, "_people") := n_distinct(PersonalID))
+    
+    assign(paste0(period, "_benefit_counts"), data)
+  }
+  
+  benefit_count <- c("No sources", "One or more sources", "Unknown or refused",
+                      "Not collected/annual assessment not due")
+  
+  Q20b <- as.data.frame(benefit_count) %>%
+    left_join(entry_benefit_counts, by = "benefit_count") %>%
+    left_join(annual_benefit_counts, by = "benefit_count") %>%
+    left_join(exit_benefit_counts, by = "benefit_count") %>%
+    rename(BenefitGroup = benefit_count) %>%
+    adorn_totals("row")
+  
+  Q20b[is.na(Q20b)] <- 0
+}
+
+
+# Q21
+{
+  insurance_list <- c("Medicaid", "Medicare", "SCHIP", "VAMedicalServices", 
+                    "EmployerProvided", "COBRA", "PrivatePay", "StateHealthIns",
+                    "IndianHealthServices", "OtherInsurance")
+  
+  for(period in entry_annual_exit) {
+    
+    data <- get(paste0(period, "_income")) %>%
+      mutate(insurance_count = ifnull(Medicaid, 0) + ifnull(Medicare, 0) +
+               ifnull(SCHIP, 0) + ifnull(VAMedicalServices, 0) +
+               ifnull(EmployerProvided, 0) + ifnull(COBRA, 0) +
+               ifnull(PrivatePay, 0) + ifnull(StateHealthIns, 0) +
+               ifnull(IndianHealthServices, 0) + ifnull(OtherInsurance, 0)
+      )
+    
+    insurance_types <- data %>%
+      filter(period != "annual" |
+               HouseholdID %nin% annual_assessment_dates$HouseholdID) %>%
+      select(all_of(insurance_list)) %>%
+      pivot_existing_only(., "InsuranceType", period)
+    
+    insurance_present <- data %>%
+      select(PersonalID, HouseholdID, InsuranceFromAnySource, insurance_count) %>%
+      mutate(InsuranceType = case_when(
+        period == "annual" &
+          HouseholdID %nin% annual_assessment_dates$HouseholdID ~ 
+          "Annual assessment not required",
+        insurance_count == 0 ~ 
+          case_when(
+            InsuranceFromAnySource %in% c(1, 0) ~ "No health insurance",
+            InsuranceFromAnySource %in% c(8, 9) ~ "DK/R",
+            TRUE ~ "DNC"),
+        insurance_count == 1 ~ "One source of insurance",
+        TRUE ~ "More than one source of insurance")) %>%
+      group_by(InsuranceType) %>%
+      summarize(!!paste0(period, "Clients") := n_distinct(PersonalID))
+    
+    assign(paste0(period, "_insurance_types"), insurance_types %>%
+             rbind(insurance_present))
+  }
+  
+  full_insurance_list <- c(insurance_list, 
+                           c("No health insurance", "DK/R", "DNC", 
+                             "Annual assessment not required", 
+                             "One source of insurance",
+                             "More than one source of insurance"))
+  
+  Q21 <- as.data.frame(full_insurance_list) %>%
+    rename(InsuranceType = full_insurance_list) %>%
+    left_join(entry_insurance_types, by = "InsuranceType") %>%
+    left_join(annual_insurance_types, by = "InsuranceType") %>%
+    left_join(exit_insurance_types, by = "InsuranceType")
+  
+  Q21[is.na(Q21) & Q21$InsuranceType != "Annual assessment not required"] <- 0
+}
+
+# Q22a1
+{
+  report_type <- "CAPER"
+  
+  # groups in specs include DNC, what does that mean in length of stay?
+  # it's not defined in the reporting glossary
+  
+  # also still need to add bed night calculations
+  Q22_data <- recent_household_enrollment %>%
+    mutate(days_enrolled = 
+             trunc((EntryDate %--% ifnull(ExitDate, report_end_date)) / days(1)),
+           enrollment_length_group = case_when(
+             days_enrolled <= 30 ~
+               case_when(report_type == "APR" ~ "30 days or less",
+                         days_enrolled <= 7 ~ "0 - 7 days",
+                         days_enrolled <= 14 ~ "8 - 14 days",
+                         days_enrolled <= 21 ~ "15 - 21 days",
+                         TRUE ~ "22 - 30 days"),
+             days_enrolled <= 60 ~ "31 - 60 days",
+             days_enrolled <= 90 ~ "61 - 90 days",
+             days_enrolled <= 180 ~ "91 - 180 days",
+             days_enrolled <= 365 ~ "181 - 365 days",
+             days_enrolled <= 730 ~ "366 - 730 days",
+             days_enrolled <= 1095 ~ "731 - 1,095 days",
+             days_enrolled <= 1460 ~ "1,096 - 1,460 days",
+             days_enrolled <= 1825 ~ "1,461 - 1,825 days",
+             TRUE ~ "More than 1,825 days")) %>%
+    group_by(enrollment_length_group)
+  
+  Q22a1_total <- Q22_data %>%
+    summarise(total = n_distinct(PersonalID))
+  
+  Q22a1_leavers <- Q22_data %>%
+    filter(!is.na(ExitDate)) %>%
+    summarise(leavers = n_distinct(PersonalID))
+  
+  Q22a1_stayers <- Q22_data %>%
+    filter(is.na(ExitDate)) %>%
+    summarise(stayers = n_distinct(PersonalID))
+  
+  enrollment_length_group <- c(case_when(report_type == "APR" ~ "30 days or less",
+                             TRUE ~ c("0 - 7 days", "8 - 14 days", "15 - 21 days",
+                               "22 - 30 days")), 
+                     "31 - 60 days", "61 - 90 days", "91 - 180 days", 
+                     "181 - 365 days", "366 - 730 days", "731 - 1,095 days",
+                     "1,096 - 1,460 days", "1,461 - 1,825 days",
+                     "More than 1,825 days")
+    
+  Q22a1 <- as.data.frame(enrollment_length_group) %>%
+    distinct() %>%
+    left_join(Q22a1_total, by = "enrollment_length_group") %>%
+    left_join(Q22a1_leavers, by = "enrollment_length_group") %>%
+    left_join(Q22a1_stayers, by = "enrollment_length_group") %>%
+    adorn_totals("row")
+    
+  Q22a1[is.na(Q22a1)] <- 0
+}
+
+# Q22a2
+{
+  Q22a2_total <- Q22_data %>%
+    summarise(total = n_distinct(PersonalID))
+  
+  Q22a2_leavers <- Q22_data %>%
+    filter(!is.na(ExitDate)) %>%
+    summarise(leavers = n_distinct(PersonalID))
+  
+  Q22a2_stayers <- Q22_data %>%
+    filter(is.na(ExitDate)) %>%
+    summarise(stayers = n_distinct(PersonalID))
+  
+  Q22a2 <- as.data.frame(enrollment_length_group) %>%
+    distinct() %>%
+    left_join(Q22a2_total, by = "enrollment_length_group") %>%
+    left_join(Q22a2_leavers, by = "enrollment_length_group") %>%
+    left_join(Q22a2_stayers, by = "enrollment_length_group") %>%
+    adorn_totals("row")
+  
+  Q22a2[is.na(Q22a2)] <- 0
+}
 
 
 
 
 
+
+#-------------------------------------------------------------
+#-------------------------------------------------------------
+#-------------------------------------------------------------
 # scratchwork for cleaning environment after each program loop
 typeof(get(ls()[55]))
 ls()[c(4, 6, 66)]
