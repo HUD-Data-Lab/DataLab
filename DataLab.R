@@ -1429,9 +1429,8 @@ recent_household_enrollment <- recent_program_enrollment %>%
            children_and_adults, only_children, unknown) %>%
     mutate(LocationDescription = if_else(
       LocationDescription == "Total", "Subtotal", LocationDescription
-    ))
-  
-  Q15[is.na(Q15)] <- 0
+    )) %>%
+    ifnull(., 0)
   
   total_row <- Q15 %>%
     filter(LocationDescription == "Subtotal") %>%
@@ -1563,10 +1562,8 @@ recent_household_enrollment <- recent_program_enrollment %>%
                                     calculated_total_income - earned_income, 0)) %>%
       select(c(PersonalID, all_of(needed_columns))) %>%
       `colnames<-`(c("PersonalID", paste0(period, "_", needed_columns[1:2]), 
-                     paste0(period, "_total_amount"))) 
-    
-    
-    income_for_changes[is.na(income_for_changes)] <- 0
+                     paste0(period, "_total_amount"))) %>%
+      ifnull(., 0)
     
     assign(paste0(period, "_income_for_changes"), income_for_changes)
   }
@@ -1601,10 +1598,8 @@ recent_household_enrollment <- recent_program_enrollment %>%
                                     calculated_total_income - earned_income, 0)) %>%
       select(c(PersonalID, all_of(needed_columns))) %>%
       `colnames<-`(c("PersonalID", paste0(period, "_", needed_columns[1:2]), 
-                     paste0(period, "_total_amount"))) 
-    
-    
-    income_for_changes[is.na(income_for_changes)] <- 0
+                     paste0(period, "_total_amount"))) %>%
+      ifnull(., 0)
     
     assign(paste0(period, "_income_for_changes"), income_for_changes)
   }
@@ -1678,10 +1673,9 @@ recent_household_enrollment <- recent_program_enrollment %>%
                   return_household_groups(., name, missing_group_name = "grouped"),
                 by = "name") %>%
       rbind(., unduplicated_without_income) %>%
-      rbind(., unduplicated_total) %>% 
-    `colnames<-`(c("name", paste0(condition_presence, "_", colnames(.)[2:6])))
-    
-    Q19b_data[is.na(Q19b_data)] <- 0
+      rbind(., unduplicated_total) %>%
+      `colnames<-`(c("name", paste0(condition_presence, "_", colnames(.)[2:6]))) %>%
+      ifnull(., 0)
     
     if(condition_presence == "disabling_condition") {
       Q19b <- Q19b_data
@@ -1781,9 +1775,8 @@ recent_household_enrollment <- recent_program_enrollment %>%
     left_join(annual_benefit_counts, by = "benefit_count") %>%
     left_join(exit_benefit_counts, by = "benefit_count") %>%
     rename(BenefitGroup = benefit_count) %>%
-    adorn_totals("row")
-  
-  Q20b[is.na(Q20b)] <- 0
+    adorn_totals("row") %>%
+    ifnull(., 0)
 }
 
 
@@ -1873,9 +1866,8 @@ recent_household_enrollment <- recent_program_enrollment %>%
     left_join(Q22a1_total, by = "enrollment_length_group") %>%
     left_join(Q22a1_leavers, by = "enrollment_length_group") %>%
     left_join(Q22a1_stayers, by = "enrollment_length_group") %>%
-    adorn_totals("row")
-    
-  Q22a1[is.na(Q22a1)] <- 0
+    adorn_totals("row") %>%
+    ifnull(., 0)
 }
 
 # Q22a2
@@ -1895,9 +1887,8 @@ recent_household_enrollment <- recent_program_enrollment %>%
     left_join(Q22a2_total, by = "enrollment_length_group") %>%
     left_join(Q22a2_leavers, by = "enrollment_length_group") %>%
     left_join(Q22a2_stayers, by = "enrollment_length_group") %>%
-    adorn_totals("row")
-  
-  Q22a2[is.na(Q22a2)] <- 0
+    adorn_totals("row") %>%
+    ifnull(., 0)
 }
 
 # Q22b
@@ -1914,10 +1905,6 @@ recent_household_enrollment <- recent_program_enrollment %>%
                       stayer = median(days_enrolled[is.na(ExitDate)])))
 }
 
-    # mutate(end_date_to_use = if_else(
-    #   EntryDate > HoH_HMID, EntryDate, HoH_HMID)) %>%
-    # add_length_of_time_groups(., EntryDate, end_date_to_use, "detailed") #%>%
-    # rename(days_to_house = number_of_days,
 # Q22c
 {
   Q22c_data <- recent_household_enrollment %>%
@@ -1954,12 +1941,21 @@ recent_household_enrollment <- recent_program_enrollment %>%
               by = "housing_length_group") %>%
     adorn_totals("row") %>%
     union(average_time_to_house) %>%
+    union(exited_without_move_in) %>%
     union(Q22c_data %>%
             mutate(housing_length_group = "total persons moved in") %>%
                 return_household_groups(., housing_length_group)) %>%
-    union(exited_without_move_in)
-  
-  Q22c[is.na(Q22c) | is.nan(Q22c)] <- 0
+    ifnull(., 0)
+}
+
+# Q22d
+{
+  Q22d <- length_of_time_groups("CAPER", "enrollment_length_group") %>%
+    left_join(Q22_data %>%
+                return_household_groups(., enrollment_length_group), 
+              by = "enrollment_length_group") %>%
+    adorn_totals("row") %>%
+    ifnull(., 0) 
 }
 
 

@@ -7,20 +7,21 @@ library(tidyverse)
 
 ifnull <- function(value, replace_with) {
   if(is.data.frame(value)) {
-    value %>% 
-      mutate(across(colnames(value), ifnull(replace_with = replace_with)))
+    replace_with_class <- case_when(
+      class(replace_with) %in% c("integer", "numeric") ~ c("integer", "numeric"), 
+      TRUE ~ c(class(replace_with))
+    )
+    
+    for (relevant_column in 
+         colnames(value)[sapply(value, class) %in% replace_with_class]) {
+      value[[relevant_column]] <- ifnull(value[[relevant_column]], replace_with)
+    }
   } else {
     if(length(value) > 0) {
       value[is.na(value) | is.nan(value)] <- replace_with
-      value
-    } else {
-      if(is.na(value) | is.nan(value)) {
-        replace_with
-      } else {
-        value
-      }
-    }
+    } 
   }
+  value
 }
 
 household_group_list <- c(total = 0, without_children = 0, children_and_adults = 0,
@@ -171,13 +172,8 @@ return_household_groups <- function(APR_dataframe, grouped_by, missing_group_nam
     potential_table[1,1] = missing_group_name
   }
   
-  potential_table[is.na(potential_table)] <- 0
-  # for(j in seq_along(potential_table)){
-  #   set(potential_table, i = which(is.na(potential_table[[j]]) &
-  #                                    is.numeric(potential_table[[j]])), j = j, value = 0)
-  # }
-  
   potential_table %>%
+    ifnull(., 0) %>%
     arrange({{grouped_by}})
 }
 
@@ -295,9 +291,8 @@ create_income_groups <- function(enrollments_total_income, annual = FALSE) {
                 `colnames<-`(c("total_income_group")),
               by = "total_income_group") %>%
     mutate(total_income_group = factor(total_income_group, ordered = TRUE,
-                                       levels = annual_income_categories))
-  
-  income_groups[is.na(income_groups)] <- 0
+                                       levels = annual_income_categories)) %>%
+    ifnull(., 0)
   
   income_groups %>%
     arrange(total_income_group)
@@ -370,9 +365,8 @@ categorize_income <- function(enrollments_total_income, annual = FALSE) {
                 `colnames<-`(c("income_category")),
               by = "income_category") %>%
     mutate(income_category = factor(income_category, ordered = TRUE,
-                                       levels = annual_income_categories))
-  
-  income_category_table[is.na(income_category_table)] <- 0
+                                       levels = annual_income_categories)) %>%
+    ifnull(., 0)
   
   income_category_table %>%
     arrange(income_category)
