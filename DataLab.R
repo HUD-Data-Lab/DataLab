@@ -952,7 +952,8 @@ recent_household_enrollment <- recent_program_enrollment %>%
   year_household_info <- all_program_enrollments %>%
     group_by(HouseholdID) %>%
     mutate(HoH_HMID = min(case_when(
-             RelationshipToHoH == 1 ~ MoveInDate), na.rm = TRUE)) %>%
+             RelationshipToHoH == 1 &
+               MoveInDate <= report_end_date ~ MoveInDate), na.rm = TRUE)) %>%
     ungroup() %>%
     select(EnrollmentID, HoH_HMID)
   
@@ -1845,31 +1846,16 @@ recent_household_enrollment <- recent_program_enrollment %>%
 
 # Q22a1
 {
-  report_type <- "CAPER"
-  
   # groups in specs include DNC, what does that mean in length of stay?
   # it's not defined in the reporting glossary
   
   # also still need to add bed night calculations
   Q22_data <- recent_household_enrollment %>%
-    mutate(days_enrolled = 
-             trunc((EntryDate %--% ifnull(ExitDate, report_end_date)) / days(1)),
-           enrollment_length_group = case_when(
-             days_enrolled <= 30 ~
-               case_when(report_type == "APR" ~ "30 days or less",
-                         days_enrolled <= 7 ~ "0 - 7 days",
-                         days_enrolled <= 14 ~ "8 - 14 days",
-                         days_enrolled <= 21 ~ "15 - 21 days",
-                         TRUE ~ "22 - 30 days"),
-             days_enrolled <= 60 ~ "31 - 60 days",
-             days_enrolled <= 90 ~ "61 - 90 days",
-             days_enrolled <= 180 ~ "91 - 180 days",
-             days_enrolled <= 365 ~ "181 - 365 days",
-             days_enrolled <= 730 ~ "366 - 730 days",
-             days_enrolled <= 1095 ~ "731 - 1,095 days",
-             days_enrolled <= 1460 ~ "1,096 - 1,460 days",
-             days_enrolled <= 1825 ~ "1,461 - 1,825 days",
-             TRUE ~ "More than 1,825 days")) %>%
+    add_length_of_time_groups(., EntryDate, 
+                              ifnull(ExitDate, ymd(report_end_date) + days(1)),
+                              "APR") %>%
+    rename(days_enrolled = number_of_days,
+           enrollment_length_group = number_of_days_group) %>%
     group_by(enrollment_length_group)
   
   Q22a1_total <- Q22_data %>%
@@ -1883,16 +1869,7 @@ recent_household_enrollment <- recent_program_enrollment %>%
     filter(is.na(ExitDate)) %>%
     summarise(stayers = n_distinct(PersonalID))
   
-  enrollment_length_group <- c(case_when(report_type == "APR" ~ "30 days or less",
-                             TRUE ~ c("0 - 7 days", "8 - 14 days", "15 - 21 days",
-                               "22 - 30 days")), 
-                     "31 - 60 days", "61 - 90 days", "91 - 180 days", 
-                     "181 - 365 days", "366 - 730 days", "731 - 1,095 days",
-                     "1,096 - 1,460 days", "1,461 - 1,825 days",
-                     "More than 1,825 days")
-    
-  Q22a1 <- as.data.frame(enrollment_length_group) %>%
-    distinct() %>%
+  Q22a1 <- length_of_time_groups("APR", "enrollment_length_group") %>%
     left_join(Q22a1_total, by = "enrollment_length_group") %>%
     left_join(Q22a1_leavers, by = "enrollment_length_group") %>%
     left_join(Q22a1_stayers, by = "enrollment_length_group") %>%
@@ -1914,8 +1891,7 @@ recent_household_enrollment <- recent_program_enrollment %>%
     filter(is.na(ExitDate)) %>%
     summarise(stayers = n_distinct(PersonalID))
   
-  Q22a2 <- as.data.frame(enrollment_length_group) %>%
-    distinct() %>%
+  Q22a2 <- length_of_time_groups("CAPER", "enrollment_length_group") %>%
     left_join(Q22a2_total, by = "enrollment_length_group") %>%
     left_join(Q22a2_leavers, by = "enrollment_length_group") %>%
     left_join(Q22a2_stayers, by = "enrollment_length_group") %>%
@@ -1924,6 +1900,67 @@ recent_household_enrollment <- recent_program_enrollment %>%
   Q22a2[is.na(Q22a2)] <- 0
 }
 
+# Q22b
+{
+  Q22b <- Q22_data %>%
+    ungroup() %>%
+    summarise(summary = "average",
+              leaver = mean(days_enrolled[!is.na(ExitDate)]),
+              stayer = mean(days_enrolled[is.na(ExitDate)])) %>%
+    rbind(Q22_data %>%
+            ungroup() %>%
+            summarise(summary = "median",
+                      leaver = median(days_enrolled[!is.na(ExitDate)]),
+                      stayer = median(days_enrolled[is.na(ExitDate)])))
+}
+
+    # mutate(end_date_to_use = if_else(
+    #   EntryDate > HoH_HMID, EntryDate, HoH_HMID)) %>%
+    # add_length_of_time_groups(., EntryDate, end_date_to_use, "detailed") #%>%
+    # rename(days_to_house = number_of_days,
+# Q22c
+{
+  Q22c_data <- recent_household_enrollment %>%
+    filter(HoH_HMID >= report_start_date) %>%
+    mutate(move_in_date = case_when(
+      EntryDate > HoH_HMID ~ EntryDate,
+      TRUE ~ HoH_HMID)) %>%
+    add_length_of_time_groups(., EntryDate, move_in_date, "detailed") %>%
+    rename(days_to_house = number_of_days,
+           housing_length_group = number_of_days_group)
+
+  average_time_to_house <- Q22c_data %>%
+    summarise(housing_length_group = "average time to house",
+              total = mean(days_to_house),
+              without_children = mean(days_to_house[household_type == "AdultsOnly"]),
+              children_and_adults = mean(days_to_house[household_type == "AdultsAndChildren"]),
+              only_children = mean(days_to_house[household_type == "ChildrenOnly"]),
+              unknown = mean(days_to_house[household_type == "Unknown"]))
+
+  exited_without_move_in <- recent_household_enrollment %>%
+    filter(is.na(HoH_HMID) &
+             !is.na(ExitDate)) %>%
+    mutate(housing_length_group = "exited_without_move_in") %>%
+    return_household_groups(., housing_length_group, "exited_without_move_in") 
+  
+  
+  Q22c <- length_of_time_groups("detailed", "housing_length_group") %>%
+    filter(housing_length_group %nin% c("731 - 1,095 days",
+                                        "1,096 - 1,460 days",
+                                        "1,461 - 1,825 days",
+                                        "More than 1,825 days")) %>%
+    left_join(Q22c_data %>%
+                return_household_groups(., housing_length_group),
+              by = "housing_length_group") %>%
+    adorn_totals("row") %>%
+    union(average_time_to_house) %>%
+    union(Q22c_data %>%
+            mutate(housing_length_group = "total persons moved in") %>%
+                return_household_groups(., housing_length_group)) %>%
+    union(exited_without_move_in)
+  
+  Q22c[is.na(Q22c) | is.nan(Q22c)] <- 0
+}
 
 
 

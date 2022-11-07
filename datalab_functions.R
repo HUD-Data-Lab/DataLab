@@ -6,17 +6,25 @@ library(tidyverse)
 `%nin%` = Negate(`%in%`)
 
 ifnull <- function(value, replace_with) {
-  if(length(value) > 0) {
-    value[is.na(value) | is.nan(value)] <- replace_with
-    value
+  if(is.data.frame(value)) {
+    value %>% 
+      mutate(across(colnames(value), ifnull(replace_with = replace_with)))
   } else {
-    if(is.na(value) | is.nan(value)) {
-      replace_with
-    } else {
+    if(length(value) > 0) {
+      value[is.na(value) | is.nan(value)] <- replace_with
       value
+    } else {
+      if(is.na(value) | is.nan(value)) {
+        replace_with
+      } else {
+        value
+      }
     }
   }
 }
+
+household_group_list <- c(total = 0, without_children = 0, children_and_adults = 0,
+                     only_children = 0, unknown = 0)
 
 trunc_userid <- function(df) {
   df %>%
@@ -137,9 +145,6 @@ sequential_ssn <- function(test_ssn) {
 # provides distinct client counts within households for any given grouping 
 return_household_groups <- function(APR_dataframe, grouped_by, missing_group_name = NA) {
 
-  possible_groups <- c(total = 0, without_children = 0, children_and_adults = 0,
-                       only_children = 0, unknown = 0)
-  
   potential_table <- APR_dataframe %>%
     group_by({{grouped_by}}) %>%
     summarise(total = n_distinct(PersonalID),
@@ -151,8 +156,8 @@ return_household_groups <- function(APR_dataframe, grouped_by, missing_group_nam
     # but I know they mattered at some point? Need to revisit and verify
     pivot_longer(!{{grouped_by}}, names_to = "Group", values_to = "values") %>%
     pivot_wider(names_from = "Group", values_from = "values") %>% 
-    add_column(!!!possible_groups[!names(possible_groups) %in% names(.)]) %>%
-    select(c({{grouped_by}}, names(possible_groups)))
+    add_column(!!!household_group_list[!names(household_group_list) %in% names(.)]) %>%
+    select(c({{grouped_by}}, names(household_group_list)))
   
   if(nrow(potential_table) == 0) {
     if(is.na(missing_group_name)) warning("You are missing a row name")
@@ -160,8 +165,8 @@ return_household_groups <- function(APR_dataframe, grouped_by, missing_group_nam
     potential_table <- APR_dataframe %>%
       select({{grouped_by}}) %>%
       distinct() %>% 
-      add_column(!!!possible_groups[!names(possible_groups) %in% names(.)]) %>%
-      select(c({{grouped_by}}, names(possible_groups)))
+      add_column(!!!household_group_list[!names(household_group_list) %in% names(.)]) %>%
+      select(c({{grouped_by}}, names(household_group_list)))
     
     potential_table[1,1] = missing_group_name
   }
@@ -448,4 +453,74 @@ pivot_existing_only <- function(data, group_name, client_label) {
     select(-total_row) %>%
     `colnames<-`(c(group_name, paste0(client_label, "Clients")))
   
+}
+
+# used in Q22 questions
+add_length_of_time_groups <- function(data, start_date, end_date, report_type) {
+  start_date <- enquo(start_date) 
+  end_date <- enquo(end_date) 
+  
+  data <- data %>%
+    mutate(number_of_days = 
+             trunc((!!start_date %--% !!end_date) / days(1)),
+           number_of_days_group = case_when(
+             number_of_days <= 7 ~ "0 - 7 days",
+             number_of_days <= 14 ~ "8 - 14 days",
+             number_of_days <= 21 ~ "15 - 21 days",
+             number_of_days <= 30 ~ "22 - 30 days",
+             number_of_days <= 60 ~ "31 - 60 days",
+             number_of_days <= 90 ~ "61 - 90 days",
+             number_of_days <= 180 ~ "91 - 180 days",
+             number_of_days <= 365 ~ "181 - 365 days",
+             number_of_days <= 730 ~ "366 - 730 days",
+             number_of_days <= 1095 ~ "731 - 1,095 days",
+             number_of_days <= 1460 ~ "1,096 - 1,460 days",
+             number_of_days <= 1825 ~ "1,461 - 1,825 days",
+             TRUE ~ "More than 1,825 days"))
+           
+  if(report_type == "APR") {
+    data %>%
+      mutate(number_of_days_group = case_when(
+        number_of_days_group %in% c("0 - 7 days", "8 - 14 days",
+                                    "15 - 21 days", "22 - 30 days") ~ "30 days or less",
+        TRUE ~ number_of_days_group))
+  } else {
+    data
+  }
+}
+# also used in Q22 questions
+length_of_time_groups <- function(report_type, column_name) {
+  if(report_type == "APR") {
+    rows <- c("30 days or less", "31 - 60 days", "61 - 90 days", "91 - 180 days", 
+      "181 - 365 days", "366 - 730 days", "731 - 1,095 days",
+      "1,096 - 1,460 days", "1,461 - 1,825 days",
+      "More than 1,825 days")
+  } else {
+    rows <- c("0 - 7 days", "8 - 14 days", "15 - 21 days", "22 - 30 days", 
+              "31 - 60 days", "61 - 90 days", "91 - 180 days", 
+              "181 - 365 days", "366 - 730 days", "731 - 1,095 days",
+              "1,096 - 1,460 days", "1,461 - 1,825 days",
+              "More than 1,825 days")
+  }
+  
+  as.data.frame(rows) %>%
+    rename(!!column_name := rows)
+}
+
+# used in Q22c
+return_household_averages <- function(data, field_to_average, 
+                                      column_label, new_row_name) {
+  field_to_average <- enquo(field_to_average)
+  
+  household_type <- c(total = 0, without_children = 0, children_and_adults = 0,
+                       only_children = 0, unknown = 0)
+  
+  potential_table <- as.data.frame(household_group_list) %>%
+    left_join(data %>%
+    group_by(household_type) %>%
+    summarise(field_average = mean({{field_to_average}})) %>%
+    mutate(column_label = {{new_row_name}}), by = "household_type") #%>%
+    # select(c({{column_label}}, names(household_group_list)))
+  
+  potential_table
 }
