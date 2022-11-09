@@ -2,6 +2,7 @@ library(janitor)
 library(data.table)
 library(lubridate)
 library(tidyverse)
+library(archive)
 
 `%nin%` = Negate(`%in%`)
 
@@ -141,6 +142,29 @@ sequential_ssn <- function(test_ssn) {
     "CA-529",	"LA-506",	"NJ-511",	"TX-607",	"FL-605",	"MN-501",	"OK-505",	"GA-501",
     "CA-530",	"LA-507",	"NJ-512",	"TX-611",	"FL-606"			
   )
+}
+
+# lists for APR/CAPER support
+{
+  APR_files <- c("Q4a", "Q5a", "Q6a", "Q6b", "Q6d", "Q6e", "Q6f", "Q7a", "Q7b",
+                 "Q8a", "Q8b", "Q9a", "Q9b", "Q10a", "Q10b", "Q10c", "Q11",
+                 "Q12a", "Q12b", "Q13a1", "Q13a2", "Q13b1", "Q13b2", "Q13c1",
+                 "Q13c2", "Q14a", "Q14b", "Q15", "Q16", "Q17", "Q18", "Q19a1",
+                 "Q19a2", "Q19b", "Q20a", "Q20b", "Q21", "Q22a1", "Q22b", "Q22c",
+                 "Q22e", "Q23c", "Q25a", "Q25b", "Q25c", "Q25d", "Q25e", "Q25f",
+                 "Q25g", "Q25h", "Q25i", "Q26a", "Q26b", "Q26c", "Q26d", "Q26e",
+                 "Q26f", "Q26g", "Q26h", "Q26i", "Q27a", "Q27b", "Q27c", "Q27d",
+                 "Q27e", "Q27f", "Q27g", "Q27h", "Q27i")
+  
+  CAPER_files <- c("Q4a", "Q5a", "Q6a", "Q6b", "Q6c", "Q6d", "Q6e", "Q6f", 
+                   "Q7a", "Q7b", "Q8a", "Q8b", "Q9a", "Q9b", "Q10a", "Q10b", 
+                   "Q10c", "Q10d", "Q11", "Q12a", "Q12b", "Q13a1", "Q13b1", 
+                   "Q13c1", "Q14a", "Q14b", "Q15", "Q16", "Q17", "Q19b", "Q20a", 
+                   "Q21", "Q22a2", "Q22c", "Q22d", "Q22e", "Q23c", "Q24", 
+                   "Q25a", "Q26b")
+  
+  
+  missing_files <- c()
 }
 
 # provides distinct client counts within households for any given grouping 

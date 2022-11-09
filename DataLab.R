@@ -1972,4 +1972,26 @@ ls()[!str_detect(ls(), "Q")]
 
 for(item in 1:length(ls())) {
   length_v <- item
+  }
+
+#-------------------------------------------------------------
+#-------------------------------------------------------------
+#-------------------------------------------------------------
+
+generate_APR <- length(intersect(c(1:7), 
+                                 unique(Funder$Funder[Funder$ProjectID %in% project_list]))) > 0
+
+generate_CAPER <- length(intersect(c(8:11), 
+                                 unique(Funder$Funder[Funder$ProjectID %in% project_list]))) > 0
+
+
+for (question in APR_files) {
+  if (exists(question)) {
+    write.csv(get(question), file.path(paste0("created_files/", question, ".csv")), row.names=FALSE)
+  } else {
+    missing_files <- c(missing_files, question)
+  }
 }
+
+archive_write_dir("zipped_files.zip", paste0(getwd(), "/created_files"))
+unlink(paste0(getwd(), "/created_files/*"))
