@@ -101,6 +101,12 @@ for (file in names(hmis_csvs)){
       select(-PersonalID)
   }
   
+  if (file == "Funder") {
+    data$Funder[data$ProjectID == 1552] <- 2
+    data$Funder[data$ProjectID == 1554] <- 3
+    data$Funder[data$ProjectID == 1565] <- 4
+  }
+  
   assign(file, data)
   
 }
@@ -288,8 +294,9 @@ chronicity_data <- chronic_household %>%
 
 items_to_keep <- c("items_to_keep", ls())
 
-for(project_id in full_project_list) {
-  project_list <- c(project_id)
+# for(project_id in full_project_list) {
+for(loop in 1) {
+  project_list <- c(1554, 1555)
   
   all_program_enrollments <- Enrollment %>%
     filter(ProjectID %in% project_list) %>%
@@ -965,9 +972,9 @@ for(project_id in full_project_list) {
   {
     year_household_info <- all_program_enrollments %>%
       group_by(HouseholdID) %>%
-      mutate(HoH_HMID = min(case_when(
+      mutate(HoH_HMID = suppressWarnings(min(case_when(
         RelationshipToHoH == 1 &
-          MoveInDate <= report_end_date ~ MoveInDate), na.rm = TRUE)) %>%
+          MoveInDate <= report_end_date ~ MoveInDate), na.rm = TRUE))) %>%
       ungroup() %>%
       select(EnrollmentID, HoH_HMID)
     
@@ -1301,7 +1308,7 @@ for(project_id in full_project_list) {
                    filter(DataCollectionStage == 1), by ="EnrollmentID")
     
     Q13a1 <- Q13a %>%
-      return_household_groups(., disability_name, "disability_type")
+      return_household_groups(., disability_name)
   }
   
   # Q13b1
@@ -1312,7 +1319,7 @@ for(project_id in full_project_list) {
                    filter(DataCollectionStage == 3), by ="EnrollmentID")
     
     Q13b1 <- Q13b %>%
-      return_household_groups(., disability_name, "disability_type")
+      return_household_groups(., disability_name)
   }
   
   # Q13c1
@@ -1331,7 +1338,7 @@ for(project_id in full_project_list) {
                  by ="EnrollmentID")
     
     Q13c1 <- Q13c %>%
-      return_household_groups(., disability_name, "disability_type")
+      return_household_groups(., disability_name)
   }
   
   # Q13a2
@@ -1344,7 +1351,7 @@ for(project_id in full_project_list) {
                   ungroup(), 
                 by = "PersonalID") %>%
       condition_count_groups() %>%
-      return_household_groups(., disability_count_group, "disability_count") %>%
+      return_household_groups(., disability_count_group) %>%
       adorn_totals("row")
   }
   
@@ -1359,7 +1366,7 @@ for(project_id in full_project_list) {
                   ungroup(), 
                 by = "PersonalID") %>%
       condition_count_groups() %>%
-      return_household_groups(., disability_count_group, "disability_count") %>%
+      return_household_groups(., disability_count_group) %>%
       adorn_totals("row")
   }
   
@@ -1374,7 +1381,7 @@ for(project_id in full_project_list) {
                   ungroup(), 
                 by = "PersonalID") %>%
       condition_count_groups() %>%
-      return_household_groups(., disability_count_group, "disability_count") %>%
+      return_household_groups(., disability_count_group) %>%
       adorn_totals("row")
   }
   
