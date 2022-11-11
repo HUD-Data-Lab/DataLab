@@ -482,6 +482,7 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type) {
     mutate(number_of_days = 
              trunc((!!start_date %--% !!end_date) / days(1)),
            number_of_days_group = case_when(
+             is.na(number_of_days) ~ "DNC",
              number_of_days <= 7 ~ "0 - 7 days",
              number_of_days <= 14 ~ "8 - 14 days",
              number_of_days <= 21 ~ "15 - 21 days",

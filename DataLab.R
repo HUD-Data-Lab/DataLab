@@ -89,6 +89,9 @@ for (file in names(hmis_csvs)){
   if (file == "Enrollment") {
     data <- data %>%
       rename(enroll_DateCreated = DateCreated) %>%
+      mutate(MoveInDate = case_when(
+        MoveInDate <= report_end_date &
+          MoveInDate >= EntryDate ~ MoveInDate)) %>%
       filter(EntryDate <= report_end_date &
                EnrollmentID %nin% Exit$EnrollmentID[Exit$ExitDate < report_start_date])
   }
@@ -288,15 +291,17 @@ chronicity_data <- chronic_household %>%
   }
 
 # used for running all reports
-{
-  full_project_list <- Project$ProjectID[Project$ProjectID %in% Funder$ProjectID[Funder$Funder %in% 1:11]]
-}
+# {
+#   full_project_list <- c(1552, Project$ProjectID[Project$ProjectID %in% Funder$ProjectID[Funder$Funder %in% 1:11]])
+# }
 
 items_to_keep <- c("items_to_keep", ls())
 
 # for(project_id in full_project_list) {
-for(loop in 1) {
-  project_list <- c(1554, 1555)
+# for(loop in 1) {
+  # project_list <- c(1554, 1555)
+    # project_list <- c(project_id)
+    # project_list <- c(1552)
   
   all_program_enrollments <- Enrollment %>%
     filter(ProjectID %in% project_list) %>%
@@ -377,6 +382,12 @@ for(loop in 1) {
            HoH_HMID = suppressWarnings(min(case_when(
              RelationshipToHoH == 1 &
                ProjectType %in% c(3, 13) ~ MoveInDate
+           ), na.rm = TRUE)),
+           HoH_ADHS = suppressWarnings(min(case_when(
+             RelationshipToHoH == 1 ~ DateToStreetESSH
+           ), na.rm = TRUE)),
+           HoH_EntryDate = suppressWarnings(min(case_when(
+             RelationshipToHoH == 1 ~ EntryDate
            ), na.rm = TRUE))) %>%
     ungroup() %>%
     mutate(household_type = case_when(
@@ -386,7 +397,7 @@ for(loop in 1) {
       adults == 1 ~ "AdultsOnly",
       TRUE ~ "ChildrenOnly"
     )) %>%
-    select(PersonalID, household_type, HoH_HMID)
+    select(PersonalID, household_type, HoH_HMID, HoH_ADHS, HoH_EntryDate)
   
   recent_household_enrollment <- recent_program_enrollment %>%
     left_join(client_plus, by = "PersonalID") %>%
@@ -973,8 +984,7 @@ for(loop in 1) {
     year_household_info <- all_program_enrollments %>%
       group_by(HouseholdID) %>%
       mutate(HoH_HMID = suppressWarnings(min(case_when(
-        RelationshipToHoH == 1 &
-          MoveInDate <= report_end_date ~ MoveInDate), na.rm = TRUE))) %>%
+        RelationshipToHoH == 1 ~ MoveInDate), na.rm = TRUE))) %>%
       ungroup() %>%
       select(EnrollmentID, HoH_HMID)
     
@@ -1979,6 +1989,55 @@ for(loop in 1) {
       ifnull(., 0) 
   }
   
+  #Q22e
+  {
+    Q22e_data <- recent_household_enrollment %>%
+      mutate(housing_date = case_when(
+        ProjectType %nin% c(3, 9, 13) |
+          EntryDate > HoH_HMID ~ EntryDate,
+        TRUE ~ HoH_HMID),
+        homelessness_start_date = case_when(
+          age < 18 &
+            EntryDate == HoH_EntryDate ~ HoH_ADHS,
+          DateToStreetESSH <= EntryDate ~ DateToStreetESSH)) %>%
+      add_length_of_time_groups(., homelessness_start_date, housing_date, "days_to_house") %>%
+      mutate(number_of_days_group = case_when(is.na(housing_date) ~ "Not yet moved in",
+                                              TRUE ~ number_of_days_group)) %>%
+      rename(days_prior_to_housing = number_of_days_group)
+    
+    Q22e_dfs <- length_of_time_groups("detailed", "days_prior_to_housing") %>%
+      full_join(Q22e_data %>%
+                  return_household_groups(., days_prior_to_housing),
+                by = "days_prior_to_housing") %>%
+      ifnull(., 0) %>%
+      mutate(days_prior_long = case_when(
+        days_prior_to_housing %in% c("731 - 1,095 days",
+                                     "1,096 - 1,460 days",
+                                     "1,461 - 1,825 days",
+                                     "More than 1,825 days") ~ "long",
+        days_prior_to_housing != "DNC" ~ "short",
+        TRUE ~ days_prior_to_housing)) %>%
+      group_by(days_prior_long) %>%
+      group_split()
+    
+    Q22e <- Q22e_dfs[[3]] %>%
+      union(Q22e_dfs[[2]] %>%
+              adorn_totals("row") %>%
+              filter(days_prior_to_housing == "Total") %>%
+              mutate(days_prior_to_housing = "More than 730 days")) %>%
+      union(Q22e_dfs[[1]])
+    #   
+    # 
+    # Q22c_data <- recent_household_enrollment %>%
+    #   filter(HoH_HMID >= report_start_date) %>%
+    #   mutate(move_in_date = case_when(
+    #     EntryDate > HoH_HMID ~ EntryDate,
+    #     TRUE ~ HoH_HMID)) %>%
+    #   add_length_of_time_groups(., EntryDate, move_in_date, "detailed") %>%
+    #   rename(days_to_house = number_of_days,
+    #          housing_length_group = number_of_days_group)
+  }
+  
   
   
   
@@ -1999,40 +2058,42 @@ for(loop in 1) {
   #-------------------------------------------------------------
   #-------------------------------------------------------------
   
-  projects_included <- if_else(length(project_list) > 1, "Multiple Projects",
-                               paste0(Project$ProjectName[Project$ProjectID %in% project_list]))
-  
-  generate_APR <- length(intersect(c(1:7), 
-                                   unique(Funder$Funder[Funder$ProjectID %in% project_list]))) > 0
-  
-  generate_CAPER <- length(intersect(c(8:11), 
-                                     unique(Funder$Funder[Funder$ProjectID %in% project_list]))) > 0
-  
-  if(generate_APR) {
-    for (question in APR_files) {
-      if (exists(question)) {
-        write.csv(get(question), file.path(paste0("created_files/", question, ".csv")), row.names=FALSE)
-      } else {
-        missing_files <- c(missing_files, paste("APR -", projects_included, "-", question))
-      }
-    }
-    archive_write_dir(paste0("APR - ", projects_included, ".zip"), 
-                      paste0(getwd(), "/created_files"))
-    unlink(paste0(getwd(), "/created_files/*"))
-  }
-  
-  if(generate_CAPER) {
-    for (question in CAPER_files) {
-      if (exists(question)) {
-        write.csv(get(question), file.path(paste0("created_files/", question, ".csv")), row.names=FALSE)
-      } else {
-        missing_files <- c(missing_files, paste("CAPER -", projects_included, "-", question))
-      }
-    }
-    archive_write_dir(paste0("CAPER - ", projects_included, ".zip"), 
-                      paste0(getwd(), "/created_files"))
-    unlink(paste0(getwd(), "/created_files/*"))
-  }
-  
-  rm(list = ls()[ls() %nin% items_to_keep])
-}
+# uncomment everything below this line when generating test kits
+#   projects_included <- max(case_when(length(project_list) > 1 ~ "Multiple Projects",
+#                                  TRUE ~ paste0(Project$ProjectName[Project$ProjectID %in% project_list])))
+#   
+#   generate_APR <- max(length(intersect(c(1:7), 
+#                                    unique(Funder$Funder[Funder$ProjectID %in% project_list]))) > 0 |    
+#     project_list == 1552)
+#   
+#   generate_CAPER <- length(intersect(c(8:11), 
+#                                      unique(Funder$Funder[Funder$ProjectID %in% project_list]))) > 0
+#   
+#   if(generate_APR) {
+#     for (question in APR_files) {
+#       if (exists(question)) {
+#         write.csv(get(question), file.path(paste0("created_files/ICF - ", question, ".csv")), row.names=FALSE)
+#       } else {
+#         missing_files <- c(missing_files, paste("APR -", projects_included, "-", question))
+#       }
+#     }
+#     archive_write_dir(paste0("APR - ", projects_included, ".zip"), 
+#                       paste0(getwd(), "/created_files"))
+#     unlink(paste0(getwd(), "/created_files/*"))
+#   }
+#   
+#   if(generate_CAPER) {
+#     for (question in CAPER_files) {
+#       if (exists(question)) {
+#         write.csv(get(question), file.path(paste0("created_files/ICF - ", question, ".csv")), row.names=FALSE)
+#       } else {
+#         missing_files <- c(missing_files, paste("CAPER -", projects_included, "-", question))
+#       }
+#     }
+#     archive_write_dir(paste0("CAPER - ", projects_included, ".zip"), 
+#                       paste0(getwd(), "/created_files"))
+#     unlink(paste0(getwd(), "/created_files/*"))
+#   }
+#   
+#   rm(list = ls()[ls() %nin% items_to_keep])
+# }
