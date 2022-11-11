@@ -2000,32 +2000,27 @@ items_to_keep <- c("items_to_keep", ls())
           age < 18 &
             EntryDate == HoH_EntryDate ~ HoH_ADHS,
           DateToStreetESSH <= EntryDate ~ DateToStreetESSH)) %>%
-      add_length_of_time_groups(., homelessness_start_date, housing_date, "days_to_house") %>%
+      add_length_of_time_groups(., homelessness_start_date, housing_date, "days_prior_to_housing") %>%
       mutate(number_of_days_group = case_when(is.na(housing_date) ~ "Not yet moved in",
                                               TRUE ~ number_of_days_group)) %>%
       rename(days_prior_to_housing = number_of_days_group)
     
-    Q22e_dfs <- length_of_time_groups("detailed", "days_prior_to_housing") %>%
+    Q22e_groups <- length_of_time_groups("days_prior_to_housing", "days_prior_to_housing") %>%
       full_join(Q22e_data %>%
-                  return_household_groups(., days_prior_to_housing),
-                by = "days_prior_to_housing") %>%
+                  return_household_groups(., days_prior_to_housing)
+                , by = "days_prior_to_housing") %>%
       ifnull(., 0) %>%
-      mutate(days_prior_long = case_when(
-        days_prior_to_housing %in% c("731 - 1,095 days",
-                                     "1,096 - 1,460 days",
-                                     "1,461 - 1,825 days",
-                                     "More than 1,825 days") ~ "long",
-        days_prior_to_housing != "DNC" ~ "short",
-        TRUE ~ days_prior_to_housing)) %>%
-      group_by(days_prior_long) %>%
-      group_split()
+      adorn_totals("row")
     
-    Q22e <- Q22e_dfs[[3]] %>%
-      union(Q22e_dfs[[2]] %>%
-              adorn_totals("row") %>%
-              filter(days_prior_to_housing == "Total") %>%
-              mutate(days_prior_to_housing = "More than 730 days")) %>%
-      union(Q22e_dfs[[1]])
+    Q22e <- Q22e_groups %>%
+      filter(days_prior_to_housing %nin% c("Not yet moved in", "DNC", "Total")) %>%
+      untabyl() %>%
+      adorn_totals("row") %>%
+      mutate(days_prior_to_housing = case_when(
+        days_prior_to_housing == "Total" ~ "total_moved_into_housing",
+        TRUE ~ days_prior_to_housing)) %>%
+      union(Q22e_groups %>%
+              filter(days_prior_to_housing %in% c("Not yet moved in", "DNC", "Total")))
     #   
     # 
     # Q22c_data <- recent_household_enrollment %>%

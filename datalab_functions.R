@@ -503,7 +503,18 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type) {
         number_of_days_group %in% c("0 - 7 days", "8 - 14 days",
                                     "15 - 21 days", "22 - 30 days") ~ "30 days or less",
         TRUE ~ number_of_days_group))
-  } else {
+  } else if(report_type == "days_prior_to_housing") {
+    data %>%
+      mutate(number_of_days_group = case_when(
+        number_of_days_group %in% c("61 - 90 days",
+                                    "91 - 180 days") ~ "61 - 180 days",
+        number_of_days_group %in% c("731 - 1,095 days",
+                                    "1,096 - 1,460 days",
+                                    "1,461 - 1,825 days",
+                                    "More than 1,825 days") ~ "731 days or more",
+        TRUE ~ number_of_days_group))
+  }
+  else {
     data
   }
 }
@@ -514,6 +525,10 @@ length_of_time_groups <- function(report_type, column_name) {
       "181 - 365 days", "366 - 730 days", "731 - 1,095 days",
       "1,096 - 1,460 days", "1,461 - 1,825 days",
       "More than 1,825 days")
+  } else if(report_type == "days_prior_to_housing") {
+    rows <- c("0 - 7 days", "8 - 14 days", "15 - 21 days", "22 - 30 days", 
+              "31 - 60 days", "61 - 180 days", "181 - 365 days", 
+              "366 - 730 days", "731 days or more", "Not yet moved in", "DNC")
   } else {
     rows <- c("0 - 7 days", "8 - 14 days", "15 - 21 days", "22 - 30 days", 
               "31 - 60 days", "61 - 90 days", "91 - 180 days", 
