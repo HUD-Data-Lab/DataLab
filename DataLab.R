@@ -18,8 +18,16 @@
 # library(colourpicker)
 
 source("datalab_functions.R")
-residences <- read_csv("Residences.csv",
-                       col_types = "iccclllii")
+ResidenceUses <- read_excel("Residences.xlsx",
+                         sheet = "ResidenceUses",
+                         col_types = c("numeric", "text", "text", "text",
+                                       "logical", "logical", "logical",
+                                       "numeric", "numeric"))
+
+DestinationClassification <- read_excel("Residences.xlsx",
+                                        sheet = "DestinationClassificationRead",
+                                        col_types = c("numeric", "text",
+                                                      "numeric", "text"))
 
 # combines all files
 {
@@ -1434,8 +1442,8 @@ items_to_keep <- c("items_to_keep", ls())
   
   # Q15
   {
-    for(residence_type in unique(na.omit(residences$APR_PriorLocationGroup))) {
-      residences_to_include <- residences %>%
+    for(residence_type in unique(na.omit(ResidenceUses$APR_PriorLocationGroup))) {
+      residences_to_include <- ResidenceUses %>%
         filter(APR_PriorLocationGroup == residence_type &
                  !is.na(LocationDescription)) 
       
@@ -1999,7 +2007,8 @@ items_to_keep <- c("items_to_keep", ls())
         homelessness_start_date = case_when(
           age < 18 &
             EntryDate == HoH_EntryDate ~ HoH_ADHS,
-          DateToStreetESSH <= EntryDate ~ DateToStreetESSH)) %>%
+          (is.na(age) | age >= 18) &
+            DateToStreetESSH <= EntryDate ~ DateToStreetESSH)) %>%
       add_length_of_time_groups(., homelessness_start_date, housing_date, "days_prior_to_housing") %>%
       mutate(number_of_days_group = case_when(is.na(housing_date) ~ "Not yet moved in",
                                               TRUE ~ number_of_days_group)) %>%
@@ -2021,22 +2030,62 @@ items_to_keep <- c("items_to_keep", ls())
         TRUE ~ days_prior_to_housing)) %>%
       union(Q22e_groups %>%
               filter(days_prior_to_housing %in% c("Not yet moved in", "DNC", "Total")))
-    #   
-    # 
-    # Q22c_data <- recent_household_enrollment %>%
-    #   filter(HoH_HMID >= report_start_date) %>%
-    #   mutate(move_in_date = case_when(
-    #     EntryDate > HoH_HMID ~ EntryDate,
-    #     TRUE ~ HoH_HMID)) %>%
-    #   add_length_of_time_groups(., EntryDate, move_in_date, "detailed") %>%
-    #   rename(days_to_house = number_of_days,
-    #          housing_length_group = number_of_days_group)
+    }
+  
+  # Q23c
+  {
+    for(residence_type in c("permanent", "temporary", "institution", "other")) {
+      residences_to_include <- ResidenceUses %>%
+        filter(APR_ExitLocationGroup == residence_type &
+                 !is.na(LocationDescription)) 
+      
+      group_of_residences <- recent_household_enrollment %>%
+        inner_join(residences_to_include, by = c("Destination" = "Location")) %>%
+        return_household_groups(., LocationDescription, residences_to_include$LocationDescription[1]) %>%
+        full_join(residences_to_include, by = "LocationDescription") %>%
+        arrange(Apr_ExitOrder) %>%
+        adorn_totals("row") 
+      
+      if (residence_type == "permanent") {
+        Q23c <- group_of_residences
+      } else {
+        Q23c <- Q23c %>%
+          union(group_of_residences)
+      }
+    }
+    
+    
+    exit_categories <- data.frame(Outcome=c("P", "N", "X")) %>%
+      left_join(recent_household_enrollment %>%
+                  inner_join(DestinationClassification, by = c("Destination" = "Location",
+                                                               "ProjectType" = "ProjectType")) %>%
+                  return_household_groups(., Outcome, "N"),
+      by = "Outcome") %>%
+      adorn_totals("row") %>%
+      pivot_longer(., cols = -Outcome) %>%
+      pivot_wider(., names_from = Outcome) %>%
+      mutate(percent_positive = P / Total) %>%
+      rename(group = name) %>%
+      pivot_longer(., cols = -group) %>%
+      pivot_wider(., names_from = group) %>%
+      rename(LocationDescription = name)
+      
+    
+    Q23c <- Q23c %>%
+      select(LocationDescription, total, without_children,
+             children_and_adults, only_children, unknown) %>%
+      mutate(LocationDescription = if_else(
+        LocationDescription == "Total", "Subtotal", LocationDescription
+      )) %>%
+      union(exit_categories %>%
+              filter(LocationDescription == "Total")) %>%
+      union(exit_categories %>%
+              filter(LocationDescription %in% c("P", "X", "percent_positive"))) %>%
+      ifnull(., 0)
   }
   
   
-  
-  
-  
+  {
   #-------------------------------------------------------------
   #-------------------------------------------------------------
   #-------------------------------------------------------------
@@ -2092,3 +2141,4 @@ items_to_keep <- c("items_to_keep", ls())
 #   
 #   rm(list = ls()[ls() %nin% items_to_keep])
 # }
+}
