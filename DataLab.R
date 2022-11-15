@@ -18,16 +18,21 @@
 # library(colourpicker)
 
 source("datalab_functions.R")
-ResidenceUses <- read_excel("Residences.xlsx",
+
+ResidenceUses <- read_excel("SupplementalTables.xlsx",
                          sheet = "ResidenceUses",
                          col_types = c("numeric", "text", "text", "text",
                                        "logical", "logical", "logical",
                                        "numeric", "numeric"))
 
-DestinationClassification <- read_excel("Residences.xlsx",
+DestinationClassification <- read_excel("SupplementalTables.xlsx",
                                         sheet = "DestinationClassificationRead",
                                         col_types = c("numeric", "text",
                                                       "numeric", "text"))
+
+IncomeTypes <- read_excel("SupplementalTables.xlsx",
+                          sheet = "IncomeTypes",
+                          col_types = c("text", "text"))
 
 # combines all files
 {
@@ -126,19 +131,15 @@ disability_table <- Disabilities %>%
   filter(DisabilityResponse == 1 |
                (DisabilityType == 10 &
                   DisabilityResponse %in% c(2, 3))) %>%
-  mutate(disability_name = case_when(DisabilityType == 5 ~ "physical",
-                                     DisabilityType == 6 ~ "developmental",
-                                     DisabilityType == 7 ~ "chronic",
+  mutate(disability_name = case_when(DisabilityType == 5 ~ "Physical Disability",
+                                     DisabilityType == 6 ~ "Developmental Disability",
+                                     DisabilityType == 7 ~ "Chronic Health Condition",
                                      DisabilityType == 8 ~ "HIV/AIDS",
-                                     DisabilityType == 9 ~ "mental_health",
-                                     DisabilityResponse == 1 ~ "alcohol_use",
-                                     DisabilityResponse == 2 ~ "drug_use",
-                                     DisabilityResponse == 3 ~ "alcohol_and_drug_use"),
-         disabilities = if_else(disability_name == "alcohol_and_drug_use", 2, 1),
-         disability_name = factor(disability_name, ordered = TRUE, 
-                                  levels = c("mental_health", "alcohol_use", "drug_use",
-                                             "alcohol_and_drug_use", "chronic", "HIV/AIDS",
-                                             "developmental", "physical")),
+                                     DisabilityType == 9 ~ "Mental Health Disorder",
+                                     DisabilityResponse == 1 ~ "Alcohol Use Disorder",
+                                     DisabilityResponse == 2 ~ "Drug Use Disorder",
+                                     DisabilityResponse == 3 ~ "Both Alcohol and Drug Use Disorders"),
+         disabilities = if_else(disability_name == "Both Alcohol and Drug Use Disorders", 2, 1),
          indefinite_and_impairs = (DisabilityType %in% c(6, 8) |
                                      (DisabilityType %in% c(5, 7, 9, 10) &
                                         IndefiniteAndImpairs == 1))) %>%
@@ -167,21 +168,21 @@ chronic_individual <- Enrollment %>%
     DisablingCondition == 1 |
       has_disability == 1 ~ "Y",
     DisablingCondition == 0 ~ "N",
-    DisablingCondition %in% c(8, 9) ~ "DK/R",
+    DisablingCondition %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
     TRUE ~ "M"),
     homeless_year_prior = trunc((DateToStreetESSH %--% EntryDate) / years(1)) >= 1 &
            !is.na(DateToStreetESSH),
     four_or_more_times = case_when(
       TimesHomelessPastThreeYears == 4 ~ "Y",
       TimesHomelessPastThreeYears %in% c(1, 2, 3) ~ "N",
-      TimesHomelessPastThreeYears %in% c(8, 9) ~ "DK/R",
+      TimesHomelessPastThreeYears %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
       TRUE ~ "M"),
     twelve_or_more_months = case_when(
       MonthsHomelessPastThreeYears >= 112 ~ "Y",
       MonthsHomelessPastThreeYears %in% c(101, 102, 103, 104, 
                                           105, 106, 107, 108, 
                                           109, 110, 111) ~ "N",
-      MonthsHomelessPastThreeYears %in% c(8, 9) ~ "DK/R",
+      MonthsHomelessPastThreeYears %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
       TRUE ~ "M"
     ),
     chronic = case_when(
@@ -231,7 +232,7 @@ chronic_household <- Enrollment %>%
               mutate(numeric_chronic = case_when(
                 chronic == "Y" ~ 1,
                 chronic == "N" ~ 2,
-                chronic == "DK/R" ~ 3,
+                chronic == "Does.Not.Know.or.Refused" ~ 3,
                 chronic == "M" ~ 4
               )), 
             by = "EnrollmentID") %>%
@@ -250,7 +251,7 @@ chronic_household <- Enrollment %>%
              TRUE ~ numeric_chronic
            ), 
            levels = c(1, 2, 3, 4),
-           labels = c("Y", "N", "DK/R", "M"))) %>%
+           labels = c("Y", "N", "Does.Not.Know.or.Refused", "M"))) %>%
   ungroup() %>%
   filter(EntryDate == first_entry_date) %>%
   # select(PersonalID, EnrollmentID, HouseholdID, chronic, numeric_chronic,
@@ -326,6 +327,10 @@ items_to_keep <- c("items_to_keep", ls())
   
   # get additional client information (age for reporting)
   {
+    detailed_age_group_list = c("Under 5", "5-12", "13-17", "18-24", "25-34",
+                                "35-44", "45-54", "55-61", "62+", 
+                                "Does.Not.Know.or.Refused", "Data.Not.Collected")
+    
     client_plus <- Client %>%
       inner_join(recent_program_enrollment %>%
                    mutate(date_for_age = (if_else(
@@ -346,14 +351,11 @@ items_to_keep <- c("items_to_keep", ls())
                                             age <= 61 ~ "55-61",
                                             age >= 62 ~ "62+",
                                             !is.na(DOBDataQuality) &
-                                              DOBDataQuality %in% c(8, 9) ~ "DK/R",
-                                            TRUE ~ "DNC"), 
-             age_group = case_when(age >= 18 ~ "adult",
-                                   age < 18 ~ "child",
-                                   TRUE ~ detailed_age_group),
-             detailed_age_group = factor(detailed_age_group, ordered = TRUE, 
-                                         levels = c("Under 5", "5-12", "13-17", "18-24", "25-34",
-                                                    "35-44", "45-54", "55-61", "62+", "DK/R", "DNC")),) %>%
+                                              DOBDataQuality %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
+                                            TRUE ~ "Data.Not.Collected"), 
+             age_group = case_when(age >= 18 ~ "Adults",
+                                   age < 18 ~ "Children",
+                                   TRUE ~ detailed_age_group)) %>%
       # get a second opinion on when to apply the household type calcs
       group_by(HouseholdID) %>%
       mutate(oldest_age = max(age, na.rm = TRUE),
@@ -384,9 +386,9 @@ items_to_keep <- c("items_to_keep", ls())
   household_info <- recent_program_enrollment %>%
     left_join(client_plus, by = "PersonalID") %>%
     group_by(HouseholdID) %>%
-    mutate(adults = max(if_else(age_group == "adult", 1, 0)),
-           children = max(if_else(age_group == "child", 1, 0)),
-           unknown = max(if_else(age_group %in% c("DK/R", "DNC"), 1, 0)),
+    mutate(adults = max(if_else(age_group == "Adults", 1, 0)),
+           children = max(if_else(age_group == "Children", 1, 0)),
+           unknown = max(if_else(age_group %in% c("Does.Not.Know.or.Refused", "Data.Not.Collected"), 1, 0)),
            HoH_HMID = suppressWarnings(min(case_when(
              RelationshipToHoH == 1 &
                ProjectType %in% c(3, 13) ~ MoveInDate
@@ -470,31 +472,31 @@ items_to_keep <- c("items_to_keep", ls())
       left_join(client_plus, by = "PersonalID") %>%
       left_join(chronicity_data, by = "EnrollmentID") %>%
       summarise(persons_served = n_distinct(PersonalID),
-                adults_served = uniqueN(PersonalID[age_group == "adult"]),
-                children_served = uniqueN(PersonalID[age_group == "child"]),
-                unknown_served = uniqueN(PersonalID[age_group %in% c("DK/R", "DNC")]),
+                adults_served = uniqueN(PersonalID[age_group == "Adults"]),
+                children_served = uniqueN(PersonalID[age_group == "Children"]),
+                unknown_served = uniqueN(PersonalID[age_group %in% c("Does.Not.Know.or.Refused", "Data.Not.Collected")]),
                 leavers = uniqueN(PersonalID[!is.na(ExitDate)]),
-                adult_leavers = uniqueN(PersonalID[age_group == "adult" &
+                adult_leavers = uniqueN(PersonalID[age_group == "Adults" &
                                                      !is.na(ExitDate)]),
-                adult_and_hoh_leavers = uniqueN((PersonalID[(age_group == "adult" |
+                adult_and_hoh_leavers = uniqueN((PersonalID[(age_group == "Adults" |
                                                                RelationshipToHoH == 1) &
                                                               !is.na(ExitDate)])),
                 stayers = uniqueN(PersonalID[is.na(ExitDate)]),
-                adult_stayers = uniqueN(PersonalID[age_group == "adult" &
+                adult_stayers = uniqueN(PersonalID[age_group == "Adults" &
                                                      is.na(ExitDate)]),
                 veterans = uniqueN(PersonalID[VeteranStatus == 1 &
-                                                age_group == "adult"]),
+                                                age_group == "Adults"]),
                 chronic = uniqueN(PersonalID[chronic == "Y"]),
                 youth = uniqueN(PersonalID[youth == 1]),
                 # can't figure out why this one isn't working
                 parenting_youth = uniqueN(PersonalID[has_children == 1 & youth == 1]),
-                adult_hoh = uniqueN(PersonalID[age_group == "adult" &
+                adult_hoh = uniqueN(PersonalID[age_group == "Adults" &
                                                  RelationshipToHoH == 1]),
-                other_hoh = uniqueN(PersonalID[age_group != "adult" &
+                other_hoh = uniqueN(PersonalID[age_group != "Adults" &
                                                  RelationshipToHoH == 1]),
                 long_stayers = uniqueN(PersonalID[is.na(ExitDate) &
                                                     trunc((EntryDate %--% report_end_date) / days(1)) >= 365 &
-                                                    (age_group == "adult" |
+                                                    (age_group == "Adults" |
                                                        RelationshipToHoH == 1)])
       ) %>% 
       mutate(rowname = "All_Clients") %>% 
@@ -505,31 +507,31 @@ items_to_keep <- c("items_to_keep", ls())
       left_join(client_plus, by = "PersonalID") %>%
       left_join(chronicity_data, by = "EnrollmentID") %>%
       summarise(persons_served = n_distinct(PersonalID),
-                adults_served = uniqueN(PersonalID[age_group == "adult"]),
-                children_served = uniqueN(PersonalID[age_group == "child"]),
-                unknown_served = uniqueN(PersonalID[age_group %in% c("DK/R", "DNC")]),
+                adults_served = uniqueN(PersonalID[age_group == "Adults"]),
+                children_served = uniqueN(PersonalID[age_group == "Children"]),
+                unknown_served = uniqueN(PersonalID[age_group %in% c("Does.Not.Know.or.Refused", "Data.Not.Collected")]),
                 leavers = uniqueN(PersonalID[!is.na(ExitDate)]),
-                adult_leavers = uniqueN(PersonalID[age_group == "adult" &
+                adult_leavers = uniqueN(PersonalID[age_group == "Adults" &
                                                      !is.na(ExitDate)]),
-                adult_and_hoh_leavers = uniqueN((PersonalID[(age_group == "adult" |
+                adult_and_hoh_leavers = uniqueN((PersonalID[(age_group == "Adults" |
                                                                RelationshipToHoH == 1) &
                                                               !is.na(ExitDate)])),
                 stayers = uniqueN(PersonalID[is.na(ExitDate)]),
-                adult_stayers = uniqueN(PersonalID[age_group == "adult" &
+                adult_stayers = uniqueN(PersonalID[age_group == "Adults" &
                                                      is.na(ExitDate)]),
                 veterans = uniqueN(PersonalID[VeteranStatus == 1 &
-                                                age_group == "adult"]),
+                                                age_group == "Adults"]),
                 chronic = uniqueN(PersonalID[chronic == "Y"]),
                 youth = uniqueN(PersonalID[youth == 1]),
                 # can't figure out why this one isn't working
                 parenting_youth = uniqueN(PersonalID[has_children == 1 & youth == 1]),
-                adult_hoh = uniqueN(PersonalID[age_group == "adult" &
+                adult_hoh = uniqueN(PersonalID[age_group == "Adults" &
                                                  RelationshipToHoH == 1]),
-                other_hoh = uniqueN(PersonalID[age_group != "adult" &
+                other_hoh = uniqueN(PersonalID[age_group != "Adults" &
                                                  RelationshipToHoH == 1]),
                 long_stayers = uniqueN(PersonalID[is.na(ExitDate) &
                                                     trunc((EntryDate %--% report_end_date) / days(1)) >= 365 &
-                                                    (age_group == "adult" |
+                                                    (age_group == "Adults" |
                                                        RelationshipToHoH == 1)])
       ) %>% 
       mutate(rowname = "DQ_Clients") %>% 
@@ -548,7 +550,7 @@ items_to_keep <- c("items_to_keep", ls())
     Q6a_name <- recent_program_enrollment_dq %>%
       inner_join(Client, by = "PersonalID") %>%
       mutate(dq_flag = case_when(
-        NameDataQuality %in% c(8, 9) ~ "DK/R",
+        NameDataQuality %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
         NameDataQuality == 99 |
           is.na(FirstName) |
           is.na(LastName) ~ "M",
@@ -559,7 +561,7 @@ items_to_keep <- c("items_to_keep", ls())
       inner_join(Client, by = "PersonalID") %>%
       mutate(sequential = lapply(SSN, sequential_ssn),
              dq_flag = case_when(
-               SSNDataQuality %in% c(8, 9) ~ "DK/R",
+               SSNDataQuality %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
                SSNDataQuality == 99 |
                  is.na(SSNDataQuality) ~ "M",
                SSNDataQuality == 2 |
@@ -582,7 +584,7 @@ items_to_keep <- c("items_to_keep", ls())
       left_join(client_plus, by = "PersonalID") %>%
       mutate(dq_flag = case_when(
         DOBDataQuality %in% c(8, 9) &
-          is.na(DOB) ~ "DK/R",
+          is.na(DOB) ~ "Does.Not.Know.or.Refused",
         is.na(DOBDataQuality) |
           (DOBDataQuality == 99 &
              is.na(DOB)) ~ "M",
@@ -592,7 +594,7 @@ items_to_keep <- c("items_to_keep", ls())
           DOB < mdy("1/1/1915") |
           DOB > DateCreated |
           (DOB >= EntryDate &
-             (age_group == "adult" |
+             (age_group == "Adults" |
                 RelationshipToHoH == 1))
         
         ~ "DI",
@@ -601,7 +603,7 @@ items_to_keep <- c("items_to_keep", ls())
     Q6a_race <- recent_program_enrollment_dq %>%
       inner_join(Client, by = "PersonalID") %>%
       mutate(dq_flag = case_when(
-        RaceNone %in% c(8, 9) ~ "DK/R",
+        RaceNone %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
         RaceNone == 99 |
           (AmIndAKNative == 0 &
              Asian == 0 &
@@ -613,14 +615,14 @@ items_to_keep <- c("items_to_keep", ls())
     Q6a_ethnicity <- recent_program_enrollment_dq %>%
       inner_join(Client, by = "PersonalID") %>%
       mutate(dq_flag = case_when(
-        Ethnicity %in% c(8, 9) ~ "DK/R",
+        Ethnicity %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
         Ethnicity == 99 ~ "M",
         TRUE ~ "OK")) 
     
     Q6a_gender <- recent_program_enrollment_dq %>%
       inner_join(Client, by = "PersonalID") %>%
       mutate(dq_flag = case_when(
-        GenderNone %in% c(8, 9) ~ "DK/R",
+        GenderNone %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
         GenderNone == 99 |
           (Female == 0 &
              Male == 0 &
@@ -629,7 +631,7 @@ items_to_keep <- c("items_to_keep", ls())
              Questioning == 0) ~ "M",
         TRUE ~ "OK")) 
     
-    columns <- c("DataElement", "DK/R", "M", "DI", "OK")
+    columns <- c("DataElement", "Does.Not.Know.or.Refused", "M", "DI", "OK")
     
     Q6a <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), columns) %>%
       mutate(across(DataElement, factor)) 
@@ -663,12 +665,12 @@ items_to_keep <- c("items_to_keep", ls())
     
     Q6a <- Q6a %>%
       select(-OK) %>%
-      mutate(`DK/R` = if_else(is.na(`DK/R`), 0, as.double(`DK/R`)),
+      mutate(`Does.Not.Know.or.Refused` = if_else(is.na(`Does.Not.Know.or.Refused`), 0, as.double(`Does.Not.Know.or.Refused`)),
              M = if_else(is.na(M), 0, as.double(M)),
              DI = if_else(is.na(DI), 0, as.double(DI)),
-             Total = `DK/R` + M + DI) %>%
+             Total = `Does.Not.Know.or.Refused` + M + DI) %>%
       add_row(DataElement = "Overall Score", 
-              `DK/R` = 0, M = 0, DI = 0, 
+              `Does.Not.Know.or.Refused` = 0, M = 0, DI = 0, 
               Total = nrow(unique(error_clients))) %>%
       mutate(ErrorRate = Total / Q5a$DQ_Clients[1])
     
@@ -708,8 +710,8 @@ items_to_keep <- c("items_to_keep", ls())
                   select(EnrollmentID, CoCCode),
                 by = "EnrollmentID") %>%
       mutate(veteran_dq = (VeteranStatus %in% c(8, 9, 99) &
-                             age_group == "adult") |
-               (age_group == "child" &
+                             age_group == "Adults") |
+               (age_group == "Children" &
                   VeteranStatus == 1),
              project_start_dq = EnrollmentID %in% Q6b_earlier_enrollment$EnrollmentID,
              relationship_dq = is.na(RelationshipToHoH) |
@@ -791,7 +793,7 @@ items_to_keep <- c("items_to_keep", ls())
                (is.na(Destination) |
                   Destination %in% c(8, 9, 99, 30)),
              income_start_dq = (RelationshipToHoH == 1 |
-                                  age_group == "adult") &
+                                  age_group == "Adults") &
                (enroll_IncomeFromAnySource %in% c(8, 9, 99) |
                   is.na(enroll_IncomeFromAnySource) |
                   (enroll_IncomeFromAnySource == 0 &
@@ -801,7 +803,7 @@ items_to_keep <- c("items_to_keep", ls())
                      (is.na(enroll_number_of_sources) |
                         enroll_number_of_sources == 0))),
              income_annual_dq = (RelationshipToHoH == 1 |
-                                   age_group == "adult") &
+                                   age_group == "Adults") &
                !is.na(annual_due) &
                is.na(ExitDate) &
                (annual_IncomeFromAnySource %in% c(8, 9, 99) |
@@ -813,7 +815,7 @@ items_to_keep <- c("items_to_keep", ls())
                      (is.na(annual_number_of_sources) |
                         annual_number_of_sources == 0))),
              income_exit_dq = (RelationshipToHoH == 1 |
-                                 age_group == "adult") &
+                                 age_group == "Adults") &
                !is.na(ExitDate) &
                (exit_IncomeFromAnySource %in% c(8, 9, 99) |
                   is.na(exit_IncomeFromAnySource) |
@@ -968,17 +970,19 @@ items_to_keep <- c("items_to_keep", ls())
   # Q7
   # Q7a
   {
+    age_groups <- c("Adults", "Children", "Does.Not.Know.or.Refused", "Data Not Collected")
+    
     Q7a_all <- recent_household_enrollment %>%
       mutate(client_group = "Total") %>%
-      return_household_groups(., client_group) 
+      return_household_groups(., client_group, c("Total")) 
     
     Q7a_moved_in <- recent_household_enrollment %>%
       filter(HoH_HMID <= report_end_date) %>% 
-      mutate(client_group = "MovedIn") %>%
-      return_household_groups(., client_group, "MovedIn") 
+      mutate(client_group = "For PSH & RRH – the total persons served who moved into housing") %>%
+      return_household_groups(., client_group, "For PSH & RRH – the total persons served who moved into housing") 
     
     Q7a <- recent_household_enrollment %>%
-      return_household_groups(., age_group) %>%
+      return_household_groups(., age_group, age_groups) %>%
       rename(client_group = age_group) %>%
       union(Q7a_all) %>%
       union(Q7a_moved_in)
@@ -1033,14 +1037,14 @@ items_to_keep <- c("items_to_keep", ls())
   {
     Q8a_all <- recent_household_enrollment %>%
       filter(RelationshipToHoH == 1) %>% 
-      mutate(client_group = "TotalHouseholds") %>%
-      return_household_groups(., client_group) 
+      mutate(client_group = "Total Households") %>%
+      return_household_groups(., client_group, "Total Households") 
     
     Q8a_moved_in <- recent_household_enrollment %>%
       filter(RelationshipToHoH == 1 &
                HoH_HMID <= report_end_date) %>% 
-      mutate(client_group = "MovedInHouseholds") %>%
-      return_household_groups(., client_group, "MovedInHouseholds") 
+      mutate(client_group = "Moved In Households") %>%
+      return_household_groups(., client_group, "Moved In Households") 
     
     Q8a <- Q8a_all %>%
       union(Q8a_moved_in)
@@ -1203,36 +1207,36 @@ items_to_keep <- c("items_to_keep", ls())
   
   # Q10a
   {
+    gender_list <- c("Male", "Female", "No Single Gender", "Questioning", 
+                     "Transgender", "Does.Not.Know.or.Refused", "Data.Not.Collected")
+    
     Q10_genders <- Client %>%
       mutate(gender_combined = case_when(
         Questioning == 1 ~ "Questioning",
-        NoSingleGender == 1 ~ "NoSingleGender",
+        NoSingleGender == 1 ~ "No Single Gender",
         Transgender == 1 ~ "Transgender",
         Female == 1 ~ "Female",
         Male == 1 ~ "Male",
-        GenderNone %in% c(8, 9) ~ "DK/R",
-        TRUE ~ "DNC"),
-        gender_combined = factor(gender_combined, ordered = TRUE, 
-                                 levels = c("Male", "Female", "NoSingleGender", "Questioning", 
-                                            "Transgender", "DK/R", "DNC"))) %>%
+        GenderNone %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
+        TRUE ~ "Data.Not.Collected")) %>%
       select(PersonalID, gender_combined)
     
     Q10a <- recent_household_enrollment %>%
       keep_adults_only() %>%
       left_join(Q10_genders, by = "PersonalID") %>%
-      return_household_groups(., gender_combined) %>%
+      return_household_groups(., gender_combined, gender_list) %>%
       adorn_totals("row")
   }
   
   # Q10b
   {
     Q10b_data <- recent_household_enrollment %>%
-      filter(age_group == "child") 
+      filter(age_group == "Children") 
     
     if(nrow(Q10b_data) > 0) {
       Q10b <- Q10b_data %>%
         left_join(Q10_genders, by = "PersonalID") %>%
-        return_household_groups(., gender_combined) %>%
+        return_household_groups(., gender_combined, gender_list) %>%
         mutate_at(colnames(Q10a[2:5]), as.numeric) %>%
         adorn_totals("row")
     }
@@ -1241,12 +1245,12 @@ items_to_keep <- c("items_to_keep", ls())
   # Q10c
   {
     Q10c_data <- recent_household_enrollment %>%
-      filter(age_group %in% c("DK/R", "DNC")) 
+      filter(age_group %in% c("Does.Not.Know.or.Refused", "Data.Not.Collected")) 
     
     if(nrow(Q10c_data) > 0) {
       Q10c <- Q10c_data %>%
         left_join(Q10_genders, by = "PersonalID") %>%
-        return_household_groups(., gender_combined) %>%
+        return_household_groups(., gender_combined, gender_list) %>%
         mutate_at(colnames(Q10a[2:5]), as.numeric) %>%
         adorn_totals("row")
     }
@@ -1256,77 +1260,84 @@ items_to_keep <- c("items_to_keep", ls())
   {
     Q10d <- recent_household_enrollment %>%
       left_join(Q10_genders, by = "PersonalID") %>%
-      mutate(detailed_age_group = as.character(detailed_age_group),
-             Q10d_age_group = case_when(
+      mutate(Q10d_age_group = case_when(
                detailed_age_group %in% c("Under 5", "5-12", "13-17") ~ "Under18",
                detailed_age_group %in% c("25-34", "35-44", "45-54", "55-61") ~ "25-61",
                TRUE ~ detailed_age_group)) %>%
       group_by(gender_combined) %>%
-      summarise(total = n_distinct(PersonalID),
-                under_18 = n_distinct(PersonalID[Q10d_age_group == "Under18"]),
-                age_18_24 = n_distinct(PersonalID[Q10d_age_group == "18-24"]),
-                age_25_61 = n_distinct(PersonalID[Q10d_age_group == "25-61"]),
-                age_62_and_up = n_distinct(PersonalID[Q10d_age_group == "62+"]),
-                age_unknown_refused = n_distinct(PersonalID[Q10d_age_group == "DK/R"]),
-                age_not_collected = n_distinct(PersonalID[Q10d_age_group == "DNC"])) %>%
+      summarise(Total = n_distinct(PersonalID),
+                Under.Age.18 = n_distinct(PersonalID[Q10d_age_group == "Under18"]),
+                Age.18.to.24 = n_distinct(PersonalID[Q10d_age_group == "18-24"]),
+                Age.25.to.61 = n_distinct(PersonalID[Q10d_age_group == "25-61"]),
+                Age.62.and.over = n_distinct(PersonalID[Q10d_age_group == "62+"]),
+                Does.Not.Know.or.Refused = n_distinct(PersonalID[Q10d_age_group == "Does.Not.Know.or.Refused"]),
+                Data.Not.Collected = n_distinct(PersonalID[Q10d_age_group == "Data.Not.Collected"])) %>%
       adorn_totals("row")
   }
   
   # Q11
   {
     Q11 <- recent_household_enrollment %>%
-      return_household_groups(., detailed_age_group) %>%
+      return_household_groups(., detailed_age_group, detailed_age_group_list) %>%
       adorn_totals("row")
   }
   
   # Q12a
   {
+    race_list <- c("White", "Black, African American, or African", 
+                   "Asian or Asian American", 
+                   "American Indian, Alaska Native, or Indigenous", 
+                   "Native Hawaiian or Pacific Islander", "Multiple Races", 
+                   "Does.Not.Know.or.Refused", "Data.Not.Collected")
+    
     Q12_races <- Client %>%
       mutate(race_combined = case_when(
         AmIndAKNative + Asian + BlackAfAmerican +
-          NativeHIPacific + White > 1 ~ "MultipleRaces",
+          NativeHIPacific + White > 1 ~ "Multiple Races",
         White == 1 ~ "White",
-        BlackAfAmerican == 1 ~ "BlackAfAmerican",
-        Asian == 1 ~ "Asian",
-        AmIndAKNative == 1 ~ "AmIndAKNative",
-        NativeHIPacific == 1 ~ "NativeHIPacific",
-        RaceNone %in% c(8, 9) ~ "DK/R",
-        TRUE ~ "DNC"),
-        race_combined = factor(race_combined, ordered = TRUE, 
-                               levels = c("White", "BlackAfAmerican", "Asian", 
-                                          "AmIndAKNative", "NativeHIPacific", "DK/R", "DNC"))) %>%
+        BlackAfAmerican == 1 ~ "Black, African American, or African",
+        Asian == 1 ~ "Asian or Asian American",
+        AmIndAKNative == 1 ~ "American Indian, Alaska Native, or Indigenous",
+        NativeHIPacific == 1 ~ "Native Hawaiian or Pacific Islander",
+        RaceNone %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
+        TRUE ~ "Data.Not.Collected")) %>%
       select(PersonalID, race_combined)
     
     Q12a <- recent_household_enrollment %>%
       left_join(Q12_races, by = "PersonalID") %>%
-      return_household_groups(., race_combined) %>%
+      return_household_groups(., race_combined, race_list) %>%
       adorn_totals("row")
   }
   
   # Q12b
   {
+    ethnicity_list <- c("Hispanic/Latin(a)(o)(x)", "Non-Hispanic/Non-Latin(a)(o)(x)",
+                        "Does.Not.Know.or.Refused", "Data.Not.Collected")
+    
     Q12b <- recent_household_enrollment %>%
       left_join(Client %>%
                   select(PersonalID, Ethnicity), by = "PersonalID") %>%
-      mutate(display_ethnicity = case_when(Ethnicity == 1 ~ "Hispanic/Latinx",
-                                           Ethnicity == 0 ~ "NotHispanic/Latinx",
-                                           Ethnicity %in% c(8, 9) ~ "DK/R",
-                                           TRUE ~ "DNC"),
-             display_ethnicity = factor(display_ethnicity, ordered = TRUE,
-                                        levels = c("NotHispanic/Latinx", "Hispanic/Latinx",
-                                                   "DK/R", "DNC"))) %>%
-      return_household_groups(., display_ethnicity) %>%
+      mutate(display_ethnicity = case_when(Ethnicity == 1 ~ "Hispanic/Latin(a)(o)(x)",
+                                           Ethnicity == 0 ~ "Non-Hispanic/Non-Latin(a)(o)(x)",
+                                           Ethnicity %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
+                                           TRUE ~ "Data.Not.Collected")) %>%
+      return_household_groups(., display_ethnicity, ethnicity_list) %>%
       adorn_totals("row")
   }
   
   # Q13a1
   {
+    disability_list <- c("Mental Health Disorder", "Alcohol Use Disorder", 
+                         "Drug Use Disorder", "Both Alcohol and Drug Use Disorders", 
+                         "Chronic Health Condition", "HIV/AIDS",
+                         "Developmental Disability", "Physical Disability")
+    
     Q13a <- recent_household_enrollment %>%
       inner_join(disability_table %>%
                    filter(DataCollectionStage == 1), by ="EnrollmentID")
     
     Q13a1 <- Q13a %>%
-      return_household_groups(., disability_name)
+      return_household_groups(., disability_name, disability_list)
   }
   
   # Q13b1
@@ -1337,7 +1348,7 @@ items_to_keep <- c("items_to_keep", ls())
                    filter(DataCollectionStage == 3), by ="EnrollmentID")
     
     Q13b1 <- Q13b %>%
-      return_household_groups(., disability_name)
+      return_household_groups(., disability_name, disability_list)
   }
   
   # Q13c1
@@ -1356,11 +1367,15 @@ items_to_keep <- c("items_to_keep", ls())
                  by ="EnrollmentID")
     
     Q13c1 <- Q13c %>%
-      return_household_groups(., disability_name)
+      return_household_groups(., disability_name, disability_list)
   }
   
   # Q13a2
   {
+    disability_count_group_list <- c("None", "One Condition", "Two Conditions",
+                                     "Three Or More Conditions", "Unknown",
+                                     "Does.Not.Know.or.Refused", "Data.Not.Collected")
+    
     Q13a2 <- recent_household_enrollment %>%
       left_join(Q13a %>%
                   # earlier data lab logic did not account for the following step
@@ -1369,7 +1384,7 @@ items_to_keep <- c("items_to_keep", ls())
                   ungroup(), 
                 by = "PersonalID") %>%
       condition_count_groups() %>%
-      return_household_groups(., disability_count_group) %>%
+      return_household_groups(., disability_count_group, disability_count_group_list) %>%
       adorn_totals("row")
   }
   
@@ -1384,7 +1399,7 @@ items_to_keep <- c("items_to_keep", ls())
                   ungroup(), 
                 by = "PersonalID") %>%
       condition_count_groups() %>%
-      return_household_groups(., disability_count_group) %>%
+      return_household_groups(., disability_count_group, disability_count_group_list) %>%
       adorn_totals("row")
   }
   
@@ -1399,12 +1414,14 @@ items_to_keep <- c("items_to_keep", ls())
                   ungroup(), 
                 by = "PersonalID") %>%
       condition_count_groups() %>%
-      return_household_groups(., disability_count_group) %>%
+      return_household_groups(., disability_count_group, disability_count_group_list) %>%
       adorn_totals("row")
   }
   
   # Q14a
   {
+    y_n_dkr_dnc_list <- c("Yes", "No", "Does.Not.Know.or.Refused", "Data.Not.Collected")
+      
     Q14 <- recent_household_enrollment %>%
       left_join(HealthAndDV %>%
                   filter(InformationDate <= report_end_date) %>%
@@ -1418,11 +1435,9 @@ items_to_keep <- c("items_to_keep", ls())
     Q14a <- Q14 %>%
       mutate(dv_experience = case_when(DomesticViolenceVictim == 1 ~ "Yes",
                                        DomesticViolenceVictim == 0 ~ "No",
-                                       DomesticViolenceVictim %in% c(8, 9) ~ "DK/R",
-                                       TRUE ~ "DNC"),
-             dv_experience = factor(dv_experience, ordered = TRUE,
-                                    levels = c("Yes", "No", "DK/R", "DNC"))) %>%
-      return_household_groups(., dv_experience) %>%
+                                       DomesticViolenceVictim %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
+                                       TRUE ~ "Data.Not.Collected")) %>%
+      return_household_groups(., dv_experience, y_n_dkr_dnc_list) %>%
       adorn_totals("row")
   }
   
@@ -1432,11 +1447,9 @@ items_to_keep <- c("items_to_keep", ls())
       filter(DomesticViolenceVictim == 1) %>%
       mutate(currently_fleeing = case_when(CurrentlyFleeing == 1 ~ "Yes",
                                            CurrentlyFleeing == 0 ~ "No",
-                                           CurrentlyFleeing %in% c(8, 9) ~ "DK/R",
-                                           TRUE ~ "DNC"),
-             currently_fleeing = factor(currently_fleeing, ordered = TRUE,
-                                        levels = c("Yes", "No", "DK/R", "DNC"))) %>%
-      return_household_groups(., currently_fleeing, "Yes") %>%
+                                           CurrentlyFleeing %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
+                                           TRUE ~ "Data.Not.Collected")) %>%
+      return_household_groups(., currently_fleeing, y_n_dkr_dnc_list) %>%
       adorn_totals("row")
   }
   
@@ -1445,14 +1458,19 @@ items_to_keep <- c("items_to_keep", ls())
     for(residence_type in unique(na.omit(ResidenceUses$APR_PriorLocationGroup))) {
       residences_to_include <- ResidenceUses %>%
         filter(APR_PriorLocationGroup == residence_type &
-                 !is.na(LocationDescription)) 
+                 !is.na(LocationDescription) &
+                 !is.na(APR_PriorOrder)) %>%
+        arrange(APR_PriorOrder) %>%
+        mutate(LocationDescription = case_when(
+          Location %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
+          TRUE ~ LocationDescription))
       
       group_of_residences <- recent_household_enrollment %>%
         keep_adults_and_hoh_only() %>%
         inner_join(residences_to_include, by = c("LivingSituation" = "Location")) %>%
-        return_household_groups(., LocationDescription, residences_to_include$LocationDescription[1]) %>%
-        full_join(residences_to_include, by = "LocationDescription") %>%
-        arrange(APR_PriorOrder) %>%
+        return_household_groups(., LocationDescription, residences_to_include$LocationDescription) %>%
+        # full_join(residences_to_include, by = "LocationDescription") %>%
+        # arrange(APR_PriorOrder) %>%
         adorn_totals("row")
       
       if (exists(("Q15"))) {
@@ -1464,8 +1482,8 @@ items_to_keep <- c("items_to_keep", ls())
     }
     
     Q15 <- Q15 %>%
-      select(LocationDescription, total, without_children,
-             children_and_adults, only_children, unknown) %>%
+      select(LocationDescription, Total, Without.Children,
+             With.Children.And.Adults, With.Only.Children, Unknown.Household.Type) %>%
       mutate(LocationDescription = if_else(
         LocationDescription == "Total", "Subtotal", LocationDescription
       )) %>%
@@ -1521,7 +1539,10 @@ items_to_keep <- c("items_to_keep", ls())
     Q16 <- entry_income_groups %>%
       full_join(annual_income_groups, by = "total_income_group") %>%
       left_join(exit_income_groups, by = "total_income_group") %>%
-      adorn_totals("row")
+      rename(Income.at.Start = entryIncome,
+             Income.at.Latest.Annual.Assessment.for.Stayers = annualIncome,
+             Income.at.Exit.for.leavers = exitIncome) %>%
+      adorn_totals("row") 
   }
   
   # Q17
@@ -1533,7 +1554,10 @@ items_to_keep <- c("items_to_keep", ls())
                VADisabilityNonService, PrivateDisability, WorkersComp, TANF,
                GA, SocSecRetirement, Pension, ChildSupport, Alimony,
                OtherIncomeSource) %>%
-        pivot_existing_only(., "IncomeGroup", period)
+        pivot_existing_only(., "IncomeGroup", period) %>%
+        left_join(IncomeTypes, by = "IncomeGroup") %>%
+        mutate(IncomeGroup = OfficialIncomeName) %>%
+        select(-OfficialIncomeName)
       
       assign(paste0(period, "_income_sources"), data)
     }
@@ -1548,14 +1572,17 @@ items_to_keep <- c("items_to_keep", ls())
       exit_income$PersonalID[exit_income$IncomeFromAnySource %in% c(0, 1)]
     )
     
-    income_information_present <- c("income_information_present", NA,
+    income_information_present <- c("Adults with Income Information at Start and Annual Assessment/Exit", NA,
                                     length(entry_annual_income_present),
                                     length(entry_exit_income_present))
     
     Q17 <- entry_income_sources %>%
       left_join(annual_income_sources, by = "IncomeGroup") %>%
       left_join(exit_income_sources, by = "IncomeGroup") %>%
-      rbind(., income_information_present)
+      rbind(., income_information_present) %>%
+      rename(Income.at.Start = entryClients,
+             Income.at.Latest.Annual.Assessment.for.Stayers = annualClients,
+             Income.at.Exit.for.Leavers = exitClients) 
   }
   
   # Q18
@@ -1581,7 +1608,7 @@ items_to_keep <- c("items_to_keep", ls())
       colSums()
     
     Q18 <- Q18 %>%
-      rbind(., c("one_or_more_sources", has_income)) %>%
+      rbind(., c("1 or more source of income", has_income)) %>%
       rbind(., income_information_present)
   }
   
@@ -1608,7 +1635,8 @@ items_to_keep <- c("items_to_keep", ls())
     }
     
     for(row in c("earned", "other", "total")){
-      titles <- paste(row, "income - ", c("people", "amount"))
+      titles <- paste(c("Number of Adults with", "Average Change in"), 
+                      str_to_title(row), "Income")
       data <- entry_income_for_changes %>%
         get_income_type_changes(., row, "annual") %>%
         cbind(titles, .)
@@ -1621,6 +1649,24 @@ items_to_keep <- c("items_to_keep", ls())
       }
       rm(data)
     }
+    
+    Q19a1 <- Q19a1 %>%
+      mutate(titles = case_when(
+        titles == "Number of Adults with Total Income" ~
+          "Number of Adults with Any Income (i.e., Total Income)",
+        titles == "Average Change in Total Income" ~
+          "Average Change in Overall Income",
+        TRUE ~ titles)) %>%
+      rename(Had.Income.Category.at.Start.and.Did.Not.Have.It.at.Annual.Assessment = lost_source,
+             Retained.Income.Category.But.Had.Less.at.Annual.Assessment.Than.at.Start = retained_decreased,
+             Retained.Income.Category.and.Same.at.Annual.Assessment.as.at.Start = retained_same,
+             Retained.Income.Category.and.Increased.at.Annual.Assessment = retained_increased,
+             Did.Not.Have.the.Income.Category.at.Start.and.Gained.the.Income.Category.at.Annual.Assessment = gained_source,
+             Did.Not.Have.the.Income.Category.at.Start.or.at.Annual.Assessment = did_not_have_source,
+             Total.Adults.including.those.with.No.Income = total_adults,
+             Performance.Measure.Adults.who.Gained.or.Increased.Income.from.Start.to.Annual.Assessment.Average.Gain = gained_or_increased,
+             Performance.measure.Percent.of.persons.who.accomplished.this.measure = percent_accomplished
+             )
   }
   
   # Q19a2
@@ -1644,7 +1690,8 @@ items_to_keep <- c("items_to_keep", ls())
     }
     
     for(row in c("earned", "other", "total")){
-      titles <- paste(row, "income - ", c("people", "amount"))
+      titles <- paste(c("Number of Adults with", "Average Change in"), 
+                      str_to_title(row), "Income")
       data <- entry_income_for_changes %>%
         get_income_type_changes(., row, "exit") %>%
         cbind(titles, .)
@@ -1657,6 +1704,24 @@ items_to_keep <- c("items_to_keep", ls())
       }
       rm(data)
     }
+    
+    Q19a2 <- Q19a2 %>%
+      mutate(titles = case_when(
+        titles == "Number of Adults with Total Income" ~
+          "Number of Adults with Any Income (i.e., Total Income)",
+        titles == "Average Change in Total Income" ~
+          "Average Change in Overall Income",
+        TRUE ~ titles)) %>%
+      rename(Had.Income.Category.at.Start.and.Did.Not.Have.It.at.Exit = lost_source,
+             Retained.Income.Category.But.Had.Less.at.Exit.Than.at.Start = retained_decreased,
+             Retained.Income.Category.and.Same.at.Exit.as.at.Start = retained_same,
+             Retained.Income.Category.and.Increased.at.Exit = retained_increased,
+             Did.Not.Have.the.Income.Category.at.Start.and.Gained.the.Income.Category.at.Exit = gained_source,
+             Did.Not.Have.the.Income.Category.at.Start.or.at.Exit = did_not_have_source,
+             Total.Adults.including.those.with.No.Income = total_adults,
+             Performance.Measure.Adults.who.Gained.or.Increased.Income.from.Start.to.Exit.Average.Gain = gained_or_increased,
+             Performance.measure.Percent.of.persons.who.accomplished.this.measure = percent_accomplished
+      )
   }
   
   # Q19b
@@ -1693,7 +1758,7 @@ items_to_keep <- c("items_to_keep", ls())
         # cbind(name = "no_income", .[2:6])
         cbind(name = "total_adults", 
               filtered_income_information %>%
-                return_household_groups(., row_name,  missing_group_name = "total") %>%
+                return_household_groups(., row_name, "total") %>%
                 select(-row_name))
       
       
@@ -1701,7 +1766,7 @@ items_to_keep <- c("items_to_keep", ls())
         filter(value == 1)
       
       unduplicated_with_income <- filtered_has_income %>%
-        return_household_groups(., row_name,  missing_group_name = "has income")
+        return_household_groups(., row_name, "has income")
       
       unduplicated_without_income <- as.data.frame(
         cbind(name = "no_income", unduplicated_total[2:6] - unduplicated_with_income[2:6]))
@@ -1709,7 +1774,7 @@ items_to_keep <- c("items_to_keep", ls())
       Q19b_data <- as.data.frame(income_rows_to_show) %>%
         rename(name = income_rows_to_show) %>%
         left_join(filtered_has_income %>%
-                    return_household_groups(., name, missing_group_name = "grouped"),
+                    return_household_groups(., name, IncomeTypes$IncomeGroup),
                   by = "name") %>%
         rbind(., unduplicated_without_income) %>%
         rbind(., unduplicated_total) %>%
@@ -1724,7 +1789,7 @@ items_to_keep <- c("items_to_keep", ls())
       }
     }
     
-    for(household_type in c("without_children", "children_and_adults", "unknown")) {
+    for(household_type in c("Without.Children", "With.Children.And.Adults", "Unknown.Household.Type")) {
       Q19b <- Q19b %>%
         mutate(!!paste0(household_type, "_percent") := ifnull(
           get(paste0("disabling_condition_", household_type)) / 
@@ -1733,19 +1798,19 @@ items_to_keep <- c("items_to_keep", ls())
     }
     
     Q19b <- Q19b %>%
-      select(name, disabling_condition_without_children,
-             no_disabling_condition_without_children, all_without_children,
-             without_children_percent, disabling_condition_children_and_adults,
-             no_disabling_condition_children_and_adults, all_children_and_adults,
-             children_and_adults_percent, disabling_condition_unknown,
-             no_disabling_condition_unknown, all_unknown, unknown_percent) 
+      select(name, disabling_condition_Without.Children,
+             no_disabling_condition_Without.Children, all_Without.Children,
+             Without.Children_percent, disabling_condition_With.Children.And.Adults,
+             no_disabling_condition_With.Children.And.Adults, all_With.Children.And.Adults,
+             With.Children.And.Adults_percent, disabling_condition_Unknown.Household.Type,
+             no_disabling_condition_Unknown.Household.Type, all_Unknown.Household.Type, Unknown.Household.Type_percent) 
     
     no_income_row <- match(TRUE, Q19b$name == "no_income")
     total_row <- match(TRUE, Q19b$name == "total_adults")
     
-    Q19b$without_children_percent[c(no_income_row, total_row)] <- NA
-    Q19b$children_and_adults_percent[c(no_income_row, total_row)] <- NA
-    Q19b$unknown_percent[c(no_income_row, total_row)] <- NA
+    Q19b$Without.Children_percent[c(no_income_row, total_row)] <- NA
+    Q19b$With.Children.And.Adults_percent[c(no_income_row, total_row)] <- NA
+    Q19b$Unknown.Household.Type_percent[c(no_income_row, total_row)] <- NA
   }
   
   # Q20a
@@ -1850,8 +1915,8 @@ items_to_keep <- c("items_to_keep", ls())
           insurance_count == 0 ~ 
             case_when(
               InsuranceFromAnySource %in% c(1, 0) ~ "No health insurance",
-              InsuranceFromAnySource %in% c(8, 9) ~ "DK/R",
-              TRUE ~ "DNC"),
+              InsuranceFromAnySource %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
+              TRUE ~ "Data.Not.Collected"),
           insurance_count == 1 ~ "One source of insurance",
           TRUE ~ "More than one source of insurance")) %>%
         group_by(InsuranceType) %>%
@@ -1862,7 +1927,7 @@ items_to_keep <- c("items_to_keep", ls())
     }
     
     full_insurance_list <- c(insurance_list, 
-                             c("No health insurance", "DK/R", "DNC", 
+                             c("No health insurance", "Does.Not.Know.or.Refused", "Data.Not.Collected", 
                                "Annual assessment not required", 
                                "One source of insurance",
                                "More than one source of insurance"))
@@ -1878,7 +1943,7 @@ items_to_keep <- c("items_to_keep", ls())
   
   # Q22a1
   {
-    # groups in specs include DNC, what does that mean in length of stay?
+    # groups in specs include Data.Not.Collected, what does that mean in length of stay?
     # it's not defined in the reporting glossary
     
     # also still need to add bed night calculations
@@ -1958,10 +2023,10 @@ items_to_keep <- c("items_to_keep", ls())
     average_time_to_house <- Q22c_data %>%
       summarise(housing_length_group = "average time to house",
                 total = mean(days_to_house),
-                without_children = mean(days_to_house[household_type == "AdultsOnly"]),
-                children_and_adults = mean(days_to_house[household_type == "AdultsAndChildren"]),
-                only_children = mean(days_to_house[household_type == "ChildrenOnly"]),
-                unknown = mean(days_to_house[household_type == "Unknown"]))
+                Without.Children = mean(days_to_house[household_type == "AdultsOnly"]),
+                With.Children.And.Adults = mean(days_to_house[household_type == "AdultsAndChildren"]),
+                With.Only.Children = mean(days_to_house[household_type == "ChildrenOnly"]),
+                Unknown.Household.Type = mean(days_to_house[household_type == "Unknown"]))
     
     exited_without_move_in <- recent_household_enrollment %>%
       filter(is.na(HoH_HMID) &
@@ -2022,14 +2087,14 @@ items_to_keep <- c("items_to_keep", ls())
       adorn_totals("row")
     
     Q22e <- Q22e_groups %>%
-      filter(days_prior_to_housing %nin% c("Not yet moved in", "DNC", "Total")) %>%
+      filter(days_prior_to_housing %nin% c("Not yet moved in", "Data.Not.Collected", "Total")) %>%
       untabyl() %>%
       adorn_totals("row") %>%
       mutate(days_prior_to_housing = case_when(
         days_prior_to_housing == "Total" ~ "total_moved_into_housing",
         TRUE ~ days_prior_to_housing)) %>%
       union(Q22e_groups %>%
-              filter(days_prior_to_housing %in% c("Not yet moved in", "DNC", "Total")))
+              filter(days_prior_to_housing %in% c("Not yet moved in", "Data.Not.Collected", "Total")))
     }
   
   # Q23c
@@ -2043,7 +2108,7 @@ items_to_keep <- c("items_to_keep", ls())
         inner_join(residences_to_include, by = c("Destination" = "Location")) %>%
         return_household_groups(., LocationDescription, residences_to_include$LocationDescription[1]) %>%
         full_join(residences_to_include, by = "LocationDescription") %>%
-        arrange(Apr_ExitOrder) %>%
+        arrange(APR_ExitOrder) %>%
         adorn_totals("row") 
       
       if (residence_type == "permanent") {
@@ -2072,8 +2137,8 @@ items_to_keep <- c("items_to_keep", ls())
       
     
     Q23c <- Q23c %>%
-      select(LocationDescription, total, without_children,
-             children_and_adults, only_children, unknown) %>%
+      select(LocationDescription, total, Without.Children,
+             With.Children.And.Adults, With.Only.Children, Unknown.Household.Type) %>%
       mutate(LocationDescription = if_else(
         LocationDescription == "Total", "Subtotal", LocationDescription
       )) %>%
