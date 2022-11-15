@@ -3,6 +3,8 @@ library(syn)
 library(lexicon)
 library(stringr)
 
+source("datalab_functions.R")
+
 set.seed(2022)
 
 
@@ -396,19 +398,14 @@ User <- User %>%
   slice(1L) %>%
   ungroup()
 
-
-
-for (project in Project$ProjectName) {
-  hold <- project
-}
-
-for (file in names(hmis_csvs)){
+# write to zipped folder
+{
+  for (file in names(hmis_csvs)) {
+    write.csv(get(file), file.path(paste0("created_files/", file, ".csv")), row.names=FALSE)
+  }
   
-  # data <- read_csv(archive_read(iowa_bos_7z, paste0(file, ".csv")), 
-  #                  col_types = get(file, hmis_csvs))
+  archive_write_dir(paste0("DataLab - Hashed CSVs.zip"),
+                    paste0(getwd(), "/created_files"))
   
-  assign(paste0("hold_", file), get(file))
-  
-  # write.csv(get(file), file = paste0(save_to, "\\", file, ".csv"), row.names = FALSE)
-  
+  unlink(paste0(getwd(), "/created_files/*"))
 }
