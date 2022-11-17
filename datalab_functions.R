@@ -20,7 +20,7 @@ ifnull <- function(value, replace_with) {
     }
   } else {
     if(length(value) > 0) {
-      value[is.na(value) | is.nan(value)] <- replace_with
+      value[is.na(value) | is.nan(value) | is.infinite(value)] <- replace_with
     } 
   }
   value
@@ -487,58 +487,54 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type) {
              trunc((!!start_date %--% !!end_date) / days(1)),
            number_of_days_group = case_when(
              is.na(number_of_days) ~ "Data.Not.Collected",
-             number_of_days <= 7 ~ "0 - 7 days",
-             number_of_days <= 14 ~ "8 - 14 days",
-             number_of_days <= 21 ~ "15 - 21 days",
-             number_of_days <= 30 ~ "22 - 30 days",
-             number_of_days <= 60 ~ "31 - 60 days",
-             number_of_days <= 90 ~ "61 - 90 days",
-             number_of_days <= 180 ~ "91 - 180 days",
-             number_of_days <= 365 ~ "181 - 365 days",
-             number_of_days <= 730 ~ "366 - 730 days",
-             number_of_days <= 1095 ~ "731 - 1,095 days",
-             number_of_days <= 1460 ~ "1,096 - 1,460 days",
-             number_of_days <= 1825 ~ "1,461 - 1,825 days",
-             TRUE ~ "More than 1,825 days"))
+             number_of_days <= 7 ~ "0 to 7 days",
+             number_of_days <= 14 ~ "8 to 14 days",
+             number_of_days <= 21 ~ "15 to 21 days",
+             number_of_days <= 30 ~ "22 to 30 days",
+             number_of_days <= 60 ~ "31 to 60 days",
+             number_of_days <= 90 ~ "61 to 90 days",
+             number_of_days <= 180 ~ "91 to 180 days",
+             number_of_days <= 365 ~ "181 to 365 days",
+             number_of_days <= 730 ~ "366 to 730 days (1-2 Yrs)",
+             number_of_days <= 1095 ~ "731 to 1,095 days (2-3 Yrs)",
+             number_of_days <= 1460 ~ "1,096 to 1,460 days (3-4 Yrs)",
+             number_of_days <= 1825 ~ "1,461 to 1,825 days (4-5 Yrs)",
+             TRUE ~ "More than 1,825 days (>5 Yrs)"))
            
   if(report_type == "APR") {
     data %>%
       mutate(number_of_days_group = case_when(
-        number_of_days_group %in% c("0 - 7 days", "8 - 14 days",
-                                    "15 - 21 days", "22 - 30 days") ~ "30 days or less",
+        between(number_of_days, 0, 30) ~ "30 days or less",
         TRUE ~ number_of_days_group))
   } else if(report_type == "days_prior_to_housing") {
     data %>%
       mutate(number_of_days_group = case_when(
-        number_of_days_group %in% c("61 - 90 days",
-                                    "91 - 180 days") ~ "61 - 180 days",
-        number_of_days_group %in% c("731 - 1,095 days",
-                                    "1,096 - 1,460 days",
-                                    "1,461 - 1,825 days",
-                                    "More than 1,825 days") ~ "731 days or more",
+        between(number_of_days, 61, 180) ~ "61 to 180 days",
+        number_of_days >= 731 ~ "731 days or more",
         TRUE ~ number_of_days_group))
   }
   else {
     data
   }
 }
+
 # also used in Q22 questions
 length_of_time_groups <- function(report_type, column_name) {
   if(report_type == "APR") {
-    rows <- c("30 days or less", "31 - 60 days", "61 - 90 days", "91 - 180 days", 
-      "181 - 365 days", "366 - 730 days", "731 - 1,095 days",
-      "1,096 - 1,460 days", "1,461 - 1,825 days",
-      "More than 1,825 days")
+    rows <- c("30 days or less", "31 to 60 days", "61 to 90 days", "91 to 180 days", 
+      "181 to 365 days", "366 to 730 days (1-2 Yrs)", "731 to 1,095 days (2-3 Yrs)",
+      "1,096 to 1,460 days (3-4 Yrs)", "1,461 to 1,825 days (4-5 Yrs)",
+      "More than 1,825 days (>5 Yrs)")
   } else if(report_type == "days_prior_to_housing") {
-    rows <- c("0 - 7 days", "8 - 14 days", "15 - 21 days", "22 - 30 days", 
-              "31 - 60 days", "61 - 180 days", "181 - 365 days", 
-              "366 - 730 days", "731 days or more", "Not yet moved in", "Data.Not.Collected")
+    rows <- c("0 to 7 days", "8 to 14 days", "15 to 21 days", "22 to 30 days", 
+              "31 to 60 days", "61 to 180 days", "181 to 365 days", 
+              "366 to 730 days (1-2 Yrs)", "731 days or more", "Not yet moved into housing", "Data.Not.Collected")
   } else {
-    rows <- c("0 - 7 days", "8 - 14 days", "15 - 21 days", "22 - 30 days", 
-              "31 - 60 days", "61 - 90 days", "91 - 180 days", 
-              "181 - 365 days", "366 - 730 days", "731 - 1,095 days",
-              "1,096 - 1,460 days", "1,461 - 1,825 days",
-              "More than 1,825 days")
+    rows <- c("0 to 7 days", "8 to 14 days", "15 to 21 days", "22 to 30 days", 
+              "31 to 60 days", "61 to 90 days", "91 to 180 days", 
+              "181 to 365 days", "366 to 730 days (1-2 Yrs)", "731 to 1,095 days (2-3 Yrs)",
+              "1,096 to 1,460 days (3-4 Yrs)", "1,461 to 1,825 days (4-5 Yrs)",
+              "More than 1,825 days (>5 Yrs)")
   }
   
   as.data.frame(rows) %>%
