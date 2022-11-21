@@ -268,8 +268,6 @@ if (compare_to_last) {
              labels = c("Y", "N", "Does.Not.Know.or.Refused", "M"))) %>%
     ungroup() %>%
     filter(EntryDate == first_entry_date) %>%
-    # select(PersonalID, EnrollmentID, HouseholdID, chronic, numeric_chronic,
-    #        min_chronicity, HoH_chronicity, HoH_or_adult_chronicity, new_chronic) %>%
     select(EnrollmentID, new_chronic)
   
   # make sure the chronicity change applies correctly
@@ -320,11 +318,9 @@ if (compare_to_last) {
   
   items_to_keep <- c("items_to_keep", ls())
   
-  for(project_id in full_project_list) {
-    # for(loop in 1) {
-    # project_list <- c(1554, 1555)
-    project_list <- c(project_id)
-    # project_list <- c(1552)
+  # loop for running all
+  # for(project_id in full_project_list) {
+  #   project_list <- c(project_id)
     
     all_program_enrollments <- Enrollment %>%
       filter(ProjectID %in% project_list) %>%
@@ -369,7 +365,10 @@ if (compare_to_last) {
                                               TRUE ~ "Data.Not.Collected"), 
                age_group = case_when(age >= 18 ~ "Adults",
                                      age < 18 ~ "Children",
-                                     TRUE ~ detailed_age_group)) %>%
+                                     TRUE ~ detailed_age_group),
+               new_veteran_status = if_else(
+                 age_group == "Children", as.integer(0), VeteranStatus
+               )) %>%
         # get a second opinion on when to apply the household type calcs
         group_by(HouseholdID) %>%
         mutate(oldest_age = max(age, na.rm = TRUE),
@@ -385,7 +384,7 @@ if (compare_to_last) {
         ) %>%
         ungroup() %>%
         select(PersonalID, age, age_group, detailed_age_group, VeteranStatus, 
-               youth_household, youth, has_children)
+               youth_household, youth, has_children, new_veteran_status)
       }
     
     annual_assessment_dates <- Enrollment %>%
@@ -498,8 +497,7 @@ if (compare_to_last) {
                   stayers = uniqueN(PersonalID[is.na(ExitDate)]),
                   adult_stayers = uniqueN(PersonalID[age_group == "Adults" &
                                                        is.na(ExitDate)]),
-                  veterans = uniqueN(PersonalID[VeteranStatus == 1 &
-                                                  age_group == "Adults"]),
+                  veterans = uniqueN(PersonalID[new_veteran_status == 1]),
                   chronic = uniqueN(PersonalID[chronic == "Y"]),
                   youth = uniqueN(PersonalID[youth == 1]),
                   # can't figure out why this one isn't working
@@ -533,8 +531,7 @@ if (compare_to_last) {
                   stayers = uniqueN(PersonalID[is.na(ExitDate)]),
                   adult_stayers = uniqueN(PersonalID[age_group == "Adults" &
                                                        is.na(ExitDate)]),
-                  veterans = uniqueN(PersonalID[VeteranStatus == 1 &
-                                                  age_group == "Adults"]),
+                  veterans = uniqueN(PersonalID[new_veteran_status == 1]),
                   chronic = uniqueN(PersonalID[chronic == "Y"]),
                   youth = uniqueN(PersonalID[youth == 1]),
                   # can't figure out why this one isn't working
@@ -2170,42 +2167,116 @@ if (compare_to_last) {
         adorn_totals("row") %>%
         pivot_longer(., cols = -Outcome) %>%
         pivot_wider(., names_from = Outcome) %>%
-        mutate(percent_positive = P / Total) %>%
+        mutate(Percentage = P / Total) %>%
         rename(group = name) %>%
         pivot_longer(., cols = -group) %>%
         pivot_wider(., names_from = group) %>%
-        rename(LocationDescription = name)
+        rename(LocationDescription = name) %>%
+        ifnull(., 0)
       
       
-      test <- Q23c %>%
+      Q23c <- Q23c %>%
         select(LocationDescription, Total, Without.Children,
                With.Children.And.Adults, With.Only.Children, Unknown.Household.Type) %>%
         mutate(LocationDescription = if_else(
           LocationDescription == "Total", "Subtotal", LocationDescription
         )) %>%
         union(exit_categories %>%
-                filter(LocationDescription == "Total") %>%
-                ifnull(., 0)) %>%
+                filter(LocationDescription == "Total")) %>%
         union(exit_categories %>%
-                filter(LocationDescription %in% c("P", "X", "percent_positive")))
+                filter(LocationDescription %in% c("P", "X", "Percentage"))) %>%
+        mutate(LocationDescription = case_when(
+          LocationDescription == "P" ~ "Total persons exiting to positive housing destinations",
+          LocationDescription == "X" ~ "Total persons whose destinations excluded them from the calculation",
+          TRUE ~ LocationDescription))
     }
     
     # Q24
     {
+      assessment_outcomes = c("Able to maintain the housing they had at project start--Without a subsidy",
+                              "Able to maintain the housing they had at project start--With the subsidy they had at project start",
+                              "Able to maintain the housing they had at project start--With an on-going subsidy acquired since project start",
+                              "Able to maintain the housing they had at project start--Only with financial assistance other than a subsidy",
+                              "Moved to new housing unit--With on-going subsidy",
+                              "Moved to new housing unit--Without an on-going subsidy",
+                              "Moved in with family/friends on a temporary basis",
+                              "Moved in with family/friends on a permanent basis",
+                              "Moved to a transitional or temporary housing facility or program",
+                              "Client became homeless – moving to a shelter or other place unfit for human habitation",
+                              "Client went to jail/prison",
+                              "Client died",
+                              "Client doesn’t know/Client refused",
+                              "Data not collected (no exit interview completed)")
       
+      Q24 <- recent_household_enrollment %>%
+        filter(!is.na(ExitDate) &
+                 ProjectType == 12) %>%
+        mutate(assessment_at_exit = case_when(
+          HousingAssessment == 1 ~
+            case_when(SubsidyInformation == 1 ~
+                        assessment_outcomes[1],
+                      SubsidyInformation == 2 ~
+                        assessment_outcomes[2],
+                      SubsidyInformation == 3 ~
+                        assessment_outcomes[3],
+                      SubsidyInformation == 4 ~
+                        assessment_outcomes[4]),
+          HousingAssessment == 2 ~
+            case_when(SubsidyInformation == 1 ~
+                        assessment_outcomes[5],
+                      SubsidyInformation == 2 ~
+                        assessment_outcomes[6]),
+          HousingAssessment == 3 ~ assessment_outcomes[7],
+          HousingAssessment == 4 ~ assessment_outcomes[8],
+          HousingAssessment == 5 ~ assessment_outcomes[9],
+          HousingAssessment == 6 ~ assessment_outcomes[10],
+          HousingAssessment == 7 ~ assessment_outcomes[11],
+          HousingAssessment == 10 ~ assessment_outcomes[12],
+          HousingAssessment %in% c(8, 9) ~ assessment_outcomes[13],
+          HousingAssessment == 99 ~ assessment_outcomes[14])) %>%
+        return_household_groups(., assessment_at_exit, assessment_outcomes) %>%
+        adorn_totals("row") %>%
+        ifnull(., 0)
+        
     }
     
     #-------------------------------------------------------------
+    #------------------- Veteran Questions -----------------------
     #-------------------------------------------------------------
-    #-------------------------------------------------------------
-    # scratchwork for cleaning environment after each program loop
-    # typeof(get(ls()[55]))
-    # ls()[c(4, 6, 66)]
-    # ls()[!str_detect(ls(), "Q")]
-    # 
-    # for(item in 1:length(ls())) {
-    #   length_v <- item
-    #   }
+    
+    # Q25a
+    {
+      person_categories <- c("Chronically Homeless Veteran",
+                             "Non-Chronically Homeless Veteran",
+                             "Not a Veteran",
+                             "Client doesn’t know/Client refused",
+                             "Data not collected (no exit interview completed)")
+      
+      ##  check this and Q25b specifically against when to apply chronic logic
+      ##  APR specs say 25a uses the same chronic logic as the rest of the report,
+      ##  while 25b uses chronic data for all adults present in the report
+      ##  range, whether or not that stay was their most recent stay...which seem
+      ##  like difference measures initially, except that the report instructions
+      ##  say to refer to the glossary for the most up-to-date chronic calculation
+      ## to use, which ALSO says "Note that reporting on clients’ CH-at-start 
+      ##  status in a specific report date range may require the examination of 
+      ##  data on clients who were in the household but left prior to the report 
+      ##  date range," and that seems like the same intent as looking at folks who
+      ##  were in the household but not as their most recent stay. Right?
+      
+      Q25a <- recent_household_enrollment %>%
+        left_join(chronicity_data, by = "EnrollmentID") %>%
+        mutate(category = case_when(
+          new_veteran_status == 1 &
+            chronic == 1 ~ person_categories[1],
+          new_veteran_status == 1 ~ person_categories[2],
+          new_veteran_status == 0 ~ person_categories[3],
+          new_veteran_status %in% c(8, 9) ~ person_categories[4],
+          TRUE ~ person_categories[5])) %>%
+        return_household_groups(., category, person_categories) %>%
+        adorn_totals("row") %>%
+        ifnull(., 0)
+    }
     
     #-------------------------------------------------------------
     #-------------------------------------------------------------
@@ -2339,5 +2410,6 @@ if (compare_to_last) {
     write.csv(differences, 
               paste0("Change Tracker ", Sys.Date(), ".csv"), 
               row.names = FALSE)
-  }
+  # }
+  
 }
