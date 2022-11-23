@@ -24,56 +24,12 @@ if (compare_to_last) {
 
 {
   source("datalab_functions.R")
+  source("DataLab_Lists.R")
   
-  ResidenceUses <- read_excel("SupplementalTables.xlsx",
-                              sheet = "ResidenceUses",
-                              col_types = c("numeric", "text", "text", "text",
-                                            "logical", "logical", "logical",
-                                            "numeric", "numeric"))
-  
-  DestinationClassification <- read_excel("SupplementalTables.xlsx",
-                                          sheet = "DestinationClassificationRead",
-                                          col_types = c("numeric", "text",
-                                                        "numeric", "text"))
-  
-  IncomeTypes <- read_excel("SupplementalTables.xlsx",
-                            sheet = "IncomeTypes",
-                            col_types = c("text", "text"))
-  
-  BenefitTypes <- read_excel("SupplementalTables.xlsx",
-                             sheet = "BenefitTypes",
-                             col_types = c("text", "text"))
-  
-  InsuranceTypes <- read_excel("SupplementalTables.xlsx",
-                               sheet = "InsuranceTypes",
-                               col_types = c("text", "text"))
   
   # combines all files
   {
-    hmis_csvs <- list(Affiliation = "cccTTcTc", 
-                      Assessment = "cccDciiiTTcTc", 
-                      AssessmentQuestions = "ccccciccTTcTc", 
-                      AssessmentResults = "ccccccTTcTc",
-                      Client = "ccccciciDiiiiiiiiiiiiiciiiiiiiiiiiiiTTcTc", 
-                      CurrentLivingSituation = "cccDiciiiiicTTcTc", 
-                      Disabilities = "cccDiiiiiiiiiiiTTcTc", 
-                      EmploymentEducation = "cccDiiiiiiTTcTc",
-                      Enrollment = "cccDciiiiiDiiiDDDiiiicccciiiDiiiiciiiiiiiiiiiiciiiiiiiiiiiiiiiiiiiiTTcTc", 
-                      EnrollmentCoC = "cccccDciTTcTc", 
-                      Event = "cccDiiiciDTTcTc",
-                      Exit = "cccDiciiiiiiiiiiiiiiiiiiiiiiiiiDiiiiiiTTcTc",
-                      Export = "ciccccciiTTTccciii", 
-                      Funder = "cciccDDTTcTc", 
-                      HealthAndDV = "cccDiiiiiiiDiiiiiTTcTc", 
-                      IncomeBenefits = "cccDididididididididididididididididciiiiiiiciiiiiiiiiiiiiiiiiiiiciiiiiiiiTTcTc", 
-                      Inventory = "ccciiiiiiiiiiiiDDTTcTc", 
-                      Organization = "ccncTTcTn", 
-                      Project = "ccccDDnnnnnnnnnTTcTc", 
-                      ProjectCoC = "ccccccccciTTcTc",
-                      Services = "cccDiicciciTTcTc", 
-                      User = "ccccccTTTc", 
-                      YouthEducationStatus = "cccDiiiiTTcTc")
-    
+
     datalab_zips <- list.files(paste0(getwd(), "/HMIS Test Kit 2.0/HMIS CSVs"),
                                full.names = TRUE)
     
@@ -202,13 +158,13 @@ if (compare_to_last) {
       chronic = case_when(
         disabling_condition_for_chronic != "Y" ~ disabling_condition_for_chronic,
         ProjectType %in% c(1, 4, 8) |
-          LivingSituation %in% c(16, 1, 18) ~
+          LivingSituation %in% na.omit(ResidenceUses$Location[ResidenceUses$PriorResidenceType_Chronicity == "homeless"]) ~
           case_when(
             homeless_year_prior ~ "Y",
             four_or_more_times != "Y" ~ four_or_more_times,
             TRUE ~ twelve_or_more_months
           ),
-        LivingSituation %in% c(15, 6, 7, 25, 4, 5) ~
+        LivingSituation %in% na.omit(ResidenceUses$Location[ResidenceUses$PriorResidenceType_Chronicity == "institution"]) ~
           case_when(
             LOSUnderThreshold == 0 |
               DateToStreetESSH == 0 ~ "N",
@@ -216,10 +172,7 @@ if (compare_to_last) {
             four_or_more_times != "Y" ~ four_or_more_times,
             TRUE ~ twelve_or_more_months
           ),
-        LivingSituation %in% c(29, 14, 2, 32, 36,
-                               35, 28, 19, 3, 31,
-                               33, 34, 10, 20, 21,
-                               11, 8, 9, 99) ~
+        LivingSituation %in% na.omit(ResidenceUses$Location[ResidenceUses$PriorResidenceType_Chronicity == "other"]) ~
           case_when(
             LOSUnderThreshold == 0 |
               DateToStreetESSH == 0 ~ "N",
@@ -313,14 +266,14 @@ if (compare_to_last) {
   
   # used for running all reports
   # {
-  full_project_list <- c(1552, Project$ProjectID[Project$ProjectID %in% Funder$ProjectID[Funder$Funder %in% 1:11]])
+  # full_project_list <- c(1552, Project$ProjectID[Project$ProjectID %in% Funder$ProjectID[Funder$Funder %in% 1:11]])
   # }
   
   items_to_keep <- c("items_to_keep", ls())
   
   # loop for running all
   # for(project_id in full_project_list) {
-  #   project_list <- c(project_id)
+    # project_list <- c(project_id)
     
     all_program_enrollments <- Enrollment %>%
       filter(ProjectID %in% project_list) %>%
@@ -337,9 +290,6 @@ if (compare_to_last) {
     
     # get additional client information (age for reporting)
     {
-      detailed_age_group_list = c("Under 5", "5-12", "13-17", "18-24", "25-34",
-                                  "35-44", "45-54", "55-61", "62+", 
-                                  "Does.Not.Know.or.Refused", "Data.Not.Collected")
       
       client_plus <- Client %>%
         inner_join(recent_program_enrollment %>%
@@ -367,8 +317,27 @@ if (compare_to_last) {
                                      age < 18 ~ "Children",
                                      TRUE ~ detailed_age_group),
                new_veteran_status = if_else(
-                 age_group == "Children", as.integer(0), VeteranStatus
-               )) %>%
+                 age_group == "Children", as.integer(0), VeteranStatus),
+               gender_combined = case_when(
+                 Questioning == 1 ~ "Questioning",
+                 NoSingleGender == 1 |
+                   (Female == 1 &
+                      Male == 1) ~ "No Single Gender",
+                 Transgender == 1 ~ "Transgender",
+                 Female == 1 ~ "Female",
+                 Male == 1 ~ "Male",
+                 GenderNone %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
+                 TRUE ~ "Data.Not.Collected"),
+               race_combined = case_when(
+                 AmIndAKNative + Asian + BlackAfAmerican +
+                   NativeHIPacific + White > 1 ~ "Multiple Races",
+                 White == 1 ~ "White",
+                 BlackAfAmerican == 1 ~ "Black, African American, or African",
+                 Asian == 1 ~ "Asian or Asian American",
+                 AmIndAKNative == 1 ~ "American Indian, Alaska Native, or Indigenous",
+                 NativeHIPacific == 1 ~ "Native Hawaiian or Pacific Islander",
+                 RaceNone %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
+                 TRUE ~ "Data.Not.Collected")) %>%
         # get a second opinion on when to apply the household type calcs
         group_by(HouseholdID) %>%
         mutate(oldest_age = max(age, na.rm = TRUE),
@@ -384,7 +353,8 @@ if (compare_to_last) {
         ) %>%
         ungroup() %>%
         select(PersonalID, age, age_group, detailed_age_group, VeteranStatus, 
-               youth_household, youth, has_children, new_veteran_status)
+               youth_household, youth, has_children, new_veteran_status,
+               gender_combined, race_combined)
       }
     
     annual_assessment_dates <- Enrollment %>%
@@ -981,7 +951,6 @@ if (compare_to_last) {
     # Q7
     # Q7a
     {
-      age_groups <- c("Adults", "Children", "Does.Not.Know.or.Refused", "Data Not Collected")
       
       Q7a_all <- recent_household_enrollment %>%
         mutate(client_group = "Total") %>%
@@ -1218,59 +1187,29 @@ if (compare_to_last) {
     
     # Q10a
     {
-      gender_list <- c("Male", "Female", "No Single Gender", "Questioning", 
-                       "Transgender", "Does.Not.Know.or.Refused", "Data.Not.Collected")
-      
-      Q10_genders <- Client %>%
-        mutate(gender_combined = case_when(
-          Questioning == 1 ~ "Questioning",
-          NoSingleGender == 1 ~ "No Single Gender",
-          Transgender == 1 ~ "Transgender",
-          Female == 1 ~ "Female",
-          Male == 1 ~ "Male",
-          GenderNone %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
-          TRUE ~ "Data.Not.Collected")) %>%
-        select(PersonalID, gender_combined)
       
       Q10a <- recent_household_enrollment %>%
         keep_adults_only() %>%
-        left_join(Q10_genders, by = "PersonalID") %>%
-        return_household_groups(., gender_combined, gender_list) %>%
-        adorn_totals("row")
+        create_gender_groups(.)
     }
     
     # Q10b
     {
-      Q10b_data <- recent_household_enrollment %>%
-        filter(age_group == "Children") 
-      
-      if(nrow(Q10b_data) > 0) {
-        Q10b <- Q10b_data %>%
-          left_join(Q10_genders, by = "PersonalID") %>%
-          return_household_groups(., gender_combined, gender_list) %>%
-          mutate_at(colnames(Q10a[2:5]), as.numeric) %>%
-          adorn_totals("row")
-      }
+      Q10b <- recent_household_enrollment %>%
+        filter(age_group == "Children") %>%
+        create_gender_groups(.)
     }
     
     # Q10c
     {
-      Q10c_data <- recent_household_enrollment %>%
-        filter(age_group %in% c("Does.Not.Know.or.Refused", "Data.Not.Collected")) 
-      
-      if(nrow(Q10c_data) > 0) {
-        Q10c <- Q10c_data %>%
-          left_join(Q10_genders, by = "PersonalID") %>%
-          return_household_groups(., gender_combined, gender_list) %>%
-          mutate_at(colnames(Q10a[2:5]), as.numeric) %>%
-          adorn_totals("row")
-      }
+      Q10c <- recent_household_enrollment %>%
+        filter(age_group %in% c("Does.Not.Know.or.Refused", "Data.Not.Collected")) %>%
+        create_gender_groups(.)
     }
     
     # Q10d
     {
       Q10d <- recent_household_enrollment %>%
-        left_join(Q10_genders, by = "PersonalID") %>%
         mutate(Q10d_age_group = case_when(
           detailed_age_group %in% c("Under 5", "5-12", "13-17") ~ "Under18",
           detailed_age_group %in% c("25-34", "35-44", "45-54", "55-61") ~ "25-61",
@@ -1289,41 +1228,19 @@ if (compare_to_last) {
     # Q11
     {
       Q11 <- recent_household_enrollment %>%
-        return_household_groups(., detailed_age_group, detailed_age_group_list) %>%
-        adorn_totals("row")
+        create_age_groups(.)
     }
     
     # Q12a
     {
-      race_list <- c("White", "Black, African American, or African", 
-                     "Asian or Asian American", 
-                     "American Indian, Alaska Native, or Indigenous", 
-                     "Native Hawaiian or Pacific Islander", "Multiple Races", 
-                     "Does.Not.Know.or.Refused", "Data.Not.Collected")
-      
-      Q12_races <- Client %>%
-        mutate(race_combined = case_when(
-          AmIndAKNative + Asian + BlackAfAmerican +
-            NativeHIPacific + White > 1 ~ "Multiple Races",
-          White == 1 ~ "White",
-          BlackAfAmerican == 1 ~ "Black, African American, or African",
-          Asian == 1 ~ "Asian or Asian American",
-          AmIndAKNative == 1 ~ "American Indian, Alaska Native, or Indigenous",
-          NativeHIPacific == 1 ~ "Native Hawaiian or Pacific Islander",
-          RaceNone %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
-          TRUE ~ "Data.Not.Collected")) %>%
-        select(PersonalID, race_combined)
       
       Q12a <- recent_household_enrollment %>%
-        left_join(Q12_races, by = "PersonalID") %>%
         return_household_groups(., race_combined, race_list) %>%
         adorn_totals("row")
     }
     
     # Q12b
     {
-      ethnicity_list <- c("Hispanic/Latin(a)(o)(x)", "Non-Hispanic/Non-Latin(a)(o)(x)",
-                          "Does.Not.Know.or.Refused", "Data.Not.Collected")
       
       Q12b <- recent_household_enrollment %>%
         left_join(Client %>%
@@ -1338,10 +1255,6 @@ if (compare_to_last) {
     
     # Q13a1
     {
-      disability_list <- c("Mental Health Disorder", "Alcohol Use Disorder", 
-                           "Drug Use Disorder", "Both Alcohol and Drug Use Disorders", 
-                           "Chronic Health Condition", "HIV/AIDS",
-                           "Developmental Disability", "Physical Disability")
       
       Q13a <- recent_household_enrollment %>%
         inner_join(disability_table %>%
@@ -1383,9 +1296,6 @@ if (compare_to_last) {
     
     # Q13a2
     {
-      disability_count_group_list <- c("None", "One Condition", "Two Conditions",
-                                       "Three Or More Conditions", "Unknown",
-                                       "Does.Not.Know.or.Refused", "Data.Not.Collected")
       
       Q13a2 <- recent_household_enrollment %>%
         left_join(Q13a %>%
@@ -1431,7 +1341,6 @@ if (compare_to_last) {
     
     # Q14a
     {
-      y_n_dkr_dnc_list <- c("Yes", "No", "Does.Not.Know.or.Refused", "Data.Not.Collected")
       
       Q14 <- recent_household_enrollment %>%
         left_join(HealthAndDV %>%
@@ -1558,69 +1467,26 @@ if (compare_to_last) {
     
     # Q17
     {
-      for(period in entry_annual_exit) {
-        
-        data <- get(paste0(period, "_income")) %>%
-          select(Earned, Unemployment, SSI, SSDI, VADisabilityService, 
-                 VADisabilityNonService, PrivateDisability, WorkersComp, TANF,
-                 GA, SocSecRetirement, Pension, ChildSupport, Alimony,
-                 OtherIncomeSource) %>%
-          pivot_existing_only(., "IncomeGroup", period) %>%
-          left_join(IncomeTypes, by = "IncomeGroup") %>%
-          mutate(IncomeGroup = OfficialIncomeName) %>%
-          select(-OfficialIncomeName)
-        
-        assign(paste0(period, "_income_sources"), data)
-      }
-      
-      entry_annual_income_present <- intersect(
-        entry_income$PersonalID[entry_income$IncomeFromAnySource %in% c(0, 1)],
-        annual_income$PersonalID[annual_income$IncomeFromAnySource %in% c(0, 1)]
-      ) 
-      
-      entry_exit_income_present <- intersect(
-        entry_income$PersonalID[entry_income$IncomeFromAnySource %in% c(0, 1)],
-        exit_income$PersonalID[exit_income$IncomeFromAnySource %in% c(0, 1)]
-      )
-      
-      income_information_present <- c("Adults with Income Information at Start and Annual Assessment/Exit", NA,
-                                      length(entry_annual_income_present),
-                                      length(entry_exit_income_present))
-      
-      Q17 <- entry_income_sources %>%
-        left_join(annual_income_sources, by = "IncomeGroup") %>%
-        left_join(exit_income_sources, by = "IncomeGroup") %>%
-        rbind(., income_information_present) %>%
-        rename(Income.at.Start = entryClients,
-               Income.at.Latest.Annual.Assessment.for.Stayers = annualClients,
-               Income.at.Exit.for.Leavers = exitClients) 
+      Q17 <- create_income_sources(recent_household_enrollment)
     }
     
     # Q18
     {
-      for(period in entry_annual_exit) {
-        
-        data <- get(paste0(period, "_income")) %>%
-          determine_total_income(., annual = period == "annual") %>%
-          categorize_income(., annual = period == "annual") %>%
-          `colnames<-`(c("income_category", paste0(period, "Income")))
-        
-        assign(paste0(period, "_income_categories"), data)
-      }
       
-      Q18 <- entry_income_categories %>%
-        full_join(annual_income_categories, by = "income_category") %>%
-        left_join(exit_income_categories, by = "income_category") %>%
+      Q18_data <- recent_household_enrollment %>%
+        create_income_categories(.) %>%
         adorn_totals("row")
       
-      has_income <- Q18 %>%
-        filter(income_category %in% c("earned_only", "earned_and_other", "other_only")) %>%
+      has_income <- Q18_data %>%
+        filter(income_category %in% c("Adults with Only Earned Income (i.e., Employment Income)", 
+                                      "Adults with Only Other Income", 
+                                      "Adults with Both Earned and Other Income")) %>%
         select(-income_category) %>% 
         colSums()
       
-      Q18 <- Q18 %>%
+      Q18 <- Q18_data %>%
         rbind(., c("1 or more source of income", has_income)) %>%
-        rbind(., income_information_present)
+        rbind(., income_information_present(recent_household_enrollment))
     }
     
     # Q19a1
@@ -1629,7 +1495,9 @@ if (compare_to_last) {
       
       for(period in entry_annual_exit[1:2]) {
         income_for_changes <- get(paste0(period, "_income")) %>%
-          filter(PersonalID %in% entry_annual_income_present) %>%
+          filter(PersonalID %in% intersect(
+            entry_income$PersonalID[entry_income$IncomeFromAnySource %in% c(0, 1)],
+            annual_income$PersonalID[annual_income$IncomeFromAnySource %in% c(0, 1)])) %>%
           determine_total_income(., annual = period == "annual") %>%
           mutate(earned_amount = if_else(calculated_total_income > 0 &
                                            earned_income > 0, 
@@ -1684,7 +1552,9 @@ if (compare_to_last) {
     {
       for(period in entry_annual_exit[c(1, 3)]) {
         income_for_changes <- get(paste0(period, "_income")) %>%
-          filter(PersonalID %in% entry_exit_income_present) %>%
+          filter(PersonalID %in% intersect(
+            entry_income$PersonalID[entry_income$IncomeFromAnySource %in% c(0, 1)],
+            exit_income$PersonalID[exit_income$IncomeFromAnySource %in% c(0, 1)])) %>%
           determine_total_income(., annual = period == "annual") %>%
           mutate(earned_amount = if_else(calculated_total_income > 0 &
                                            earned_income > 0, 
@@ -1824,28 +1694,7 @@ if (compare_to_last) {
     
     # Q20a
     {
-      
-      benefit_list <- c("SNAP", "WIC", "TANFChildCare", "TANFTransportation", 
-                        "OtherTANF", "OtherBenefitsSource")
-      
-      for(period in entry_annual_exit) {
-        
-        data <- get(paste0(period, "_income")) %>%
-          select(all_of(benefit_list)) %>%
-          pivot_existing_only(., "BenefitGroup", period) %>%
-          left_join(BenefitTypes, by = "BenefitGroup") %>%
-          mutate(BenefitGroup = OfficialBenefitName) %>%
-          select(-OfficialBenefitName)
-        
-        assign(paste0(period, "_benefit_sources"), data)
-      }
-      
-      Q20a <- entry_benefit_sources %>%
-        left_join(annual_benefit_sources, by = "BenefitGroup") %>%
-        left_join(exit_benefit_sources, by = "BenefitGroup") %>%
-        rename(Benefit.at.Start = entryClients,
-               Benefit.at.Latest.Annual.Assessment.for.Stayers = annualClients,
-               Benefit.at.Exit.for.Leavers = exitClients) 
+      Q20a <- create_benefit_groups(recent_household_enrollment)
     }
     
     # Q20b
@@ -2083,7 +1932,6 @@ if (compare_to_last) {
     
     # Q22d
     {
-      length_of_participation <- length_of_time_groups("CAPER", "enrollment_length_group")
       
       Q22d <- Q22_data %>%
         return_household_groups(., enrollment_length_group, 
@@ -2130,83 +1978,11 @@ if (compare_to_last) {
     
     # Q23c
     {
-      for(residence_type in c("permanent", "temporary", "institution", "other")) {
-        residences_to_include <- ResidenceUses %>%
-          filter(APR_ExitLocationGroup == residence_type &
-                   !is.na(LocationDescription)) 
-        
-        group_of_residences <- recent_household_enrollment %>%
-          inner_join(residences_to_include, by = c("Destination" = "Location")) %>%
-          return_household_groups(., LocationDescription, residences_to_include$LocationDescription) %>%
-          full_join(residences_to_include, by = "LocationDescription") %>%
-          arrange(APR_ExitOrder) %>%
-          adorn_totals("row") %>%
-          ifnull(., 0) 
-        
-        group_title_row <- group_of_residences[0,]
-        group_title_row[1,1] <- str_to_title(residence_type)
-        
-        group_of_residences <- rbind(group_title_row, group_of_residences)
-        
-        if (residence_type == "permanent") {
-          Q23c <- group_of_residences
-        } else {
-          Q23c <- Q23c %>%
-            union(group_of_residences)
-        }
-      }
-      
-      possible_outcomes <- c("P", "N", "X")
-      
-      exit_categories <- data.frame(Outcome = possible_outcomes) %>%
-        left_join(recent_household_enrollment %>%
-                    inner_join(DestinationClassification, by = c("Destination" = "Location",
-                                                                 "ProjectType" = "ProjectType")) %>%
-                    return_household_groups(., Outcome, possible_outcomes),
-                  by = "Outcome") %>%
-        adorn_totals("row") %>%
-        pivot_longer(., cols = -Outcome) %>%
-        pivot_wider(., names_from = Outcome) %>%
-        mutate(Percentage = P / Total) %>%
-        rename(group = name) %>%
-        pivot_longer(., cols = -group) %>%
-        pivot_wider(., names_from = group) %>%
-        rename(LocationDescription = name) %>%
-        ifnull(., 0)
-      
-      
-      Q23c <- Q23c %>%
-        select(LocationDescription, Total, Without.Children,
-               With.Children.And.Adults, With.Only.Children, Unknown.Household.Type) %>%
-        mutate(LocationDescription = if_else(
-          LocationDescription == "Total", "Subtotal", LocationDescription
-        )) %>%
-        union(exit_categories %>%
-                filter(LocationDescription == "Total")) %>%
-        union(exit_categories %>%
-                filter(LocationDescription %in% c("P", "X", "Percentage"))) %>%
-        mutate(LocationDescription = case_when(
-          LocationDescription == "P" ~ "Total persons exiting to positive housing destinations",
-          LocationDescription == "X" ~ "Total persons whose destinations excluded them from the calculation",
-          TRUE ~ LocationDescription))
+      Q23c <- create_destination_groups(recent_household_enrollment)
     }
     
     # Q24
     {
-      assessment_outcomes = c("Able to maintain the housing they had at project start--Without a subsidy",
-                              "Able to maintain the housing they had at project start--With the subsidy they had at project start",
-                              "Able to maintain the housing they had at project start--With an on-going subsidy acquired since project start",
-                              "Able to maintain the housing they had at project start--Only with financial assistance other than a subsidy",
-                              "Moved to new housing unit--With on-going subsidy",
-                              "Moved to new housing unit--Without an on-going subsidy",
-                              "Moved in with family/friends on a temporary basis",
-                              "Moved in with family/friends on a permanent basis",
-                              "Moved to a transitional or temporary housing facility or program",
-                              "Client became homeless – moving to a shelter or other place unfit for human habitation",
-                              "Client went to jail/prison",
-                              "Client died",
-                              "Client doesn’t know/Client refused",
-                              "Data not collected (no exit interview completed)")
       
       Q24 <- recent_household_enrollment %>%
         filter(!is.na(ExitDate) &
@@ -2244,13 +2020,11 @@ if (compare_to_last) {
     #------------------- Veteran Questions -----------------------
     #-------------------------------------------------------------
     
+    recent_veteran_enrollment <- recent_household_enrollment %>%
+      filter(new_veteran_status == 1)
+    
     # Q25a
     {
-      person_categories <- c("Chronically Homeless Veteran",
-                             "Non-Chronically Homeless Veteran",
-                             "Not a Veteran",
-                             "Client doesn’t know/Client refused",
-                             "Data not collected (no exit interview completed)")
       
       ##  check this and Q25b specifically against when to apply chronic logic
       ##  APR specs say 25a uses the same chronic logic as the rest of the report,
@@ -2268,19 +2042,89 @@ if (compare_to_last) {
         left_join(chronicity_data, by = "EnrollmentID") %>%
         mutate(category = case_when(
           new_veteran_status == 1 &
-            chronic == 1 ~ person_categories[1],
-          new_veteran_status == 1 ~ person_categories[2],
-          new_veteran_status == 0 ~ person_categories[3],
-          new_veteran_status %in% c(8, 9) ~ person_categories[4],
-          TRUE ~ person_categories[5])) %>%
-        return_household_groups(., category, person_categories) %>%
+            chronic == 1 ~ vet_chronic_categories[1],
+          new_veteran_status == 1 ~ vet_chronic_categories[2],
+          new_veteran_status == 0 ~ vet_chronic_categories[3],
+          new_veteran_status %in% c(8, 9) ~ vet_chronic_categories[4],
+          TRUE ~ vet_chronic_categories[5])) %>%
+        return_household_groups(., category, vet_chronic_categories) %>%
         adorn_totals("row") %>%
         ifnull(., 0)
+    }
+    
+    # Q25b
+    {
+      ## see note above
+    }
+    
+    # Q25c
+    {
+      Q25c <- recent_veteran_enrollment %>%
+        create_gender_groups(.)
+    }
+    
+    # Q25d
+    {
+      Q25d <- recent_veteran_enrollment %>%
+        create_age_groups(.) %>%
+        select(-With.Only.Children) %>%
+        filter(detailed_age_group %nin% detailed_age_group_list[1:3])
+    }
+    
+    # Q25e
+    {
+      
+      Q25e.1.and.2 <- recent_veteran_enrollment %>%
+        inner_join(disability_table %>%
+                     filter(DataCollectionStage %in% c(1, 3)), by ="EnrollmentID") %>%
+        group_by(disability_name) %>%
+        summarise(Conditions.At.Start = n_distinct(PersonalID[DataCollectionStage == 1]),
+                  Conditions.At.Latest.Assessment.for.Stayers = n_distinct(
+                    PersonalID[DataCollectionStage == 3 & !is.na(ExitDate)]))
+      
+      Q25e.3 <- Q13c %>%
+        filter(EnrollmentID %in% recent_veteran_enrollment$EnrollmentID) %>%
+        group_by(disability_name) %>%
+        summarise(Conditions.At.Exit.for.Leavers = n_distinct(PersonalID))
+      
+      # for comparing purposes, the existing kit has stayers and leavers flipped
+      Q25e <- as.data.frame(disability_list)  %>%
+        `colnames<-`(c("disability_name")) %>%
+        full_join(Q25e.1.and.2, by = "disability_name") %>%
+        full_join(Q25e.3, by = "disability_name") %>%
+        ifnull(0)
+      
+    }
+    
+    # Q25f
+    # Q26f specifies that rows 10 and 11 are excluded intentionally, Q25f does
+    # not specify this but it also does not show these rows in the table
+    {
+      Q25f <- recent_veteran_enrollment %>%
+        create_income_categories(.) %>%
+        adorn_totals("row")
+    }
+    
+    # Q25g
+    {
+      Q25g <- create_income_sources(recent_veteran_enrollment)
+    }
+    
+    # Q25h
+    {
+      Q25h <- create_benefit_groups(recent_veteran_enrollment)
+    }
+    
+    # Q25i
+    {
+      Q25i <- create_destination_groups(recent_veteran_enrollment)
     }
     
     #-------------------------------------------------------------
     #-------------------------------------------------------------
     #-------------------------------------------------------------
+ #use below bracket for testing   
+}
     
     projects_included <- max(case_when(length(project_list) > 1 ~ "Multiple Projects",
                                        TRUE ~ paste0(Project$ProjectName[Project$ProjectID %in% project_list])))
@@ -2405,11 +2249,12 @@ if (compare_to_last) {
   
   if (compare_to_last) {
     differences <- differences %>% 
-      filter(str_detect(differences, "Mean"))
+      filter(str_detect(differences, "Mean") &
+               question != "Q4a")
     
     write.csv(differences, 
               paste0("Change Tracker ", Sys.Date(), ".csv"), 
               row.names = FALSE)
-  # }
+  }
   
 }

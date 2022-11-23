@@ -91,83 +91,6 @@ sequential_ssn <- function(test_ssn) {
   }
 }
 
-# valid cocs
-{
-  valid_cocs <- c(
-    "AK-500",	"GA-502",	"MN-505",	"OR-501",	"CA-531",	"LA-509",	"NJ-513",	"TX-624",
-    "AK-501",	"GA-503",	"MN-506",	"OR-502",	"CA-600",	"MA-500",	"NJ-514",	"TX-700",
-    "AL-500",	"GA-504",	"MN-508",	"OR-503",	"CA-601",	"MA-502",	"NJ-515",	"TX-701",
-    "AL-501",	"GA-505",	"MN-509",	"OR-504",	"CA-602",	"MA-503",	"NJ-516",	"UT-500",
-    "AL-502",	"GA-506",	"MN-511",	"OR-505",	"CA-603",	"MA-504",	"NM-500",	"UT-503",
-    "AL-503",	"GA-507",	"MO-500",	"OR-506",	"CA-604",	"MA-505",	"NM-501",	"UT-504",
-    "AL-504",	"GA-508",	"MO-501",	"OR-507",	"CA-606",	"MA-506",	"NV-500",	"VA-500",
-    "AL-505",	"GU-500",	"MO-503",	"PA-500",	"CA-607",	"MA-507",	"NV-501",	"VA-501",
-    "AL-506",	"HI-500",	"MO-600",	"PA-501",	"CA-608",	"MA-509",	"NV-502",	"VA-502",
-    "AL-507",	"HI-501",	"MO-602",	"PA-502",	"CA-609",	"MA-510",	"NY-500",	"VA-503",
-    "AR-500",	"IA-500",	"MO-603",	"PA-503",	"CA-611",	"MA-511",	"NY-501",	"VA-504",
-    "AR-501",	"IA-501",	"MO-604",	"PA-504",	"CA-612",	"MA-515",	"NY-503",	"VA-505",
-    "AR-503",	"IA-502",	"MO-606",	"PA-505",	"CA-613",	"MA-516",	"NY-505",	"VA-507",
-    "AR-505",	"ID-500",	"MP-500",	"PA-506",	"CA-614",	"MA-519",	"NY-507",	"VA-508",
-    "AR-508",	"ID-501",	"MS-500",	"PA-508",	"CO-500",	"MD-501",	"NY-508",	"VA-513",
-    "AS-500",	"IL-500",	"MS-501",	"PA-509",	"CO-503",	"MD-502",	"NY-510",	"VA-514",
-    "AZ-500",	"IL-501",	"MS-503",	"PA-510",	"CO-504",	"MD-503",	"NY-511",	"VA-521",
-    "AZ-501",	"IL-502",	"MT-500",	"PA-511",	"CO-505",	"MD-504",	"NY-512",	"VA-600",
-    "AZ-502",	"IL-503",	"NC-500",	"PA-512",	"CT-503",	"MD-505",	"NY-513",	"VA-601",
-    "CA-500",	"IL-504",	"NC-501",	"PA-600",	"CT-505",	"MD-506",	"NY-514",	"VA-602",
-    "CA-501",	"IL-506",	"NC-502",	"PA-601",	"DC-500",	"MD-509",	"NY-518",	"VA-603",
-    "CA-502",	"IL-507",	"NC-503",	"PA-603",	"DE-500",	"MD-511",	"NY-519",	"VA-604",
-    "CA-503",	"IL-508",	"NC-504",	"PA-605",	"FL-500",	"MD-513",	"NY-520",	"VI-500",
-    "CA-504",	"IL-510",	"NC-505",	"PR-502",	"FL-501",	"MD-514",	"NY-522",	"VT-500",
-    "CA-505",	"IL-511",	"NC-506",	"PR-503",	"FL-502",	"MD-601",	"NY-523",	"VT-501",
-    "CA-506",	"IL-512",	"NC-507",	"RI-500",	"FL-503",	"ME-500",	"NY-525",	"WA-500",
-    "CA-507",	"IL-513",	"NC-509",	"SC-500",	"FL-504",	"MI-500",	"NY-600",	"WA-501",
-    "CA-508",	"IL-514",	"NC-511",	"SC-501",	"FL-505",	"MI-501",	"NY-601",	"WA-502",
-    "CA-509",	"IL-515",	"NC-513",	"SC-502",	"FL-506",	"MI-502",	"NY-602",	"WA-503",
-    "CA-510",	"IL-516",	"NC-516",	"SC-503",	"FL-507",	"MI-503",	"NY-603",	"WA-504",
-    "CA-511",	"IL-517",	"ND-500",	"SD-500",	"FL-508",	"MI-504",	"NY-604",	"WA-508",
-    "CA-512",	"IL-518",	"NE-500",	"TN-500",	"FL-509",	"MI-505",	"NY-606",	"WI-500",
-    "CA-513",	"IL-519",	"NE-501",	"TN-501",	"FL-510",	"MI-506",	"NY-608",	"WI-501",
-    "CA-514",	"IL-520",	"NE-502",	"TN-502",	"FL-511",	"MI-507",	"OH-500",	"WI-502",
-    "CA-515",	"IN-502",	"NH-500",	"TN-503",	"FL-512",	"MI-508",	"OH-501",	"WI-503",
-    "CA-516",	"IN-503",	"NH-501",	"TN-504",	"FL-513",	"MI-509",	"OH-502",	"WV-500",
-    "CA-517",	"KS-502",	"NH-502",	"TN-506",	"FL-514",	"MI-510",	"OH-503",	"WV-501",
-    "CA-518",	"KS-503",	"NJ-500",	"TN-507",	"FL-515",	"MI-511",	"OH-504",	"WV-503",
-    "CA-519",	"KS-505",	"NJ-501",	"TN-509",	"FL-517",	"MI-512",	"OH-505",	"WV-508",
-    "CA-520",	"KS-507",	"NJ-502",	"TN-510",	"FL-518",	"MI-514",	"OH-506",	"WY-500",
-    "CA-521",	"KY-500",	"NJ-503",	"TN-512",	"FL-519",	"MI-515",	"OH-507",	"OK-506",
-    "CA-522",	"KY-501",	"NJ-504",	"TX-500",	"FL-520",	"MI-516",	"OH-508",	"OK-507",
-    "CA-523",	"KY-502",	"NJ-506",	"TX-503",	"FL-600",	"MI-517",	"OK-500",	"OR-500",
-    "CA-524",	"LA-500",	"NJ-507",	"TX-600",	"FL-601",	"MI-518",	"OK-501",	"MN-502",
-    "CA-525",	"LA-502",	"NJ-508",	"TX-601",	"FL-602",	"MI-519",	"OK-502",	"MN-503",
-    "CA-526",	"LA-503",	"NJ-509",	"TX-603",	"FL-603",	"MI-523",	"OK-503",	"MN-504",
-    "CA-527",	"LA-505",	"NJ-510",	"TX-604",	"FL-604",	"MN-500",	"OK-504",	"GA-500",
-    "CA-529",	"LA-506",	"NJ-511",	"TX-607",	"FL-605",	"MN-501",	"OK-505",	"GA-501",
-    "CA-530",	"LA-507",	"NJ-512",	"TX-611",	"FL-606"			
-  )
-}
-
-# lists for APR/CAPER support
-{
-  APR_files <- c("Q4a", "Q5a", "Q6a", "Q6b", "Q6d", "Q6e", "Q6f", "Q7a", "Q7b",
-                 "Q8a", "Q8b", "Q9a", "Q9b", "Q10a", "Q10b", "Q10c", "Q11",
-                 "Q12a", "Q12b", "Q13a1", "Q13a2", "Q13b1", "Q13b2", "Q13c1",
-                 "Q13c2", "Q14a", "Q14b", "Q15", "Q16", "Q17", "Q18", "Q19a1",
-                 "Q19a2", "Q19b", "Q20a", "Q20b", "Q21", "Q22a1", "Q22b", "Q22c",
-                 "Q22e", "Q23c", "Q25a", "Q25b", "Q25c", "Q25d", "Q25e", "Q25f",
-                 "Q25g", "Q25h", "Q25i", "Q26a", "Q26b", "Q26c", "Q26d", "Q26e",
-                 "Q26f", "Q26g", "Q26h", "Q26i", "Q27a", "Q27b", "Q27c", "Q27d",
-                 "Q27e", "Q27f", "Q27g", "Q27h", "Q27i")
-  
-  CAPER_files <- c("Q4a", "Q5a", "Q6a", "Q6b", "Q6c", "Q6d", "Q6e", "Q6f", 
-                   "Q7a", "Q7b", "Q8a", "Q8b", "Q9a", "Q9b", "Q10a", "Q10b", 
-                   "Q10c", "Q10d", "Q11", "Q12a", "Q12b", "Q13a1", "Q13b1", 
-                   "Q13c1", "Q14a", "Q14b", "Q15", "Q16", "Q17", "Q19b", "Q20a", 
-                   "Q21", "Q22a2", "Q22c", "Q22d", "Q22e", "Q23c", "Q24", 
-                   "Q25a", "Q26b")
-  
-  
-  missing_files <- c()
-}
 
 # provides distinct client counts within households for any given grouping 
 return_household_groups <- function(APR_dataframe, grouped_by = grouped_by, 
@@ -186,25 +109,14 @@ return_household_groups <- function(APR_dataframe, grouped_by = grouped_by,
     pivot_wider(names_from = "Group", values_from = "values") %>%
     add_column(!!!household_group_list[!names(household_group_list) %in% names(.)]) %>%
     select(c({{grouped_by}}, names(household_group_list)))
-  # 
-  # if(nrow(potential_table) == 0) {
-  #   if(is.na(missing_group_name)) warning("You are missing a row name")
-  #   
-  #   potential_table <- APR_dataframe %>%
-  #     select({{grouped_by}}) %>%
-  #     distinct() %>% 
-  #     add_column(!!!household_group_list[!names(household_group_list) %in% names(.)]) %>%
-  #     select(c({{grouped_by}}, names(household_group_list)))
-  #   
-  #   potential_table[1,1] = missing_group_name
-  # }
-  # 
-  test <- deparse(substitute(grouped_by))
+  
+  deparsed_grouped_by <- deparse(substitute(grouped_by))
+  
   as.data.frame(group_list) %>%
     rename({{grouped_by}} := group_list) %>%
-    full_join(potential_table, by = test) %>%
+    full_join(potential_table, by = deparsed_grouped_by) %>%
     ifnull(., 0)
-  # potential_table
+  
 }
 
 # gets last Wednesday of January, April, July, and October
@@ -298,25 +210,19 @@ determine_total_income <- function(enrollments_and_income, annual = FALSE) {
 }
 
 create_income_groups <- function(enrollments_total_income, annual = FALSE) {
-  income_categories <- c("No Income", "$1 - $150", "$151 - $250", 
-                         "$251 - $500", "$501 - $1,000", 
-                         "$1,001 - $1,500", "$1,501 - $2,000", 
-                         "$2,001", "Does.Not.Know.or.Refused", "Data.Not.Collected")
-  
-  annual_income_categories <- c(income_categories, "No Annual Required", "Required Annual Missing")
   
   if(annual) {
-    income_categories <- annual_income_categories
+    income_amount_categories <- annual_income_amount_categories
   }
   
   income_groups <- enrollments_total_income %>%
     group_by(total_income_group) %>%
     summarise(Income = n_distinct(PersonalID)) %>%
-    full_join(as.data.frame(income_categories) %>%
+    full_join(as.data.frame(income_amount_categories) %>%
                 `colnames<-`(c("total_income_group")),
               by = "total_income_group") %>%
     mutate(total_income_group = factor(total_income_group, ordered = TRUE,
-                                       levels = annual_income_categories)) %>%
+                                       levels = annual_income_amount_categories)) %>%
     ifnull(., 0)
   
   income_groups %>%
@@ -364,16 +270,9 @@ keep_adults_and_hoh_only <- function(enrollment_data) {
 
 # used in Q18
 categorize_income <- function(enrollments_total_income, annual = FALSE) {
-  income_categories <- c("Adults with Only Earned Income (i.e., Employment Income)", 
-                         "Adults with Only Other Income", 
-                         "Adults with Both Earned and Other Income",
-                         "Adults with No Income", "Does.Not.Know.or.Refused", 
-                         "Data.Not.Collected")
-  
-  annual_income_categories <- c(income_categories, "No Annual Required", "Required Annual Missing")
-  
+
   if(annual) {
-    income_categories <- annual_income_categories
+    income_type_categories <- annual_income_type_categories
   }
   
   income_category_table <- enrollments_total_income %>%
@@ -389,11 +288,11 @@ categorize_income <- function(enrollments_total_income, annual = FALSE) {
     )) %>%
     group_by(income_category) %>%
     summarise(Income = n()) %>%
-    full_join(as.data.frame(income_categories) %>%
+    full_join(as.data.frame(income_type_categories) %>%
                 `colnames<-`(c("income_category")),
               by = "income_category") %>%
     mutate(income_category = factor(income_category, ordered = TRUE,
-                                       levels = annual_income_categories)) %>%
+                                       levels = annual_income_type_categories)) %>%
     ifnull(., 0)
   
   income_category_table %>%
@@ -558,4 +457,175 @@ return_household_averages <- function(data, field_to_average,
     # select(c({{column_label}}, names(household_group_list)))
   
   potential_table
+}
+
+# used in Q18, Q26f
+create_income_categories <- function(included_enrollments) {
+  
+  for(period in entry_annual_exit) {
+    
+    data <- get(paste0(period, "_income")) %>%
+      filter(EnrollmentID %in% included_enrollments$EnrollmentID) %>%
+      determine_total_income(., annual = period == "annual") %>%
+      categorize_income(., annual = period == "annual") %>%
+      `colnames<-`(c("income_category", paste0(period, "Income")))
+    
+    assign(paste0(period, "_income_categories"), data)
+  }
+  
+  entry_income_categories %>%
+    full_join(annual_income_categories, by = "income_category") %>%
+    left_join(exit_income_categories, by = "income_category")
+  
+}
+
+# used in Q17, Q26g
+create_income_sources <- function(included_enrollments) {
+  for(period in entry_annual_exit) {
+    
+    data <- get(paste0(period, "_income")) %>%
+      filter(EnrollmentID %in% included_enrollments$EnrollmentID) %>%
+      select(Earned, Unemployment, SSI, SSDI, VADisabilityService, 
+             VADisabilityNonService, PrivateDisability, WorkersComp, TANF,
+             GA, SocSecRetirement, Pension, ChildSupport, Alimony,
+             OtherIncomeSource) %>%
+      pivot_existing_only(., "IncomeGroup", period) %>%
+      left_join(IncomeTypes, by = "IncomeGroup") %>%
+      mutate(IncomeGroup = OfficialIncomeName) %>%
+      select(-OfficialIncomeName)
+    
+    assign(paste0(period, "_income_sources"), data)
+  }
+  
+  created_income_sources <- entry_income_sources %>%
+    left_join(annual_income_sources, by = "IncomeGroup") %>%
+    left_join(exit_income_sources, by = "IncomeGroup") %>%
+    rbind(., income_information_present(included_enrollments)) %>%
+    rename(Income.at.Start = entryClients,
+           Income.at.Latest.Annual.Assessment.for.Stayers = annualClients,
+           Income.at.Exit.for.Leavers = exitClients)
+}
+
+
+# check for income information presence
+income_information_present <- function(included_enrollments) {
+  
+  entry_annual_income_present <- intersect(
+    intersect(
+      entry_income$PersonalID[entry_income$IncomeFromAnySource %in% c(0, 1)],
+      annual_income$PersonalID[annual_income$IncomeFromAnySource %in% c(0, 1)]),
+    included_enrollments$PersonalID
+  ) 
+  
+  entry_exit_income_present <- intersect(
+    intersect(
+      entry_income$PersonalID[entry_income$IncomeFromAnySource %in% c(0, 1)],
+      exit_income$PersonalID[exit_income$IncomeFromAnySource %in% c(0, 1)]),
+    included_enrollments$PersonalID
+  )
+  
+  c("Adults with Income Information at Start and Annual Assessment/Exit", NA,
+    length(entry_annual_income_present),
+    length(entry_exit_income_present))
+}
+
+# create age group table
+create_age_groups <- function(filtered_recent_household_enrollment) {
+  filtered_recent_household_enrollment %>%
+    return_household_groups(., detailed_age_group, detailed_age_group_list) %>%
+    adorn_totals("row")
+}
+
+
+# create gender group table
+create_gender_groups <- function(filtered_recent_household_enrollment) {
+  filtered_recent_household_enrollment %>%
+    return_household_groups(., gender_combined, gender_list) %>%
+    adorn_totals("row")
+}
+
+
+# create benefit group table
+create_benefit_groups <- function(included_enrollments) {
+  for(period in entry_annual_exit) {
+    
+    data <- get(paste0(period, "_income")) %>%
+      filter(EnrollmentID %in% included_enrollments$EnrollmentID) %>%
+      select(all_of(benefit_list)) %>%
+      pivot_existing_only(., "BenefitGroup", period) %>%
+      left_join(BenefitTypes, by = "BenefitGroup") %>%
+      mutate(BenefitGroup = OfficialBenefitName) %>%
+      select(-OfficialBenefitName)
+    
+    assign(paste0(period, "_benefit_sources"), data)
+  }
+  
+  entry_benefit_sources %>%
+    left_join(annual_benefit_sources, by = "BenefitGroup") %>%
+    left_join(exit_benefit_sources, by = "BenefitGroup") %>%
+    rename(Benefit.at.Start = entryClients,
+           Benefit.at.Latest.Annual.Assessment.for.Stayers = annualClients,
+           Benefit.at.Exit.for.Leavers = exitClients)
+}
+
+
+# create destination table for APR/CAPER
+create_destination_groups <- function(included_enrollments) {
+  for(residence_type in c("permanent", "temporary", "institution", "other")) {
+    residences_to_include <- ResidenceUses %>%
+      filter(APR_ExitLocationGroup == residence_type &
+               !is.na(LocationDescription)) 
+    
+    group_of_residences <- included_enrollments %>%
+      inner_join(residences_to_include, by = c("Destination" = "Location")) %>%
+      return_household_groups(., LocationDescription, residences_to_include$LocationDescription) %>%
+      full_join(residences_to_include, by = "LocationDescription") %>%
+      arrange(APR_ExitOrder) %>%
+      adorn_totals("row") %>%
+      ifnull(., 0) 
+    
+    group_title_row <- group_of_residences[0,]
+    group_title_row[1,1] <- str_to_title(residence_type)
+    
+    group_of_residences <- rbind(group_title_row, group_of_residences)
+    
+    if (residence_type == "permanent") {
+      destination_group <- group_of_residences
+    } else {
+      destination_group <- destination_group %>%
+        union(group_of_residences)
+    }
+  }
+  
+  exit_categories <- data.frame(Outcome = possible_outcomes) %>%
+    left_join(included_enrollments %>%
+                inner_join(DestinationClassification, by = c("Destination" = "Location",
+                                                             "ProjectType" = "ProjectType")) %>%
+                return_household_groups(., Outcome, possible_outcomes),
+              by = "Outcome") %>%
+    adorn_totals("row") %>%
+    pivot_longer(., cols = -Outcome) %>%
+    pivot_wider(., names_from = Outcome) %>%
+    mutate(Percentage = P / Total) %>%
+    rename(group = name) %>%
+    pivot_longer(., cols = -group) %>%
+    pivot_wider(., names_from = group) %>%
+    rename(LocationDescription = name) %>%
+    ifnull(., 0)
+  
+  
+  destination_group %>%
+    select(LocationDescription, Total, Without.Children,
+           With.Children.And.Adults, With.Only.Children, Unknown.Household.Type) %>%
+    mutate(LocationDescription = if_else(
+      LocationDescription == "Total", "Subtotal", LocationDescription
+    )) %>%
+    union(exit_categories %>%
+            filter(LocationDescription == "Total")) %>%
+    union(exit_categories %>%
+            filter(LocationDescription %in% c("P", "X", "Percentage"))) %>%
+    mutate(LocationDescription = case_when(
+      LocationDescription == "P" ~ "Total persons exiting to positive housing destinations",
+      LocationDescription == "X" ~ "Total persons whose destinations excluded them from the calculation",
+      TRUE ~ LocationDescription))
 }
