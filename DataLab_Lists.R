@@ -314,6 +314,18 @@ vet_chronic_categories <- c("Chronically Homeless Veteran",
 
 
 # ------------------------------------------------------------------------------
+# ----------------------- Classification List: Chronic -------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   APR/CAPER - Q26a
+
+chronic_categories <- c("Chronically Homeless",
+                        "Not Chronically Homeless",
+                        "Client doesn’t know/Client refused",
+                        "Data not collected (no exit interview completed)")
+
+
+# ------------------------------------------------------------------------------
 # ---------------------- Income Amount Categories ------------------------------
 # ------------------------------------------------------------------------------
 # used in:
@@ -374,3 +386,24 @@ gender_list <- c("Male", "Female", "No Single Gender", "Questioning",
 
 benefit_list <- c("SNAP", "WIC", "TANFChildCare", "TANFTransportation", 
                   "OtherTANF", "OtherBenefitsSource")
+
+
+# ------------------------------------------------------------------------------
+# ------------------------ CSV Income Categories -----------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   APR/CAPER - Q19b
+
+income_rows_to_show <- c("Earned", "SSI", "SSDI", "VADisabilityService", 
+                         "PrivateDisability", "WorkersComp", "TANF", 
+                         "SocSecRetirement", "Pension", "ChildSupport",
+                         "other_income_created")
+
+
+# ------------------------------------------------------------------------------
+# ------------------------ Outreach Contact Groups -----------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   APR/CAPER - Q9
+
+contact_groups <- c("Once", "2-5 times", "6-9 times", "10+ times")
