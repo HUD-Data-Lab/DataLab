@@ -381,9 +381,24 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type) {
   start_date <- enquo(start_date) 
   end_date <- enquo(end_date) 
   
+  nbn_data <- recent_household_enrollment %>%
+    filter(ProjectID %in% Project$ProjectID[Project$ProjectType == 1 &
+                                               Project$TrackingMethod == 3]) %>%
+    left_join(all_bed_nights, 
+              by = "EnrollmentID") %>%
+    group_by(EnrollmentID) %>%
+    summarise(nbn_number_of_days = n_distinct(na.omit(ymd(DateProvided)))) %>%
+    ungroup() %>%
+    select(EnrollmentID, nbn_number_of_days)
+  
   time_groups <- data %>%
+    left_join(nbn_data, by = "EnrollmentID") %>%
     mutate(number_of_days = 
-             trunc((!!start_date %--% !!end_date) / days(1)),
+             if_else(
+               ProjectID %in% Project$ProjectID[Project$ProjectType == 1 &
+                                                  Project$TrackingMethod == 3],
+               nbn_number_of_days,
+               as.integer(trunc((!!start_date %--% !!end_date) / days(1)))),
            number_of_days_group = case_when(
              is.na(number_of_days) ~ "Data.Not.Collected",
              number_of_days <= 7 ~ "0 to 7 days",

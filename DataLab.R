@@ -22,6 +22,7 @@ compare_to_last <- FALSE
 if (compare_to_last) {
   compare_to_dir <- choose.dir()}
 
+# this bracket will run everything, use with care!
 {
   source("datalab_functions.R")
   source("DataLab_Lists.R")
@@ -93,17 +94,11 @@ if (compare_to_last) {
       data$Funder[data$ProjectID == 1565] <- 4
     }
     
-    if (file == "Services") {
-      data <- data %>%
-        filter(DateProvided >= report_start_date &
-                 DateProvided <= report_end_date)
-    }
-    
     assign(file, data)
     
   }
   
-  bed_nights <- Services %>%
+  all_bed_nights <- Services %>%
     left_join(Enrollment %>%
                 filter(ProjectID %in% Project$ProjectID[Project$ProjectType == 1 &
                                                           Project$TrackingMethod == 3]) %>%
@@ -111,7 +106,11 @@ if (compare_to_last) {
               by = "EnrollmentID") %>%
     filter(RecordType == 200 & 
              TypeProvided == 200 &
-             DateProvided >= EntryDate)
+             DateProvided >= EntryDate &
+             DateProvided <= report_end_date)
+  
+  bed_nights_in_report <- all_bed_nights %>%
+    filter(DateProvided >= report_start_date)
   
   # apply NbN active logic to the enrollment table, since everything is based on that
   Enrollment <- Enrollment %>%
@@ -119,7 +118,7 @@ if (compare_to_last) {
                                                Project$TrackingMethod == 3] |
              EnrollmentID %in% Exit$EnrollmentID[Exit$ExitDate >= report_start_date &
                                                    Exit$ExitDate <= report_end_date] |
-             EnrollmentID %in% bed_nights$EnrollmentID)
+             EnrollmentID %in% bed_nights_in_report$EnrollmentID)
 
   disability_table <- Disabilities %>%
     filter(DisabilityResponse == 1 |
@@ -246,10 +245,6 @@ if (compare_to_last) {
     ungroup() %>%
     filter(EntryDate == first_entry_date) %>%
     select(EnrollmentID, new_chronic)
-  
-  # make sure the chronicity change applies correctly
-  # test <- chronic_household %>%
-  #   filter(HouseholdID %in% chronic_household$HouseholdID[chronic != new_chronic])
   
   chronicity_data <- chronic_household %>%
     full_join(chronic_individual %>%
@@ -880,7 +875,7 @@ if (compare_to_last) {
         slice(1L) %>%
         ungroup()
       
-      most_recent_bed_night <- bed_nights %>%
+      most_recent_bed_night <- bed_nights_in_report %>%
         arrange(desc(DateProvided)) %>%
         group_by(EnrollmentID) %>%
         slice(1L) %>%
@@ -934,7 +929,7 @@ if (compare_to_last) {
         pit_date <- pit_dates[[which(pit_dates$month == pit_month), 2]]
         
         pit_nbn_people <- all_program_enrollments %>%
-          inner_join(bed_nights %>%
+          inner_join(bed_nights_in_report %>%
                        filter(DateProvided == pit_date))
         
         pit_enrollments <- all_program_enrollments %>%
@@ -991,7 +986,7 @@ if (compare_to_last) {
         pit_date <- pit_dates[[which(pit_dates$month == pit_month), 2]]
         
         pit_nbn_people <- all_program_enrollments %>%
-          inner_join(bed_nights %>%
+          inner_join(bed_nights_in_report %>%
                        filter(DateProvided == pit_date))
         pit_hh_enrollments <- all_program_enrollments %>%
           left_join(year_household_info, by = "EnrollmentID") %>%
@@ -1717,10 +1712,11 @@ if (compare_to_last) {
     # Q22c
     {
       Q22c_data <- recent_household_enrollment %>%
-        filter((HoH_HMID >= report_start_date &
-                  HoH_HMID <= report_end_date) |
-                 (is.na(HoH_HMID) &
-                    ExitDate <= report_end_date)) %>%
+        filter(ProjectType %in% c(3, 13) & 
+                 ((HoH_HMID >= report_start_date &
+                     HoH_HMID <= report_end_date) |
+                    (is.na(HoH_HMID) &
+                       ExitDate <= report_end_date))) %>%
         mutate(move_in_date = case_when(
           EntryDate > HoH_HMID ~ EntryDate,
           TRUE ~ HoH_HMID)) %>%
@@ -1737,7 +1733,8 @@ if (compare_to_last) {
                   Unknown.Household.Type = mean(days_to_house[household_type == "Unknown"]))
       
       exited_without_move_in <- recent_household_enrollment %>%
-        filter(is.na(HoH_HMID) &
+        filter(ProjectType %in% c(3, 13) &
+                 is.na(HoH_HMID) &
                  !is.na(ExitDate)) %>%
         mutate(housing_length_group = "Persons who were exited without move-in") %>%
         return_household_groups(., housing_length_group, "Persons who were exited without move-in") 
@@ -2295,3 +2292,4 @@ if (compare_to_last) {
   }
   
 }
+
