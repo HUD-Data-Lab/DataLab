@@ -17,8 +17,8 @@
 # library(shinydashboardPlus)
 # library(colourpicker)
 
-generate_new_kits <- TRUE
-compare_to_last <- TRUE
+generate_new_kits <- FALSE
+compare_to_last <- FALSE
 if (compare_to_last) {
   compare_to_dir <- choose.dir()}
 
@@ -93,10 +93,34 @@ if (compare_to_last) {
       data$Funder[data$ProjectID == 1565] <- 4
     }
     
+    if (file == "Services") {
+      data <- data %>%
+        filter(DateProvided >= report_start_date &
+                 DateProvided <= report_end_date)
+    }
+    
     assign(file, data)
     
   }
   
+  bed_nights <- Services %>%
+    left_join(Enrollment %>%
+                filter(ProjectID %in% Project$ProjectID[Project$ProjectType == 1 &
+                                                          Project$TrackingMethod == 3]) %>%
+                select(EnrollmentID, EntryDate) ,
+              by = "EnrollmentID") %>%
+    filter(RecordType == 200 & 
+             TypeProvided == 200 &
+             DateProvided >= EntryDate)
+  
+  # apply NbN active logic to the enrollment table, since everything is based on that
+  Enrollment <- Enrollment %>%
+    filter(ProjectID %nin% Project$ProjectID[Project$ProjectType == 1 &
+                                               Project$TrackingMethod == 3] |
+             EnrollmentID %in% Exit$EnrollmentID[Exit$ExitDate >= report_start_date &
+                                                   Exit$ExitDate <= report_end_date] |
+             EnrollmentID %in% bed_nights$EnrollmentID)
+
   disability_table <- Disabilities %>%
     filter(DisabilityResponse == 1 |
              (DisabilityType == 10 &
@@ -241,13 +265,13 @@ if (compare_to_last) {
       # "1546",    # DataLab - ES-EE ESG I    
       # "1547",    # DataLab - ES-EE ESG II (with CE elements) 
       # "1544",    # DataLab - ES-EE RHY   
-      # "1548",    # DataLab - ES-NbN ESG
+      "1548"#,    # DataLab - ES-NbN ESG
       # "1564",    # DataLab - HP ESG
       # "1552",    # DataLab - PSH CoC I
       # "1550",    # DataLab - PSH HOPWA  
       # "1551",    # DataLab - PSH VASH  
-      "1554",    # DataLab - RRH CoC I
-      "1555"#,    # DataLab - RRH CoC II
+      # "1554",    # DataLab - RRH CoC I
+      # "1555",    # DataLab - RRH CoC II
       # "1556",    # DataLab - RRH ESG I
       # "1553",    # Datalab - RRH VA  
       # "1557",    # DataLab - SH VA-HCHV     
@@ -452,10 +476,9 @@ if (compare_to_last) {
                  (!is.na(DateOfEngagement) &
                     DateOfEngagement <= report_end_date))
       
-      Q5a <- create_summary_table(recent_program_enrollment_dq, "DQ_Clients") %>%
-        left_join(create_summary_table(recent_program_enrollment, "All_Clients"), 
+      Q5a <- create_summary_table(recent_program_enrollment_dq, "Count.of.Clients.for.DQ") %>%
+        left_join(create_summary_table(recent_program_enrollment, "Count.of.Clients"), 
                   by = "Group")
-      
     }
     
     # Q6
@@ -586,7 +609,7 @@ if (compare_to_last) {
         add_row(DataElement = "Overall Score", 
                 `Does.Not.Know.or.Refused` = 0, M = 0, DI = 0, 
                 Total = nrow(unique(error_clients))) %>%
-        mutate(ErrorRate = Total / Q5a$DQ_Clients[1])
+        mutate(ErrorRate = Total / Q5a$Count.of.Clients.for.DQ[1])
       
       rm(list=ls(pattern="^Q6a_"))
     }
@@ -644,13 +667,13 @@ if (compare_to_last) {
                   location_dq = n_distinct(PersonalID[location_dq]),
                   disabling_condition_dq = n_distinct(PersonalID[disabling_condition_dq]),
         ) %>% 
-        mutate(rowname = "DQ_Clients") %>% 
+        mutate(rowname = "Count.of.Clients.for.DQ") %>% 
         pivot_longer(!rowname, names_to = "Group", values_to = "values") %>% 
         pivot_wider(names_from = "rowname", values_from = "values") %>%
         mutate(ErrorRate = case_when(
-          Group == "veteran_dq" ~ DQ_Clients / Q5a$DQ_Clients[2],
-          Group == "location_dq" ~ DQ_Clients / (Q5a$DQ_Clients[14] + Q5a$DQ_Clients[15]),
-          TRUE ~ DQ_Clients / Q5a$DQ_Clients[1])
+          Group == "veteran_dq" ~ Count.of.Clients.for.DQ / Q5a$Count.of.Clients.for.DQ[2],
+          Group == "location_dq" ~ Count.of.Clients.for.DQ / (Q5a$Count.of.Clients.for.DQ[14] + Q5a$Count.of.Clients.for.DQ[15]),
+          TRUE ~ Count.of.Clients.for.DQ / Q5a$Count.of.Clients.for.DQ[1])
         )
       
     }
@@ -745,14 +768,14 @@ if (compare_to_last) {
                   income_annual_dq = n_distinct(PersonalID[income_annual_dq]),
                   income_exit_dq = n_distinct(PersonalID[income_exit_dq])
         ) %>% 
-        mutate(rowname = "DQ_Clients") %>% 
+        mutate(rowname = "Count.of.Clients.for.DQ") %>% 
         pivot_longer(!rowname, names_to = "Group", values_to = "values") %>% 
         pivot_wider(names_from = "rowname", values_from = "values") %>%
         mutate(ErrorRate = case_when(
-          Group == "destination_dq" ~ DQ_Clients / Q5a$DQ_Clients[5],
-          Group == "income_start_dq" ~ DQ_Clients / (Q5a$DQ_Clients[2] + Q5a$DQ_Clients[15]),
-          Group == "income_annual_dq" ~ DQ_Clients / Q5a$DQ_Clients[16],
-          Group == "income_exit_dq" ~ DQ_Clients / Q5a$DQ_Clients[7])
+          Group == "destination_dq" ~ Count.of.Clients.for.DQ / Q5a$Count.of.Clients.for.DQ[5],
+          Group == "income_start_dq" ~ Count.of.Clients.for.DQ / (Q5a$Count.of.Clients.for.DQ[2] + Q5a$Count.of.Clients.for.DQ[15]),
+          Group == "income_annual_dq" ~ Count.of.Clients.for.DQ / Q5a$Count.of.Clients.for.DQ[16],
+          Group == "income_exit_dq" ~ Count.of.Clients.for.DQ / Q5a$Count.of.Clients.for.DQ[7])
         )
     }
     
@@ -853,32 +876,23 @@ if (compare_to_last) {
         filter(InformationDate >= report_start_date &
                  InformationDate <= report_end_date) %>%
         arrange(desc(InformationDate)) %>%
-        group_by(PersonalID) %>%
+        group_by(EnrollmentID) %>%
         slice(1L) %>%
         ungroup()
       
-      prior_CLS <- CurrentLivingSituation %>%
-        filter(InformationDate %nin% most_recent_CLS$InformationDate) %>%
-        arrange(desc(InformationDate)) %>%
-        group_by(PersonalID) %>%
+      most_recent_bed_night <- bed_nights %>%
+        arrange(desc(DateProvided)) %>%
+        group_by(EnrollmentID) %>%
         slice(1L) %>%
         ungroup()
       
-      # actually pausing on this whole piece--what on earth is bullet four trying to say??
-      # Q6f <- recent_program_enrollment_dq %>%
-      #   filter((ProjectType == 4 |
-      #             (ProjectType == 1 &
-      #                TrackingMethod == 3)) &
-      #            is.na(ExitDate) &
-      #            trunc((EntryDate %--% report_end_date) / days(1)) >= 90) %>%
-      #   left_join(most_recent_CLS %>%
-      #               select(PersonalID, InformationDate) %>%
-      #               rename(recent_CLS_InformationDate = InformationDate),
-      #             by = "PersonalID") %>%
-      #   left_join(prior_CLS %>%
-      #               select(PersonalID, InformationDate) %>%
-      #               rename(prior_InformationDate = InformationDate),
-      #             by = "PersonalID")
+      Q6f <- create_inactive_table(recent_program_enrollment_dq,
+                                   most_recent_CLS,
+                                   "contact") %>%
+        union(create_inactive_table(recent_program_enrollment_dq,
+                                    most_recent_bed_night,
+                                    "bed night"))
+      
     }
     
     # Q7
@@ -919,17 +933,24 @@ if (compare_to_last) {
       for (pit_month in pit_months) {
         pit_date <- pit_dates[[which(pit_dates$month == pit_month), 2]]
         
+        pit_nbn_people <- all_program_enrollments %>%
+          inner_join(bed_nights %>%
+                       filter(DateProvided == pit_date))
+        
         pit_enrollments <- all_program_enrollments %>%
           left_join(year_household_info, by = "EnrollmentID") %>%
           filter(EntryDate <= pit_date &
                    (ProjectType %nin% c(3, 13) |
                       (ProjectType %in% c(3, 13) &
                          HoH_HMID <= pit_date)) &
-                   (is.na(ExitDate) |
-                      (ProjectType %in% c(1, 2, 3, 8, 9, 10, 13) &
-                         ExitDate > pit_date) |
-                      (ProjectType %in% c(4, 6, 11) &
-                         ExitDate >= pit_date))) %>%
+                   (EnrollmentID %in% pit_nbn_people$EnrollmentID |
+                      (ProjectID %nin% Project$ProjectID[Project$ProjectType == 1 &
+                                                           Project$TrackingMethod == 3] &
+                         (is.na(ExitDate) |
+                            (ProjectType %in% c(1, 2, 3, 8, 9, 10, 13) &
+                               ExitDate > pit_date) |
+                            (ProjectType %in% c(4, 6, 11) &
+                               ExitDate >= pit_date))))) %>%
           left_join(household_info %>%
                       select(PersonalID, household_type),
                     by = "PersonalID") %>%
@@ -969,17 +990,23 @@ if (compare_to_last) {
       for (pit_month in pit_months) {
         pit_date <- pit_dates[[which(pit_dates$month == pit_month), 2]]
         
+        pit_nbn_people <- all_program_enrollments %>%
+          inner_join(bed_nights %>%
+                       filter(DateProvided == pit_date))
         pit_hh_enrollments <- all_program_enrollments %>%
           left_join(year_household_info, by = "EnrollmentID") %>%
           filter(EntryDate <= pit_date &
                    (ProjectType %nin% c(3, 13) |
                       (ProjectType %in% c(3, 13) &
                          HoH_HMID <= pit_date)) &
-                   (is.na(ExitDate) |
-                      (ProjectType %in% c(1, 2, 3, 8, 9, 10, 13) &
-                         ExitDate > pit_date) |
-                      (ProjectType %in% c(4, 6, 11) &
-                         ExitDate >= pit_date))) %>%
+                   (EnrollmentID %in% pit_nbn_people$EnrollmentID |
+                      (ProjectID %nin% Project$ProjectID[Project$ProjectType == 1 &
+                                                           Project$TrackingMethod == 3] &
+                         (is.na(ExitDate) |
+                            (ProjectType %in% c(1, 2, 3, 8, 9, 10, 13) &
+                               ExitDate > pit_date) |
+                            (ProjectType %in% c(4, 6, 11) &
+                               ExitDate >= pit_date))))) %>%
           select(HouseholdID) %>%
           distinct() %>%
           left_join(all_program_enrollments %>%

@@ -861,3 +861,39 @@ create_summary_table <- function(filtered_enrollments, column_name) {
     pivot_longer(!rowname, names_to = "Group", values_to = "values") %>% 
     pivot_wider(names_from = "rowname", values_from = "values")
 }
+
+# used in Q6f of the APR & CAPER, Q7 of the DQ report from the glossary
+create_inactive_table <- function(dq_enrollments,
+                                  activity_events,
+                                  activity_type) {
+  
+  if (activity_type %nin% c("bed night", "contact")) {
+    stop("The argument \"activity_type\" can only be \"bed night\" or \"contact\"")
+  }
+  
+  included_activity_type <- intersect(
+    c("InformationDate", "DateProvided"),
+    colnames(activity_events)
+  )
+  
+  activity_type_header <- if_else(activity_type == "contact",
+                                  "Contact (Adults and Heads of Household in Street Outreach or ES – NBN)",
+                                  "Bed Night (All clients in ES – NBN)")
+  
+  dq_enrollments %>%
+    filter(is.na(ExitDate) &
+             trunc((EntryDate %--% report_end_date) / days(1)) >= 90 &
+             ((ProjectType == 1 &
+                 TrackingMethod == 3) |
+                (activity_type == "contact" &
+                   ProjectType == 4))) %>%
+    left_join(activity_events %>%
+                select(c("EnrollmentID", all_of(included_activity_type))) %>%
+                `colnames<-`(c("EnrollmentID", "included_activity_type")),
+              by = "EnrollmentID") %>%
+    summarise(Data.Element = activity_type_header,
+              Number.of.Records = n_distinct(PersonalID),
+              Number.of.Inactive.Records = n_distinct(PersonalID[is.na(included_activity_type)])) %>%
+    ifnull(., 0) %>%
+    mutate(Percent.of.Inactive.Records = Number.of.Inactive.Records / Number.of.Records)
+}
