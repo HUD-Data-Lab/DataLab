@@ -35,7 +35,7 @@ hmis_csvs <- list(Affiliation = "cccTTcTc",
 # used in:
 #   APR
 
-APR_files <- c("Q4a", "Q5a", "Q6a", "Q6b", "Q6d", "Q6e", "Q6f", "Q7a", "Q7b",
+APR_files <- c("Q4a", "Q5a", "Q6a", "Q6b", "Q6c", "Q6d", "Q6e", "Q6f", "Q7a", "Q7b",
                "Q8a", "Q8b", "Q9a", "Q9b", "Q10a", "Q10b", "Q10c", "Q11",
                "Q12a", "Q12b", "Q13a1", "Q13a2", "Q13b1", "Q13b2", "Q13c1",
                "Q13c2", "Q14a", "Q14b", "Q15", "Q16", "Q17", "Q18", "Q19a1",
@@ -196,7 +196,7 @@ race_list <- c("White", "Black, African American, or African",
                "Asian or Asian American", 
                "American Indian, Alaska Native, or Indigenous", 
                "Native Hawaiian or Pacific Islander", "Multiple Races", 
-               "Does.Not.Know.or.Refused", "Data.Not.Collected")
+               "Client.Does.Not.Know.or.Refused", "Data.Not.Collected")
 
 
 # ------------------------------------------------------------------------------
@@ -206,7 +206,7 @@ race_list <- c("White", "Black, African American, or African",
 #   APR/CAPER - Q12b
 
 ethnicity_list <- c("Hispanic/Latin(a)(o)(x)", "Non-Hispanic/Non-Latin(a)(o)(x)",
-                    "Does.Not.Know.or.Refused", "Data.Not.Collected")
+                    "Client.Does.Not.Know.or.Refused", "Data.Not.Collected")
 
 
 # ------------------------------------------------------------------------------
@@ -215,7 +215,7 @@ ethnicity_list <- c("Hispanic/Latin(a)(o)(x)", "Non-Hispanic/Non-Latin(a)(o)(x)"
 # used in:
 #   APR/CAPER - Q7a
 
-age_groups <- c("Adults", "Children", "Does.Not.Know.or.Refused", "Data Not Collected")
+age_groups <- c("Adults", "Children", "Client.Does.Not.Know.or.Refused", "Data Not Collected")
 
 
 # ------------------------------------------------------------------------------
@@ -226,7 +226,7 @@ age_groups <- c("Adults", "Children", "Does.Not.Know.or.Refused", "Data Not Coll
 
 detailed_age_group_list = c("Under 5", "5-12", "13-17", "18-24", "25-34",
                             "35-44", "45-54", "55-61", "62+", 
-                            "Does.Not.Know.or.Refused", "Data.Not.Collected")
+                            "Client.Does.Not.Know.or.Refused", "Data.Not.Collected")
 
 
 # ------------------------------------------------------------------------------
@@ -249,7 +249,7 @@ disability_list <- c("Mental Health Disorder", "Alcohol Use Disorder",
 
 disability_count_group_list <- c("None", "One Condition", "Two Conditions",
                                  "Three Or More Conditions", "Unknown",
-                                 "Does.Not.Know.or.Refused", "Data.Not.Collected")
+                                 "Client.Does.Not.Know.or.Refused", "Data.Not.Collected")
 
 # ------------------------------------------------------------------------------
 # ---------------------------- HUD List 1.8 ------------------------------------
@@ -257,7 +257,7 @@ disability_count_group_list <- c("None", "One Condition", "Two Conditions",
 # used in:
 #   APR/CAPER - Q14a
 
-y_n_dkr_dnc_list <- c("Yes", "No", "Does.Not.Know.or.Refused", "Data.Not.Collected")
+y_n_dkr_dnc_list <- c("Yes", "No", "Client.Does.Not.Know.or.Refused", "Data.Not.Collected")
 
 
 # ------------------------------------------------------------------------------
@@ -334,7 +334,7 @@ chronic_categories <- c("Chronically Homeless",
 income_amount_categories <- c("No Income", "$1 - $150", "$151 - $250", 
                        "$251 - $500", "$501 - $1,000", 
                        "$1,001 - $1,500", "$1,501 - $2,000", 
-                       "$2,001", "Does.Not.Know.or.Refused", "Data.Not.Collected")
+                       "$2,001+", "Client.Does.Not.Know.or.Refused", "Data.Not.Collected")
 
 
 # ------------------------------------------------------------------------------
@@ -355,7 +355,7 @@ annual_income_amount_categories <- c(income_amount_categories, "No Annual Requir
 income_type_categories <- c("Adults with Only Earned Income (i.e., Employment Income)", 
                        "Adults with Only Other Income", 
                        "Adults with Both Earned and Other Income",
-                       "Adults with No Income", "Does.Not.Know.or.Refused", 
+                       "Adults with No Income", "Client.Does.Not.Know.or.Refused", 
                        "Data.Not.Collected")
 
 
@@ -375,7 +375,7 @@ annual_income_type_categories <- c(income_type_categories, "No Annual Required",
 #   APR/CAPER - Q10
 
 gender_list <- c("Male", "Female", "No Single Gender", "Questioning", 
-                 "Transgender", "Does.Not.Know.or.Refused", "Data.Not.Collected")
+                 "Transgender", "Client.Does.Not.Know.or.Refused", "Data.Not.Collected")
 
 
 # ------------------------------------------------------------------------------
@@ -397,7 +397,7 @@ benefit_list <- c("SNAP", "WIC", "TANFChildCare", "TANFTransportation",
 income_rows_to_show <- c("Earned", "SSI", "SSDI", "VADisabilityService", 
                          "PrivateDisability", "WorkersComp", "TANF", 
                          "SocSecRetirement", "Pension", "ChildSupport",
-                         "other_income_created")
+                         "Other.Source")
 
 
 # ------------------------------------------------------------------------------
@@ -407,3 +407,26 @@ income_rows_to_show <- c("Earned", "SSI", "SSDI", "VADisabilityService",
 #   APR/CAPER - Q9
 
 contact_groups <- c("Once", "2-5 times", "6-9 times", "10+ times")
+
+
+# ------------------------------------------------------------------------------
+# ----------------------------- Household Type Groups --------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   APR/CAPER - 
+
+household_group_list <- c(Total = 0, Without.Children = 0, 
+                          With.Children.And.Adults = 0, With.Only.Children = 0, 
+                          Unknown.Household.Type = 0)
+
+
+# ------------------------------------------------------------------------------
+# ------------------------- Split Household Type Groups ------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   APR/CAPER - 
+
+split_household_group_list <- c(Total = 0, Without.Children = 0, 
+                          Adults.in.HH.with.Children.and.Adults = 0,
+                          Children.in.HH.with.Children.and.Adults = 0,
+                          With.Only.Children = 0, Unknown.Household.Type = 0)

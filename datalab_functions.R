@@ -26,10 +26,6 @@ ifnull <- function(value, replace_with) {
   value
 }
 
-household_group_list <- c(Total = 0, Without.Children = 0, 
-                          With.Children.And.Adults = 0, With.Only.Children = 0, 
-                          Unknown.Household.Type = 0)
-
 trunc_userid <- function(df) {
   df %>%
     mutate(UserID = substr(UserID, 1, 2))
@@ -94,15 +90,36 @@ sequential_ssn <- function(test_ssn) {
 
 # provides distinct client counts within households for any given grouping 
 return_household_groups <- function(APR_dataframe, grouped_by = grouped_by, 
-                                    group_list = group_list) {
+                                    group_list = group_list,
+                                    split_by_age = FALSE) {
 
   potential_table <- APR_dataframe %>%
-    group_by({{grouped_by}}) %>%
-    summarise(Total = n_distinct(PersonalID),
-              Without.Children = n_distinct(PersonalID[household_type == "AdultsOnly"]),
-              With.Children.And.Adults = n_distinct(PersonalID[household_type == "AdultsAndChildren"]),
-              With.Only.Children = n_distinct(PersonalID[household_type == "ChildrenOnly"]),
-              Unknown.Household.Type = n_distinct(PersonalID[household_type == "Unknown"])) %>% 
+    group_by({{grouped_by}})
+  
+  if (split_by_age) {
+    
+    household_group_list <- split_household_group_list
+    
+    potential_table <- potential_table %>%
+      summarise(Total = n_distinct(PersonalID),
+                Without.Children = n_distinct(PersonalID[household_type == "AdultsOnly"]),
+                Adults.in.HH.with.Children.and.Adults = n_distinct(PersonalID[household_type == "AdultsAndChildren" &
+                                                                                age_group == "Adults"]),
+                Children.in.HH.with.Children.and.Adults = n_distinct(PersonalID[household_type == "AdultsAndChildren" &
+                                                                                  age_group == "Children"]),
+                With.Only.Children = n_distinct(PersonalID[household_type == "ChildrenOnly"]),
+                Unknown.Household.Type = n_distinct(PersonalID[household_type == "Unknown"])) 
+  } else {
+    potential_table <- potential_table %>%
+      group_by({{grouped_by}}) %>%
+      summarise(Total = n_distinct(PersonalID),
+                Without.Children = n_distinct(PersonalID[household_type == "AdultsOnly"]),
+                With.Children.And.Adults = n_distinct(PersonalID[household_type == "AdultsAndChildren"]),
+                With.Only.Children = n_distinct(PersonalID[household_type == "ChildrenOnly"]),
+                Unknown.Household.Type = n_distinct(PersonalID[household_type == "Unknown"])) 
+  }
+  
+  potential_table <- potential_table %>%
     # I don't remember why I added the next two lines, they seem redundant
     # but I know they mattered at some point? Need to revisit and verify
     pivot_longer(!{{grouped_by}}, names_to = "Group", values_to = "values") %>%
@@ -147,7 +164,7 @@ condition_count_groups <- function(enrollments_and_conditions) {
       case_when(
         DisablingCondition == 0 ~ "None",
         DisablingCondition == 1 ~ "Unknown",
-        DisablingCondition %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
+        DisablingCondition %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
         TRUE ~ "Data.Not.Collected"),
       case_when(
         disability_count == 1 ~ "One Condition",
@@ -188,7 +205,7 @@ determine_total_income <- function(enrollments_and_income, annual = FALSE) {
                                                        IncomeFromAnySource == 1)) ~ 0),
            total_income_group = case_when(
              is.na(calculated_total_income) ~ if_else(
-               IncomeFromAnySource %in% c(8, 9), "Does.Not.Know.or.Refused", "Data.Not.Collected"),
+               IncomeFromAnySource %in% c(8, 9), "Client.Does.Not.Know.or.Refused", "Data.Not.Collected"),
              calculated_total_income == 0 ~ "No Income",
              calculated_total_income <= 150 ~ "$1 - $150",
              calculated_total_income <= 250 ~ "$151 - $250",
@@ -196,7 +213,7 @@ determine_total_income <- function(enrollments_and_income, annual = FALSE) {
              calculated_total_income <= 1000 ~ "$501 - $1,000",
              calculated_total_income <= 1500 ~ "$1,001 - $1,500",
              calculated_total_income <= 2000 ~ "$1,501 - $2,000",
-             TRUE ~ "$2,001"))
+             TRUE ~ "$2,001+"))
   
   if(annual) {
     total_income <- total_income %>%
@@ -443,7 +460,8 @@ length_of_time_groups <- function(report_type, column_name) {
   } else if(report_type == "days_prior_to_housing") {
     rows <- c("0 to 7 days", "8 to 14 days", "15 to 21 days", "22 to 30 days", 
               "31 to 60 days", "61 to 180 days", "181 to 365 days", 
-              "366 to 730 days (1-2 Yrs)", "731 days or more", "Not yet moved into housing", "Data.Not.Collected")
+              "366 to 730 days (1-2 Yrs)", "731 days or more", 
+              "Not yet moved into housing", "Data.Not.Collected")
   } else {
     rows <- c("0 to 7 days", "8 to 14 days", "15 to 21 days", "22 to 30 days", 
               "31 to 60 days", "61 to 90 days", "91 to 180 days", 
@@ -670,7 +688,7 @@ create_prior_residence_groups <- function(included_enrollments) {
                !is.na(APR_PriorOrder)) %>%
       arrange(APR_PriorOrder) %>%
       mutate(LocationDescription = case_when(
-        Location %in% c(8, 9) ~ "Does.Not.Know.or.Refused",
+        Location %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
         TRUE ~ LocationDescription))
     
     group_of_residences <- included_enrollments %>%
@@ -735,7 +753,7 @@ create_prior_residence_groups <- function(included_enrollments) {
                     DisablingCondition == 0) |
                  (condition_presence == "all" &
                     DisablingCondition %in% c(0, 1))) %>%
-        mutate(other_income_created = if_else(
+        mutate(Other.Source = if_else(
           Unemployment == 1 |
             VADisabilityNonService == 1 |
             GA == 1 |
@@ -745,7 +763,7 @@ create_prior_residence_groups <- function(included_enrollments) {
         pivot_longer(!c(PersonalID, household_type)) %>%
         mutate(row_name = "row")
       
-      unduplicated_total <- cbind(name = "total_adults", 
+      unduplicated_total <- cbind(name = "Unduplicated.Total.Adults", 
                                   filtered_income_information %>%
                                     mutate(row_name = "total") %>%
                                     return_household_groups(., row_name, "total") %>%
@@ -759,7 +777,7 @@ create_prior_residence_groups <- function(included_enrollments) {
         return_household_groups(., row_name, "has income")
       
       unduplicated_without_income <- as.data.frame(
-        cbind(name = "no_income", unduplicated_total[2:6] - unduplicated_with_income[2:6]))
+        cbind(name = "No.Sources", unduplicated_total[2:6] - unduplicated_with_income[2:6]))
       
       income_hh_type_disabling_condition_data <- as.data.frame(income_rows_to_show) %>%
         rename(name = income_rows_to_show) %>%
@@ -801,12 +819,17 @@ create_prior_residence_groups <- function(included_enrollments) {
     income_hh_type_disabling_condition <- income_hh_type_disabling_condition %>%
       select(c(name, all_of(selected_cols)) )
     
-    no_income_row <- match(TRUE, income_hh_type_disabling_condition$name == "no_income")
-    total_row <- match(TRUE, income_hh_type_disabling_condition$name == "total_adults")
+    no_income_row <- match(TRUE, income_hh_type_disabling_condition$name == "No.Sources")
+    total_row <- match(TRUE, income_hh_type_disabling_condition$name == "Unduplicated.Total.Adults")
     
-    income_hh_type_disabling_condition$Without.Children_percent[c(no_income_row, total_row)] <- NA
-    income_hh_type_disabling_condition$With.Children.And.Adults_percent[c(no_income_row, total_row)] <- NA
-    income_hh_type_disabling_condition$Unknown.Household.Type_percent[c(no_income_row, total_row)] <- NA
+    # income_hh_type_disabling_condition$Without.Children_percent[c(no_income_row, total_row)] <- NA
+    # income_hh_type_disabling_condition$With.Children.And.Adults_percent[c(no_income_row, total_row)] <- NA
+    # income_hh_type_disabling_condition$Unknown.Household.Type_percent[c(no_income_row, total_row)] <- NA
+    
+    income_hh_type_disabling_condition[income_hh_type_disabling_condition$name == "Unduplicated.Total.Adults", 
+                                       c("Without.Children_percent",
+                                         "With.Children.And.Adults_percent",
+                                         "Unknown.Household.Type_percent")] <- NA
     
     income_hh_type_disabling_condition
   }
@@ -828,10 +851,10 @@ create_contact_table <- function(filtered_enrollments, first_CLS_group,
                   TRUE ~ "10+ times")),
               by = "EnrollmentID") %>% 
     group_by(ContactGroup) %>%
-    summarise(all_persons_contacted = n_distinct(PersonalID),
-              first_contact_not_LH = n_distinct(PersonalID[CLS_group == "Not LH"]),
-              first_contact_LH = n_distinct(PersonalID[CLS_group == "LH"]),
-              first_contact_unknown = n_distinct(PersonalID[CLS_group == "Unknown"])) %>%
+    summarise(All.Persons.Contacted = n_distinct(PersonalID),
+              First.contact.NOT.staying.on.the.Streets.ES.or.SH = n_distinct(PersonalID[CLS_group == "Not LH"]),
+              First.contact.WAS.staying.on.the.Streets.ES.or.SH = n_distinct(PersonalID[CLS_group == "LH"]),
+              First.contact.Worker.unable.to.determine = n_distinct(PersonalID[CLS_group == "Unknown"])) %>%
     adorn_totals("row")
   
   as.data.frame(contact_groups) %>%
@@ -848,7 +871,7 @@ create_summary_table <- function(filtered_enrollments, column_name) {
     summarise(Total.number.of.persons.served = n_distinct(PersonalID),
               Number.of.adults.age.18.or.over = uniqueN(PersonalID[age_group == "Adults"]),
               Number.of.children.under.age.18 = uniqueN(PersonalID[age_group == "Children"]),
-              Number.of.persons.with.unknown.age = uniqueN(PersonalID[age_group %in% c("Does.Not.Know.or.Refused", "Data.Not.Collected")]),
+              Number.of.persons.with.unknown.age = uniqueN(PersonalID[age_group %in% c("Client.Does.Not.Know.or.Refused", "Data.Not.Collected")]),
               Number.of.leavers = uniqueN(PersonalID[!is.na(ExitDate)]),
               Number.of.adult.leavers = uniqueN(PersonalID[age_group == "Adults" &
                                                              !is.na(ExitDate)]),
@@ -861,7 +884,6 @@ create_summary_table <- function(filtered_enrollments, column_name) {
               Number.of.veterans = uniqueN(PersonalID[new_veteran_status == 1]),
               Number.of.chronically.homeless.persons = uniqueN(PersonalID[chronic == "Y"]),
               Number.of.youth.under.age.25 = uniqueN(PersonalID[youth == 1]),
-              # can't figure out why this one isn't working
               Number.of.parenting.youth.under.age.25.with.children = uniqueN(PersonalID[has_children == 1 & youth == 1]),
               Number.of.adult.heads.of.household = uniqueN(PersonalID[age_group == "Adults" &
                                                                         RelationshipToHoH == 1]),
