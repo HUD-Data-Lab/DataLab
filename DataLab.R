@@ -10,12 +10,12 @@
 # <https://www.gnu.org/licenses/>. 
 
 generate_new_kits <- TRUE
-compare_to_last <- FALSE
+compare_to_last <- TRUE
 if (compare_to_last) {
   compare_to_dir <- choose.dir()}
 
 # this bracket will run everything; use with care!
-# {
+{
   source("datalab_functions.R")
   source("DataLab_Lists.R")
   
@@ -249,25 +249,25 @@ if (compare_to_last) {
   {
     project_list <- c(
       # "942",    # DataLab - Coordinated Entry 
-      # "1546",    # DataLab - ES-EE ESG I    
+      # "1546"#,    # DataLab - ES-EE ESG I
       # "1547",    # DataLab - ES-EE ESG II (with CE elements) 
       # "1544",    # DataLab - ES-EE RHY   
-      # "1548",    # DataLab - ES-NbN ESG
-      # "1564",    # DataLab - HP ESG
+      # "1548"#,    # DataLab - ES-NbN ESG
+      # "1564"#,    # DataLab - HP ESG
       # "1552",    # DataLab - PSH CoC I
       # "1550",    # DataLab - PSH HOPWA  
       # "1551",    # DataLab - PSH VASH  
-      "1554"#,    # DataLab - RRH CoC I
-      # "1555",    # DataLab - RRH CoC II
+      "1554",    # DataLab - RRH CoC I
+      "1555"#,    # DataLab - RRH CoC II
       # "1556",    # DataLab - RRH ESG I
       # "1553",    # Datalab - RRH VA  
       # "1557",    # DataLab - SH VA-HCHV     
       # "1565",    # DataLab - SO CoC
-      # "1566",    # DataLab - SO ESG  
+      # "1566"#,    # DataLab - SO ESG
       # "1568",    # Datalab - SO PATH   
       # "1567",    # DataLab - SSO CoC  
       # "1561",    # DataLab - TH CoC
-      # "1560",    # DataLab - TH ESG    
+      # "1560",    # DataLab - TH ESG
       # "1558",    # DataLab - TH HOPWA   
       # "1559",    # Datalab - TH RHY   
       # "1563",    # DataLab - TH VA  
@@ -283,8 +283,8 @@ if (compare_to_last) {
   items_to_keep <- c("items_to_keep", ls())
   
   # loop for running all
-  # for(project_id in full_project_list) {
-  # project_list <- c(project_id)
+  for(project_id in full_project_list) {
+  project_list <- c(project_id)
     
     all_program_enrollments <- Enrollment %>%
       filter(ProjectID %in% project_list) %>%
@@ -778,19 +778,22 @@ if (compare_to_last) {
       
       Q6d_data <- recent_program_enrollment_dq %>%
             left_join(client_plus, by = "PersonalID") %>%
-            filter(EntryDate >= mdy("10/1/2016")) %>%
+            filter(EntryDate >= mdy("10/1/2016") &
+                     ProjectType %in% c(1, 2, 3, 4, 8, 9, 10, 13)) %>%
             keep_adults_and_hoh_only() %>%
             mutate(Entering.into.project.type = case_when(
               ProjectType %in% c(1, 4, 8) ~ "ES.SH.Street.Outreach",
               ProjectType == 2 ~ "TH",
               ProjectType %in% c(3, 9, 10, 13) ~ "PH.all"),
-              missing_institution = LivingSituation %in% c(15, 6, 7, 25, 4, 5) &
+              missing_institution = Entering.into.project.type != "ES.SH.Street.Outreach" &
+                LivingSituation %in% c(15, 6, 7, 25, 4, 5) &
                 (LengthOfStay %in% c(8, 9, 99) |
                    is.na(LengthOfStay)),
-              missing_housing = (LivingSituation %in% c(29, 14, 2, 32, 36, 35, 
-                                                        28, 19, 3, 31, 33, 34, 10, 
-                                                        20, 21, 11, 8, 9, 99) |
-                                   is.na(LivingSituation)) &
+              missing_housing = Entering.into.project.type != "ES.SH.Street.Outreach" &
+                (LivingSituation %in% c(29, 14, 2, 32, 36, 35, 
+                                        28, 19, 3, 31, 33, 34, 10, 
+                                        20, 21, 11, 8, 9, 99) |
+                   is.na(LivingSituation)) &
                 (LengthOfStay %in% c(8, 9, 99) |
                    is.na(LengthOfStay)),
               include_for_EFG = Entering.into.project.type == "ES.SH.Street.Outreach" |
@@ -825,8 +828,8 @@ if (compare_to_last) {
                                                            missing_date |
                                                            missing_times |
                                                            missing_months])) %>% 
-            pivot_longer(!Entering.into.project.type, names_to = "Group", values_to = "values") %>% 
-            pivot_wider(names_from = "Group", values_from = "values") %>%
+            # pivot_longer(!Entering.into.project.type, names_to = "Group", values_to = "values") %>% 
+            # pivot_wider(names_from = "Group", values_from = "values") %>%
             mutate(Percent.of.records.unable.to.calculate = all_errors / Count.of.total.records) %>%
             select(-all_errors)
       
@@ -1062,12 +1065,13 @@ if (compare_to_last) {
       # same question as before--is this the most recent CLS for the *person* or the *enrollment*?
       recent_CLS_for_Q9 <- recent_household_enrollment %>%
         left_join(CurrentLivingSituation %>%
+                    select(-PersonalID) %>%
                     rename(CLS_InformationDate = InformationDate,
-                           CLS = CurrentLivingSituation), by = "PersonalID") %>%
+                           CLS = CurrentLivingSituation), by = "EnrollmentID") %>%
         filter(CLS_InformationDate >= report_start_date &
-                 CLS_InformationDate <= report_end_date &
-                 (CLS_InformationDate <= DateOfEngagement |
-                    is.na(DateOfEngagement)))
+                    CLS_InformationDate <= report_end_date &
+                    (CLS_InformationDate <= DateOfEngagement |
+                       is.na(DateOfEngagement)))
       
       # this one specifies enrollment as directed in the programming specifications
       all_CLS_for_Q9 <- recent_household_enrollment %>%
@@ -1092,7 +1096,7 @@ if (compare_to_last) {
         ungroup()
       
       first_CLS_group <- all_CLS_for_Q9 %>%
-        arrange(desc(CLS_InformationDate)) %>%
+        arrange(CLS_InformationDate) %>%
         group_by(EnrollmentID) %>%
         slice(1L) %>%
         ungroup %>%
@@ -1803,6 +1807,7 @@ if (compare_to_last) {
     #Q22e
     {
       Q22e_data <- recent_household_enrollment %>%
+        filter(ProjectType %in% c(1, 2, 3, 8, 9, 13)) %>%
         mutate(housing_date = case_when(
           ProjectType %nin% c(3, 9, 13) |
             EntryDate > HoH_HMID ~ EntryDate,

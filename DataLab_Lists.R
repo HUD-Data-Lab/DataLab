@@ -205,7 +205,7 @@ race_list <- c("White", "Black, African American, or African",
 # used in:
 #   APR/CAPER - Q12b
 
-ethnicity_list <- c("Hispanic/Latin(a)(o)(x)", "Non-Hispanic/Non-Latin(a)(o)(x)",
+ethnicity_list <- c("Non-Hispanic/Latin(a)(o)(x)", "Hispanic/Non-Latin(a)(o)(x)",
                     "Client.Does.Not.Know.or.Refused", "Data.Not.Collected")
 
 
@@ -215,7 +215,7 @@ ethnicity_list <- c("Hispanic/Latin(a)(o)(x)", "Non-Hispanic/Non-Latin(a)(o)(x)"
 # used in:
 #   APR/CAPER - Q7a
 
-age_groups <- c("Adults", "Children", "Client.Does.Not.Know.or.Refused", "Data Not Collected")
+age_groups <- c("Adults", "Children", "Client.Does.Not.Know.or.Refused", "Data.Not.Collected")
 
 
 # ------------------------------------------------------------------------------

@@ -417,7 +417,8 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type) {
                nbn_number_of_days,
                as.integer(trunc((!!start_date %--% !!end_date) / days(1)))),
            number_of_days_group = case_when(
-             is.na(number_of_days) ~ "Data.Not.Collected",
+             is.na(number_of_days) |
+               !!start_date > !!end_date ~ "Data.Not.Collected",
              number_of_days <= 7 ~ "0 to 7 days",
              number_of_days <= 14 ~ "8 to 14 days",
              number_of_days <= 21 ~ "15 to 21 days",
@@ -621,15 +622,23 @@ create_destination_groups <- function(included_enrollments) {
   for(residence_type in c("permanent", "temporary", "institution", "other")) {
     residences_to_include <- ResidenceUses %>%
       filter(APR_ExitLocationGroup == residence_type &
-               !is.na(LocationDescription)) 
+               !is.na(LocationDescription)) %>%
+      mutate(LocationDescription = case_when(
+        Location %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+        TRUE ~ LocationDescription))
     
     group_of_residences <- included_enrollments %>%
-      inner_join(residences_to_include, by = c("Destination" = "Location")) %>%
-      return_household_groups(., LocationDescription, residences_to_include$LocationDescription) %>%
-      full_join(residences_to_include, by = "LocationDescription") %>%
+      inner_join(residences_to_include, by = c("Destination" = "Location"))  %>%
+      return_household_groups(., LocationDescription, unique(residences_to_include$LocationDescription)) %>%
+      full_join(residences_to_include %>%
+                  filter(Location != 9), 
+                by = "LocationDescription") %>%
       arrange(APR_ExitOrder) %>%
       adorn_totals("row") %>%
-      ifnull(., 0) 
+      ifnull(., 0) %>%
+      mutate(LocationDescription = case_when(
+        LocationDescription == "Total" ~ paste(str_to_title(residence_type), "Subtotal"),
+        TRUE ~ LocationDescription))
     
     group_title_row <- group_of_residences[0,]
     group_title_row[1,1] <- str_to_title(residence_type)
@@ -664,9 +673,6 @@ create_destination_groups <- function(included_enrollments) {
   destination_group %>%
     select(LocationDescription, Total, Without.Children,
            With.Children.And.Adults, With.Only.Children, Unknown.Household.Type) %>%
-    mutate(LocationDescription = if_else(
-      LocationDescription == "Total", "Subtotal", LocationDescription
-    )) %>%
     union(exit_categories %>%
             filter(LocationDescription == "Total")) %>%
     union(exit_categories %>%
@@ -681,20 +687,27 @@ create_destination_groups <- function(included_enrollments) {
 # create prior residence table, used for Q15 and Q27d
 
 create_prior_residence_groups <- function(included_enrollments) {
-  for(residence_type in unique(na.omit(ResidenceUses$APR_PriorLocationGroup))) {
+  for(residence_type in c("homeless", "institution", "other")) {
     residences_to_include <- ResidenceUses %>%
       filter(APR_PriorLocationGroup == residence_type &
                !is.na(LocationDescription) &
-               !is.na(APR_PriorOrder)) %>%
+               !is.na(APR_PriorOrder) &
+               Location != 9) %>%
       arrange(APR_PriorOrder) %>%
       mutate(LocationDescription = case_when(
-        Location %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+        Location == 8 ~ "Client.Does.Not.Know.or.Refused",
         TRUE ~ LocationDescription))
     
     group_of_residences <- included_enrollments %>%
+      mutate(LivingSituation = if_else(LivingSituation == 9, 
+                                       as.integer(8), LivingSituation)) %>%
       inner_join(residences_to_include, by = c("LivingSituation" = "Location")) %>%
       return_household_groups(., LocationDescription, residences_to_include$LocationDescription) %>%
-      adorn_totals("row")
+      adorn_totals("row") %>%
+      mutate(LocationDescription = case_when(
+        LocationDescription == "Total" ~ paste(str_to_title(residence_type), "Subtotal"),
+        TRUE ~ LocationDescription
+      ))
     
     if (exists(("residence_table"))) {
       residence_table <- residence_table %>%
@@ -707,13 +720,10 @@ create_prior_residence_groups <- function(included_enrollments) {
   residence_table <- residence_table %>%
     select(LocationDescription, Total, Without.Children,
            With.Children.And.Adults, With.Only.Children, Unknown.Household.Type) %>%
-    mutate(LocationDescription = if_else(
-      LocationDescription == "Total", "Subtotal", LocationDescription
-    )) %>%
     ifnull(., 0)
   
   total_row <- residence_table %>%
-    filter(LocationDescription == "Subtotal") %>%
+    filter(grepl("Subtotal", LocationDescription)) %>%
     select(-LocationDescription) %>%
     colSums() %>%
     t() %>%
@@ -822,10 +832,6 @@ create_prior_residence_groups <- function(included_enrollments) {
     no_income_row <- match(TRUE, income_hh_type_disabling_condition$name == "No.Sources")
     total_row <- match(TRUE, income_hh_type_disabling_condition$name == "Unduplicated.Total.Adults")
     
-    # income_hh_type_disabling_condition$Without.Children_percent[c(no_income_row, total_row)] <- NA
-    # income_hh_type_disabling_condition$With.Children.And.Adults_percent[c(no_income_row, total_row)] <- NA
-    # income_hh_type_disabling_condition$Unknown.Household.Type_percent[c(no_income_row, total_row)] <- NA
-    
     income_hh_type_disabling_condition[income_hh_type_disabling_condition$name == "Unduplicated.Total.Adults", 
                                        c("Without.Children_percent",
                                          "With.Children.And.Adults_percent",
@@ -841,7 +847,7 @@ create_contact_table <- function(filtered_enrollments, first_CLS_group,
   
   data <- filtered_enrollments %>%
     left_join(first_CLS_group, by = "EnrollmentID") %>%
-    left_join(all_CLS_for_Q9 %>%
+    inner_join(all_CLS_for_Q9 %>%
                 group_by(EnrollmentID) %>%
                 summarise(Contacts = n()) %>%
                 mutate(ContactGroup = case_when(
