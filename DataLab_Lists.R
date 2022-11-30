@@ -430,3 +430,34 @@ split_household_group_list <- c(Total = 0, Without.Children = 0,
                           Adults.in.HH.with.Children.and.Adults = 0,
                           Children.in.HH.with.Children.and.Adults = 0,
                           With.Only.Children = 0, Unknown.Household.Type = 0)
+
+
+# ------------------------------------------------------------------------------
+# --------------------------- Standard Detail Columns --------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   APR/CAPER detail exports
+
+standard_detail_columns <- c("ProjectName", "HouseholdID", "PersonalID",
+                             "EnrollmentID", "EntryDate", "ExitDate")
+
+# ------------------------------------------------------------------------------
+# ----------------------- Housing Program Detail Columns -----------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   APR/CAPER detail exports
+
+housing_program_detail_columns <- c("ProjectName", "HouseholdID", 
+                                    "PersonalID", "RelationshipToHoH", 
+                                    "HoH_HMID", "EnrollmentID", 
+                                    "EntryDate", "ExitDate")
+
+
+# ------------------------------------------------------------------------------
+# ------------------------- Demographic Detail Columns -------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   APR/CAPER detail exports
+
+demographic_detail_columns <- c("age", "new_veteran_status", "household_type",
+                             "chronic")

@@ -279,7 +279,7 @@ keep_adults_and_hoh_only <- function(enrollment_data) {
     inner_join(client_plus %>%
                  filter(age_group == "Adults") %>%
                  select(PersonalID) %>%
-                 union(recent_household_enrollment %>%
+                 union(recent_program_enrollment %>%
                          filter(RelationshipToHoH == 1) %>%
                          select(PersonalID)),
                by = "PersonalID")
@@ -398,7 +398,7 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type) {
   start_date <- enquo(start_date) 
   end_date <- enquo(end_date) 
   
-  nbn_data <- recent_household_enrollment %>%
+  nbn_data <- recent_program_enrollment %>%
     filter(ProjectID %in% Project$ProjectID[Project$ProjectType == 1 &
                                                Project$TrackingMethod == 3]) %>%
     left_join(all_bed_nights, 
@@ -565,28 +565,28 @@ income_information_present <- function(included_enrollments) {
 }
 
 # create age group table
-create_age_groups <- function(filtered_recent_household_enrollment,
+create_age_groups <- function(filtered_recent_program_enrollment,
                               chronic = FALSE) {
   
   if (chronic) {
     detailed_age_group_list <- c("0 - 17", detailed_age_group_list[4:11])
     
-    filtered_recent_household_enrollment <- filtered_recent_household_enrollment %>%
+    filtered_recent_program_enrollment <- filtered_recent_program_enrollment %>%
       mutate(detailed_age_group = case_when(
         detailed_age_group %nin% detailed_age_group_list ~ "0 - 17",
         TRUE ~ detailed_age_group
       ))
   }
   
-  filtered_recent_household_enrollment %>%
+  filtered_recent_program_enrollment %>%
     return_household_groups(., detailed_age_group, detailed_age_group_list) %>%
     adorn_totals("row")
 }
 
 
 # create gender group table
-create_gender_groups <- function(filtered_recent_household_enrollment) {
-  filtered_recent_household_enrollment %>%
+create_gender_groups <- function(filtered_recent_program_enrollment) {
+  filtered_recent_program_enrollment %>%
     return_household_groups(., gender_combined, gender_list) %>%
     adorn_totals("row")
 }
@@ -872,8 +872,8 @@ create_contact_table <- function(filtered_enrollments, first_CLS_group,
 # generate table with general summary information about the project
 create_summary_table <- function(filtered_enrollments, column_name) {
   filtered_enrollments %>%
-    left_join(client_plus, by = "PersonalID") %>%
-    left_join(chronicity_data, by = "EnrollmentID") %>%
+    # left_join(client_plus, by = "PersonalID") %>%
+    # left_join(chronicity_data, by = "EnrollmentID") %>%
     summarise(Total.number.of.persons.served = n_distinct(PersonalID),
               Number.of.adults.age.18.or.over = uniqueN(PersonalID[age_group == "Adults"]),
               Number.of.children.under.age.18 = uniqueN(PersonalID[age_group == "Children"]),

@@ -9,8 +9,8 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
-generate_new_kits <- TRUE
-compare_to_last <- FALSE
+generate_new_kits <- FALSE
+compare_to_last <- TRUE
 if (compare_to_last) {
   compare_to_dir <- choose.dir()}
 
@@ -289,7 +289,7 @@ if (compare_to_last) {
     all_program_enrollments <- Enrollment %>%
       filter(ProjectID %in% project_list) %>%
       left_join(Project %>%
-                  select(ProjectID, ProjectType, TrackingMethod),
+                  select(ProjectID, ProjectType, TrackingMethod, ProjectName),
                 by = "ProjectID") %>%
       left_join(Exit, by = "EnrollmentID")
     
@@ -403,7 +403,7 @@ if (compare_to_last) {
       )) %>%
       select(PersonalID, household_type, HoH_HMID, HoH_ADHS, HoH_EntryDate)
     
-    recent_household_enrollment <- recent_program_enrollment %>%
+    recent_program_enrollment <- recent_program_enrollment %>%
       left_join(client_plus, by = "PersonalID") %>%
       left_join(household_info, by = "PersonalID") %>%
       left_join(chronicity_data, by = "EnrollmentID")
@@ -463,6 +463,11 @@ if (compare_to_last) {
                  (!is.na(DateOfEngagement) &
                     DateOfEngagement <= report_end_date))
       
+      # Q5a_detail <- recent_program_enrollment %>%
+      #   select(c(all_of(standard_detail_columns),
+      #            all_of(demographic_detail_columns))) %>%
+      #   mutate(IncludedInDQ = EnrollmentID %in% recent_program_enrollment_dq$EnrollmentID)
+      
       Q5a <- create_summary_table(recent_program_enrollment_dq, "Count.of.Clients.for.DQ") %>%
         left_join(create_summary_table(recent_program_enrollment, "Count.of.Clients"), 
                   by = "Group")
@@ -508,7 +513,7 @@ if (compare_to_last) {
       
       Q6a_dob <- recent_program_enrollment_dq %>%
         inner_join(Client, by = "PersonalID") %>%
-        left_join(client_plus, by = "PersonalID") %>%
+        # left_join(client_plus, by = "PersonalID") %>%
         mutate(dq_flag = case_when(
           DOBDataQuality %in% c(8, 9) &
             is.na(DOB) ~ "Client.Does.Not.Know.or.Refused",
@@ -639,7 +644,7 @@ if (compare_to_last) {
       valid_cocs <- c(valid_cocs, "XX-500", "XX-501")
       
       Q6b <- recent_program_enrollment_dq %>%
-        left_join(client_plus, by = "PersonalID") %>%
+        # left_join(client_plus, by = "PersonalID") %>%
         left_join(EnrollmentCoC %>%
                     filter(DataCollectionStage == 1) %>%
                     select(EnrollmentID, CoCCode),
@@ -702,7 +707,7 @@ if (compare_to_last) {
       
       
       Q6c <- recent_program_enrollment_dq %>%
-        left_join(client_plus, by = "PersonalID") %>%
+        # left_join(client_plus, by = "PersonalID") %>%
         left_join(annual_assessment_dates, by = "HouseholdID") %>%
         left_join(income_sources %>%
                     filter(DataCollectionStage == 1) %>%
@@ -777,7 +782,7 @@ if (compare_to_last) {
       Entering.into.project.type <- c("ES.SH.Street.Outreach", "TH", "PH.all")
       
       Q6d_data <- recent_program_enrollment_dq %>%
-            left_join(client_plus, by = "PersonalID") %>%
+            # left_join(client_plus, by = "PersonalID") %>%
             filter(EntryDate >= mdy("10/1/2016") &
                      ProjectType %in% c(1, 2, 3, 4, 8, 9, 10, 13)) %>%
             keep_adults_and_hoh_only() %>%
@@ -926,16 +931,16 @@ if (compare_to_last) {
     # Q7a
     {
       
-      Q7a_all <- recent_household_enrollment %>%
+      Q7a_all <- recent_program_enrollment %>%
         mutate(client_group = "Total") %>%
         return_household_groups(., client_group, c("Total")) 
       
-      Q7a_moved_in <- recent_household_enrollment %>%
+      Q7a_moved_in <- recent_program_enrollment %>%
         filter(HoH_HMID <= report_end_date) %>% 
         mutate(client_group = "For PSH & RRH - the total persons served who moved into housing") %>%
-        return_household_groups(., client_group, "For PSH & RRH - the total persons served who moved into housing") 
+        return_household_groups(., client_group, "For PSH & RRH -the total persons served who moved into housing") 
       
-      Q7a <- recent_household_enrollment %>%
+      Q7a <- recent_program_enrollment %>%
         return_household_groups(., age_group, age_groups) %>%
         rename(client_group = age_group) %>%
         union(Q7a_all) %>%
@@ -998,12 +1003,12 @@ if (compare_to_last) {
     
     # Q8a
     {
-      Q8a_all <- recent_household_enrollment %>%
+      Q8a_all <- recent_program_enrollment %>%
         filter(RelationshipToHoH == 1) %>% 
         mutate(client_group = "Total Households") %>%
         return_household_groups(., client_group, "Total Households") 
       
-      Q8a_moved_in <- recent_household_enrollment %>%
+      Q8a_moved_in <- recent_program_enrollment %>%
         filter(RelationshipToHoH == 1 &
                  HoH_HMID <= report_end_date) %>% 
         mutate(client_group = "Moved In Households") %>%
@@ -1063,7 +1068,7 @@ if (compare_to_last) {
     # Q9a
     {
       # same question as before--is this the most recent CLS for the *person* or the *enrollment*?
-      recent_CLS_for_Q9 <- recent_household_enrollment %>%
+      recent_CLS_for_Q9 <- recent_program_enrollment %>%
         left_join(CurrentLivingSituation %>%
                     select(-PersonalID) %>%
                     rename(CLS_InformationDate = InformationDate,
@@ -1074,7 +1079,7 @@ if (compare_to_last) {
                        is.na(DateOfEngagement)))
       
       # this one specifies enrollment as directed in the programming specifications
-      all_CLS_for_Q9 <- recent_household_enrollment %>%
+      all_CLS_for_Q9 <- recent_program_enrollment %>%
         left_join(CurrentLivingSituation %>%
                     rename(CLS_InformationDate = InformationDate,
                            CLS = CurrentLivingSituation), by = "EnrollmentID") %>%
@@ -1085,7 +1090,7 @@ if (compare_to_last) {
                     is.na(DateOfEngagement)) &
                  CLS_InformationDate <= report_end_date) %>%
         select(EnrollmentID, CLS_InformationDate, CLS) %>%
-        union(recent_household_enrollment %>%
+        union(recent_program_enrollment %>%
                 filter(DateOfEngagement <= report_end_date) %>%
                 rename(CLS_InformationDate = DateOfEngagement) %>%
                 mutate(CLS = 999) %>%
@@ -1106,7 +1111,7 @@ if (compare_to_last) {
           TRUE ~ "Not LH"
         ))
       
-      Q9a <- recent_household_enrollment %>%
+      Q9a <- recent_program_enrollment %>%
         filter((ProjectType == 4 |
                   (ProjectType == 1 &
                      TrackingMethod == 3)) &
@@ -1119,7 +1124,7 @@ if (compare_to_last) {
     
     # Q9b
     {
-      Q9b <- recent_household_enrollment %>%
+      Q9b <- recent_program_enrollment %>%
         filter((ProjectType == 4 |
                   (ProjectType == 1 &
                      TrackingMethod == 3)) &
@@ -1145,7 +1150,7 @@ if (compare_to_last) {
     
     # Q10a
     {
-      Q10a <- recent_household_enrollment %>%
+      Q10a <- recent_program_enrollment %>%
         keep_adults_only() %>%
         create_gender_groups(.) %>%
         select(-With.Only.Children)
@@ -1153,7 +1158,7 @@ if (compare_to_last) {
     
     # Q10b
     {
-      Q10b <- recent_household_enrollment %>%
+      Q10b <- recent_program_enrollment %>%
         filter(age_group == "Children") %>%
         create_gender_groups(.) %>%
         select(-Without.Children)
@@ -1161,7 +1166,7 @@ if (compare_to_last) {
     
     # Q10c
     {
-      Q10c <- recent_household_enrollment %>%
+      Q10c <- recent_program_enrollment %>%
         filter(age_group %in% c("Client.Does.Not.Know.or.Refused", "Data.Not.Collected")) %>%
         create_gender_groups(.)
     }
@@ -1170,7 +1175,7 @@ if (compare_to_last) {
     {
       Q10d <- as.data.frame(gender_list) %>%
         `colnames<-`(c("gender_combined")) %>%
-        full_join(recent_household_enrollment %>%
+        full_join(recent_program_enrollment %>%
                     mutate(Q10d_age_group = case_when(
                       detailed_age_group %in% c("Under 5", "5-12", "13-17") ~ "Under18",
                       detailed_age_group %in% c("25-34", "35-44", "45-54", "55-61") ~ "25-61",
@@ -1190,14 +1195,14 @@ if (compare_to_last) {
     
     # Q11
     {
-      Q11 <- recent_household_enrollment %>%
+      Q11 <- recent_program_enrollment %>%
         create_age_groups(.)
     }
     
     # Q12a
     {
       
-      Q12a <- recent_household_enrollment %>%
+      Q12a <- recent_program_enrollment %>%
         return_household_groups(., race_combined, race_list) %>%
         adorn_totals("row")
     }
@@ -1205,7 +1210,7 @@ if (compare_to_last) {
     # Q12b
     {
       
-      Q12b <- recent_household_enrollment %>%
+      Q12b <- recent_program_enrollment %>%
         left_join(Client %>%
                     select(PersonalID, Ethnicity), by = "PersonalID") %>%
         mutate(display_ethnicity = case_when(Ethnicity == 1 ~ "Hispanic/Latin(a)(o)(x)",
@@ -1219,7 +1224,7 @@ if (compare_to_last) {
     # Q13a1
     {
       
-      Q13a <- recent_household_enrollment %>%
+      Q13a <- recent_program_enrollment %>%
         inner_join(disability_table %>%
                      filter(DataCollectionStage == 1), by ="EnrollmentID")
       
@@ -1230,7 +1235,7 @@ if (compare_to_last) {
     
     # Q13b1
     {
-      Q13b <- recent_household_enrollment %>%
+      Q13b <- recent_program_enrollment %>%
         filter(!is.na(ExitDate)) %>%
         inner_join(disability_table %>%
                      filter(DataCollectionStage == 3), by ="EnrollmentID")
@@ -1242,7 +1247,7 @@ if (compare_to_last) {
     
     # Q13c1
     {
-      Q13c <- recent_household_enrollment %>%
+      Q13c <- recent_program_enrollment %>%
         filter(is.na(ExitDate)) %>%
         inner_join(disability_table %>%
                      filter(InformationDate <= report_end_date &
@@ -1264,7 +1269,7 @@ if (compare_to_last) {
     # Q13a2
     {
       
-      Q13a2 <- recent_household_enrollment %>%
+      Q13a2 <- recent_program_enrollment %>%
         left_join(Q13a %>%
                     # earlier data lab logic did not account for the following step
                     group_by(PersonalID) %>%
@@ -1279,7 +1284,7 @@ if (compare_to_last) {
     
     # Q13b2
     {
-      Q13b2 <- recent_household_enrollment %>%
+      Q13b2 <- recent_program_enrollment %>%
         filter(!is.na(ExitDate)) %>%
         left_join(Q13b %>%
                     # earlier data lab logic did not account for the following step
@@ -1295,7 +1300,7 @@ if (compare_to_last) {
     
     # Q13c2
     {
-      Q13c2 <- recent_household_enrollment %>%
+      Q13c2 <- recent_program_enrollment %>%
         filter(is.na(ExitDate)) %>%
         left_join(Q13c %>%
                     # earlier data lab logic did not account for the following step
@@ -1312,7 +1317,7 @@ if (compare_to_last) {
     # Q14a
     {
       
-      Q14 <- recent_household_enrollment %>%
+      Q14 <- recent_program_enrollment %>%
         keep_adults_and_hoh_only() %>%
         left_join(HealthAndDV %>%
                     filter(InformationDate <= report_end_date) %>%
@@ -1346,27 +1351,27 @@ if (compare_to_last) {
     
     # Q15
     {
-      Q15 <- recent_household_enrollment %>%
+      Q15 <- recent_program_enrollment %>%
         keep_adults_and_hoh_only() %>%
         create_prior_residence_groups(.)
     }
     
     # Q16
     {
-      entry_income <- recent_household_enrollment %>%
+      entry_income <- recent_program_enrollment %>%
         left_join(IncomeBenefits %>%
                     select(-PersonalID) %>%
                     filter(DataCollectionStage == 1),
                   by = c("EnrollmentID", "EntryDate" = "InformationDate"))
       
-      annual_income <- recent_household_enrollment %>%
+      annual_income <- recent_program_enrollment %>%
         filter(is.na(ExitDate)) %>%
         get_annual_id(., IncomeBenefits, IncomeBenefitsID) %>%
         left_join(IncomeBenefits %>%
-                    select(colnames(IncomeBenefits)[colnames(IncomeBenefits) %nin% colnames(recent_household_enrollment)]),
+                    select(colnames(IncomeBenefits)[colnames(IncomeBenefits) %nin% colnames(recent_program_enrollment)]),
                   by = c("IncomeBenefitsID" = "IncomeBenefitsID"))
       
-      exit_income <- recent_household_enrollment %>%
+      exit_income <- recent_program_enrollment %>%
         filter(!is.na(ExitDate)) %>%
         left_join(IncomeBenefits %>%
                     select(-PersonalID) %>%
@@ -1395,7 +1400,7 @@ if (compare_to_last) {
     
     # Q17
     {
-      Q17 <- recent_household_enrollment %>%
+      Q17 <- recent_program_enrollment %>%
         keep_adults_only() %>%
         create_income_sources(.)
     }
@@ -1403,7 +1408,7 @@ if (compare_to_last) {
     # Q18
     {
       
-      Q18_data <- recent_household_enrollment %>%
+      Q18_data <- recent_program_enrollment %>%
         keep_adults_only() %>%
         create_income_categories(.) %>%
         adorn_totals("row")
@@ -1417,7 +1422,7 @@ if (compare_to_last) {
       
       Q18 <- Q18_data %>%
         rbind(., c("1 or more source of income", has_income)) %>%
-        rbind(., income_information_present(recent_household_enrollment %>%
+        rbind(., income_information_present(recent_program_enrollment %>%
                                             keep_adults_only()))
     }
     
@@ -1547,7 +1552,7 @@ if (compare_to_last) {
     
     # Q20a
     {
-      Q20a <- create_benefit_groups(recent_household_enrollment)
+      Q20a <- create_benefit_groups(recent_program_enrollment)
     }
     
     # Q20b
@@ -1672,7 +1677,7 @@ if (compare_to_last) {
     {
       # groups in specs include Data.Not.Collected, what does that mean in length of stay?
       # it's not defined in the reporting glossary
-      Q22_data <- recent_household_enrollment %>%
+      Q22_data <- recent_program_enrollment %>%
         add_length_of_time_groups(., EntryDate, 
                                   ifnull(ExitDate, ymd(report_end_date) + days(1)),
                                   "APR") %>%
@@ -1746,7 +1751,7 @@ if (compare_to_last) {
     
     # Q22c
     {
-      Q22c_data <- recent_household_enrollment %>%
+      Q22c_data <- recent_program_enrollment %>%
         filter(ProjectType %in% c(3, 13) & 
                  ((HoH_HMID >= report_start_date &
                      HoH_HMID <= report_end_date) |
@@ -1767,7 +1772,7 @@ if (compare_to_last) {
                   With.Only.Children = mean(days_to_house[household_type == "ChildrenOnly"]),
                   Unknown.Household.Type = mean(days_to_house[household_type == "Unknown"]))
       
-      exited_without_move_in <- recent_household_enrollment %>%
+      exited_without_move_in <- recent_program_enrollment %>%
         filter(ProjectType %in% c(3, 13) &
                  is.na(HoH_HMID) &
                  !is.na(ExitDate)) %>%
@@ -1804,7 +1809,7 @@ if (compare_to_last) {
     
     #Q22e
     {
-      Q22e_data <- recent_household_enrollment %>%
+      Q22e_data <- recent_program_enrollment %>%
         filter(ProjectType %in% c(1, 2, 3, 8, 9, 13)) %>%
         mutate(housing_date = case_when(
           ProjectType %nin% c(3, 9, 13) |
@@ -1841,13 +1846,13 @@ if (compare_to_last) {
     
     # Q23c
     {
-      Q23c <- create_destination_groups(recent_household_enrollment)
+      Q23c <- create_destination_groups(recent_program_enrollment)
     }
     
     # Q24
     {
       
-      Q24 <- recent_household_enrollment %>%
+      Q24 <- recent_program_enrollment %>%
         filter(!is.na(ExitDate) &
                  ProjectType == 12) %>%
         mutate(assessment_at_exit = case_when(
@@ -1883,7 +1888,7 @@ if (compare_to_last) {
     #------------------- Veteran Questions -----------------------
     #-------------------------------------------------------------
     
-    recent_veteran_enrollment <- recent_household_enrollment %>%
+    recent_veteran_enrollment <- recent_program_enrollment %>%
       filter(new_veteran_status == 1)
     
     # Q25a
@@ -1901,7 +1906,7 @@ if (compare_to_last) {
       ##  date range," and that seems like the same intent as looking at folks who
       ##  were in the household but not as their most recent stay. Right?
       
-      Q25a <- recent_household_enrollment %>%
+      Q25a <- recent_program_enrollment %>%
         mutate(category = case_when(
           new_veteran_status == 1 &
             chronic == "Y" ~ vet_chronic_categories[1],
@@ -1987,12 +1992,12 @@ if (compare_to_last) {
     #------------------- Chronic Questions -----------------------
     #-------------------------------------------------------------
     
-    recent_chronic_enrollment <- recent_household_enrollment %>%
+    recent_chronic_enrollment <- recent_program_enrollment %>%
       filter(chronic == "Y")
     
     # Q26a
     {
-      Q26a <- recent_household_enrollment %>%
+      Q26a <- recent_program_enrollment %>%
         mutate(category = case_when(
           chronic == "Y" ~ chronic_categories[1],
           chronic == "N" ~ chronic_categories[2],
@@ -2070,7 +2075,7 @@ if (compare_to_last) {
     #-------------------- Youth Questions ------------------------
     #-------------------------------------------------------------
     
-    recent_youth_enrollment <- recent_household_enrollment %>%
+    recent_youth_enrollment <- recent_program_enrollment %>%
       filter(youth == 1)
     
     # Q27a
@@ -2086,7 +2091,7 @@ if (compare_to_last) {
         `colnames<-`(c("household_type"))
         
       Q27b <- Q27b_headers %>%
-        full_join(recent_household_enrollment %>%
+        full_join(recent_program_enrollment %>%
                     filter(youth_household == 1 &
                              has_children == 1) %>%
                     mutate(household_member_type = case_when(
