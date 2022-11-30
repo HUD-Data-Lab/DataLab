@@ -932,8 +932,8 @@ if (compare_to_last) {
       
       Q7a_moved_in <- recent_household_enrollment %>%
         filter(HoH_HMID <= report_end_date) %>% 
-        mutate(client_group = "For PSH & RRH – the total persons served who moved into housing") %>%
-        return_household_groups(., client_group, "For PSH & RRH – the total persons served who moved into housing") 
+        mutate(client_group = "For PSH & RRH - the total persons served who moved into housing") %>%
+        return_household_groups(., client_group, "For PSH & RRH - the total persons served who moved into housing") 
       
       Q7a <- recent_household_enrollment %>%
         return_household_groups(., age_group, age_groups) %>%
@@ -2207,10 +2207,10 @@ if (compare_to_last) {
         for (question in APR_files) {
           if (exists(question)) {
             
-            to_write <- get(question) %>% 
-              `colnames<-`(c("", gsub(".", " ", names(get(question)), fixed = TRUE)[2:length(names(get(question)))]))
+            to_write <- get(question)%>% 
+              set_hud_format()
             
-            write.csv(to_write, file.path(paste0("created_files/ICF - ", question, ".csv")), row.names=FALSE)
+            write_csv(to_write, file.path(paste0("created_files/ICF - ", question, ".csv")))
           } else {
             missing_files <- c(missing_files, paste("APR -", projects_included, "-", question))
           }
@@ -2225,9 +2225,9 @@ if (compare_to_last) {
           if (exists(question)) {
             
             to_write <- get(question) %>% 
-              `colnames<-`(c("", gsub(".", " ", names(get(question)), fixed = TRUE)[2:length(names(get(question)))]))
+              set_hud_format()
             
-            write.csv(to_write, file.path(paste0("created_files/ICF - ", question, ".csv")), row.names=FALSE)
+            write_csv(to_write, file.path(paste0("created_files/ICF - ", question, ".csv")))
           } else {
             missing_files <- c(missing_files, paste("CAPER -", projects_included, "-", question))
           }
@@ -2325,9 +2325,8 @@ if (compare_to_last) {
       filter(str_detect(differences, "Mean") &
                question != "Q4a")
     
-    write.csv(differences, 
-              paste0("Change Tracker ", Sys.Date(), ".csv"), 
-              row.names = FALSE)
+    write_csv(differences, 
+              paste0("Change Tracker ", Sys.Date(), ".csv"))
   }
   
 }
