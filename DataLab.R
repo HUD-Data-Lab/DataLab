@@ -9,7 +9,7 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
-generate_new_kits <- FALSE
+generate_new_kits <- TRUE
 compare_to_last <- TRUE
 if (compare_to_last) {
   compare_to_dir <- choose.dir()}
@@ -463,10 +463,10 @@ if (compare_to_last) {
                  (!is.na(DateOfEngagement) &
                     DateOfEngagement <= report_end_date))
       
-      # Q5a_detail <- recent_program_enrollment %>%
-      #   select(c(all_of(standard_detail_columns),
-      #            all_of(demographic_detail_columns))) %>%
-      #   mutate(IncludedInDQ = EnrollmentID %in% recent_program_enrollment_dq$EnrollmentID)
+      Q5a_detail <- recent_program_enrollment %>%
+        select(c(all_of(standard_detail_columns),
+                 all_of(demographic_detail_columns))) %>%
+        mutate(IncludedInDQ = EnrollmentID %in% recent_program_enrollment_dq$EnrollmentID)
       
       Q5a <- create_summary_table(recent_program_enrollment_dq, "Count.of.Clients.for.DQ") %>%
         left_join(create_summary_table(recent_program_enrollment, "Count.of.Clients"), 
@@ -484,7 +484,8 @@ if (compare_to_last) {
             is.na(FirstName) |
             is.na(LastName) ~ "Information.Missing",
           NameDataQuality == 2 ~ "Data.Issues",
-          TRUE ~ "OK")) 
+          TRUE ~ "OK")) %>%
+        select(PersonalID, FirstName, LastName, NameDataQuality, dq_flag)
       
       Q6a_ssn <- recent_program_enrollment_dq %>%
         inner_join(Client, by = "PersonalID") %>%
@@ -509,7 +510,8 @@ if (compare_to_last) {
                               "777777777", "888888888", "999999999") |
                    sequential == TRUE
                  ~ "Data.Issues",
-                 TRUE ~ "OK")) 
+                 TRUE ~ "OK")) %>%
+        select(PersonalID, SSN, SSNDataQuality, dq_flag)
       
       Q6a_dob <- recent_program_enrollment_dq %>%
         inner_join(Client, by = "PersonalID") %>%
@@ -527,10 +529,10 @@ if (compare_to_last) {
             DOB > DateCreated |
             (DOB >= EntryDate &
                (age_group == "Adults" |
-                  RelationshipToHoH == 1))
-          
-          ~ "Data.Issues",
-          TRUE ~ "OK")) 
+                  RelationshipToHoH == 1)) ~ "Data.Issues",
+          TRUE ~ "OK")) %>%
+        select(PersonalID, DOB, DOBDataQuality, DateCreated, age_group,
+               RelationshipToHoH, dq_flag)
       
       Q6a_race <- recent_program_enrollment_dq %>%
         inner_join(Client, by = "PersonalID") %>%
@@ -542,14 +544,17 @@ if (compare_to_last) {
                BlackAfAmerican == 0 &
                NativeHIPacific == 0 &
                White == 0) ~ "Information.Missing",
-          TRUE ~ "OK"))
+          TRUE ~ "OK")) %>%
+        select(PersonalID, AmIndAKNative, Asian, BlackAfAmerican,
+               NativeHIPacific, White, RaceNone, dq_flag)
       
       Q6a_ethnicity <- recent_program_enrollment_dq %>%
         inner_join(Client, by = "PersonalID") %>%
         mutate(dq_flag = case_when(
           Ethnicity %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
           Ethnicity == 99 ~ "Information.Missing",
-          TRUE ~ "OK")) 
+          TRUE ~ "OK")) %>%
+        select(PersonalID, Ethnicity, dq_flag)
       
       Q6a_gender <- recent_program_enrollment_dq %>%
         inner_join(Client, by = "PersonalID") %>%
@@ -561,7 +566,9 @@ if (compare_to_last) {
                NoSingleGender == 0 &
                Transgender == 0 &
                Questioning == 0) ~ "Information.Missing",
-          TRUE ~ "OK")) 
+          TRUE ~ "OK")) %>%
+        select(PersonalID, Female, Male, NoSingleGender, Transgender,
+               Questioning, GenderNone, dq_flag)
       
       columns <- c("DataElement", "Client.Does.Not.Know.or.Refused", 
                    "Information.Missing", "Data.Issues", "OK")
@@ -569,10 +576,20 @@ if (compare_to_last) {
       Q6a <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), columns) %>%
         mutate(across(DataElement, factor)) 
       
+      Q6a_detail <- recent_program_enrollment_dq %>%
+        select(all_of(standard_detail_columns))
+      
       elements <- list("Name", "SSN", "DOB", "Race", "Ethnicity", "Gender")
       
       for (element in elements) {
-        table <- get(paste0("Q6a_", tolower(element))) %>%
+        table <- get(paste0("Q6a_", tolower(element))) 
+        
+        detail_title <- paste0(element, "_DQ")
+        Q6a_detail <- Q6a_detail %>%
+          left_join(table, by = "PersonalID") %>%
+          rename({{detail_title}} := dq_flag)
+        
+        table <- table %>%
           group_by(dq_flag) %>%
           summarise(Clients = n()) %>% 
           pivot_wider(names_from = "dq_flag", values_from = "Clients") %>%
@@ -614,7 +631,6 @@ if (compare_to_last) {
                                                 "Information.Missing")] <- NA
       Q6a$Data.Issues[4:7] <- NA
       
-      rm(list=ls(pattern="^Q6a_"))
     }
     
     # Q6b 
@@ -1209,7 +1225,6 @@ if (compare_to_last) {
     
     # Q12b
     {
-      
       Q12b <- recent_program_enrollment %>%
         left_join(Client %>%
                     select(PersonalID, Ethnicity), by = "PersonalID") %>%
@@ -1740,8 +1755,10 @@ if (compare_to_last) {
       Q22b <- Q22_data %>%
         ungroup() %>%
         summarise(summary = "Average Length",
-                  Leavers = mean(days_enrolled[!is.na(ExitDate)]),
-                  Stayers = mean(days_enrolled[is.na(ExitDate)])) %>%
+                  Leavers = round(
+                    mean(days_enrolled[!is.na(ExitDate)]), 4),
+                  Stayers = round(
+                    mean(days_enrolled[is.na(ExitDate)]), 4)) %>%
         rbind(Q22_data %>%
                 ungroup() %>%
                 summarise(summary = "Median Length",
@@ -1906,14 +1923,17 @@ if (compare_to_last) {
       ##  date range," and that seems like the same intent as looking at folks who
       ##  were in the household but not as their most recent stay. Right?
       
-      Q25a <- recent_program_enrollment %>%
+      Q25a_detail <- recent_program_enrollment %>%
+        keep_adults_only() %>%
         mutate(category = case_when(
           new_veteran_status == 1 &
             chronic == "Y" ~ vet_chronic_categories[1],
           new_veteran_status == 1 ~ vet_chronic_categories[2],
           new_veteran_status == 0 ~ vet_chronic_categories[3],
           new_veteran_status %in% c(8, 9) ~ vet_chronic_categories[4],
-          TRUE ~ vet_chronic_categories[5])) %>%
+          TRUE ~ vet_chronic_categories[5])) 
+      
+      Q25a <- Q25a_detail %>%
         return_household_groups(., category, vet_chronic_categories) %>%
         adorn_totals("row") %>%
         ifnull(., 0)
@@ -1921,7 +1941,25 @@ if (compare_to_last) {
     
     # Q25b
     {
-      ## see note above
+      Q25b <- recent_program_enrollment %>%
+        filter(RelationshipToHoH == 1) %>%
+        mutate(category = case_when(
+          HouseholdID %in%
+            Q25a_detail$HouseholdID[Q25a_detail$category == vet_chronic_categories[1]] ~
+            vet_chronic_categories[1],
+          HouseholdID %in%
+            Q25a_detail$HouseholdID[Q25a_detail$category == vet_chronic_categories[2]] ~
+            vet_chronic_categories[2],
+          HouseholdID %in%
+            Q25a_detail$HouseholdID[Q25a_detail$category == vet_chronic_categories[3]] ~
+            vet_chronic_categories[3],
+          HouseholdID %in%
+            Q25a_detail$HouseholdID[Q25a_detail$category == vet_chronic_categories[4]] ~
+            vet_chronic_categories[4],
+          TRUE ~ vet_chronic_categories[5])) %>%
+        return_household_groups(., category, vet_chronic_categories) %>%
+        adorn_totals("row") %>%
+        ifnull(., 0)
     }
     
     # Q25c
@@ -1997,12 +2035,15 @@ if (compare_to_last) {
     
     # Q26a
     {
-      Q26a <- recent_program_enrollment %>%
+      Q26a_detail <- recent_program_enrollment %>%
         mutate(category = case_when(
           chronic == "Y" ~ chronic_categories[1],
           chronic == "N" ~ chronic_categories[2],
           chronic == "Client.Does.Not.Know.or.Refused" ~ chronic_categories[3],
-          TRUE ~ chronic_categories[4])) %>%
+          TRUE ~ chronic_categories[4])) 
+      
+      Q26a <- Q26a_detail %>%
+        filter(RelationshipToHoH == 1) %>%
         return_household_groups(., category, chronic_categories) %>%
         adorn_totals("row") %>%
         ifnull(., 0)
@@ -2010,7 +2051,10 @@ if (compare_to_last) {
     
     # Q26b
     {
-      ## see note above
+      Q26b <- Q26a_detail %>%
+        return_household_groups(., category, chronic_categories) %>%
+        adorn_totals("row") %>%
+        ifnull(., 0)
     }
     
     # Q26c
@@ -2160,8 +2204,8 @@ if (compare_to_last) {
     # label for A17 specifies adults like the other uses of this logic, but
     # this question is unique in that it includes HoHs who are minors
     {
-      Q26g <- recent_youth_enrollment %>%
-        keep_adults_only() %>%
+      Q27g <- recent_youth_enrollment %>%
+        keep_adults_and_hoh_only() %>%
         create_income_sources(.)
     }
     

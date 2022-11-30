@@ -944,18 +944,16 @@ create_inactive_table <- function(dq_enrollments,
 # used to write files with correct formatting
 set_hud_format <- function(data_for_csv) {
   
-  data_for_csv[, 1] <- gsub("Client.Does.Not.Know.or.Refused", 
-                            "Client Doesn't Know/Refused", 
-                            data_for_csv[, 1], fixed = TRUE)
-  data_for_csv[, 1] <- gsub(".", " ", data_for_csv[, 1], fixed = TRUE)
+  first_col_name <- names(data_for_csv)[1]
+  data_for_csv <- data_for_csv %>%
+    mutate(!!first_col_name := gsub(".", " ", get(first_col_name), fixed = TRUE),
+      !!first_col_name := case_when(
+               get(first_col_name) == "Client Does Not Know or Refused" ~
+                 "Client Doesn't Know/Refused",
+               TRUE ~ get(first_col_name)))
   
   new_header <- names(data_for_csv)[2:length(data_for_csv)]
   new_header[new_header == "Client.Does.Not.Know.or.Refused"] <- "Client Doesn't Know/Refused"
-  
-  # not_dates <- sapply(data, class) != 'Date'
-  # data_for_csv[not_dates][data_for_csv[not_dates] == "Client.Does.Not.Know.or.Refused"] <- "Client Doesn't Know/Refused"
-  
-  # data_for_csv[as.matrix(data_for_csv) == "Client.Does.Not.Know.or.Refused"] <- "Client Doesn't Know/Refused"
   
   data_for_csv %>%
     `colnames<-`(c("", gsub(".", " ", new_header, fixed = TRUE)))
