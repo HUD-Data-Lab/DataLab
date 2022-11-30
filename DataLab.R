@@ -10,7 +10,7 @@
 # <https://www.gnu.org/licenses/>. 
 
 generate_new_kits <- TRUE
-compare_to_last <- TRUE
+compare_to_last <- FALSE
 if (compare_to_last) {
   compare_to_dir <- choose.dir()}
 
@@ -1672,8 +1672,6 @@ if (compare_to_last) {
     {
       # groups in specs include Data.Not.Collected, what does that mean in length of stay?
       # it's not defined in the reporting glossary
-      
-      # also still need to add bed night calculations
       Q22_data <- recent_household_enrollment %>%
         add_length_of_time_groups(., EntryDate, 
                                   ifnull(ExitDate, ymd(report_end_date) + days(1)),
@@ -1961,7 +1959,7 @@ if (compare_to_last) {
     }
     
     # Q25f
-    # Q26f specifies that rows 10 and 11 are excluded intentionally, Q25f does
+    # Q26f specifies that rows 11 and 12 are excluded intentionally, Q25f does
     # not specify this but it also does not show these rows in the table
     {
       Q25f <- recent_veteran_enrollment %>%
@@ -2115,9 +2113,6 @@ if (compare_to_last) {
     }
     
     # Q27d
-    # specs say to just use Q15 with a youth filter and change the HoH/adult 
-    # filter to HoH only, but the table shown switches the order of the other 
-    # and permanent categories when compared to Q15
     {
       Q27d <- recent_youth_enrollment %>%
         filter(RelationshipToHoH == 1) %>%
@@ -2211,7 +2206,11 @@ if (compare_to_last) {
       if(APR_relevant) {
         for (question in APR_files) {
           if (exists(question)) {
-            write.csv(get(question), file.path(paste0("created_files/ICF - ", question, ".csv")), row.names=FALSE)
+            
+            to_write <- get(question) %>% 
+              `colnames<-`(c("", gsub(".", " ", names(get(question)), fixed = TRUE)[2:length(names(get(question)))]))
+            
+            write.csv(to_write, file.path(paste0("created_files/ICF - ", question, ".csv")), row.names=FALSE)
           } else {
             missing_files <- c(missing_files, paste("APR -", projects_included, "-", question))
           }
@@ -2224,7 +2223,11 @@ if (compare_to_last) {
       if(CAPER_relevant) {
         for (question in CAPER_files) {
           if (exists(question)) {
-            write.csv(get(question), file.path(paste0("created_files/ICF - ", question, ".csv")), row.names=FALSE)
+            
+            to_write <- get(question) %>% 
+              `colnames<-`(c("", gsub(".", " ", names(get(question)), fixed = TRUE)[2:length(names(get(question)))]))
+            
+            write.csv(to_write, file.path(paste0("created_files/ICF - ", question, ".csv")), row.names=FALSE)
           } else {
             missing_files <- c(missing_files, paste("CAPER -", projects_included, "-", question))
           }
