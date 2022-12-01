@@ -3,6 +3,9 @@ library(syn)
 library(lexicon)
 library(stringr)
 
+programs_to_get <- "all"
+# programs_to_get <- "nbn"
+
 source("datalab_functions.R")
 
 set.seed(2022)
@@ -143,11 +146,6 @@ while (length(invalid_ssns) < nrow(ssns) - sum(ssns$valid)) {
 
 ssns$generated_ssns <- c(valid_ssns, invalid_ssns)
 
-hashed_client <- Client %>%
-  left_join(ssns, by = "SSN") %>%
-  mutate(SSN = generated_ssns) %>%
-  select(-c(sequential, valid, generated_ssns))
-
 
 words_for_names <- setNames(
   data.frame(c(
@@ -163,11 +161,14 @@ words_for_names <- setNames(
   distinct() %>%
   filter(
     !nsfw_word(word)
-    ) %>%
+  ) %>%
   # left_join(hash_grady_pos, by = "word") %>%
   mutate(word = str_to_title(word))
 
-hashed_client <- hashed_client %>%
+hashed_client <- Client %>%
+  left_join(ssns, by = "SSN") %>%
+  mutate(SSN = generated_ssns) %>%
+  select(-c(sequential, valid, generated_ssns)) %>%
   mutate(new_FirstName = sample(words_for_names$word, nrow(hashed_client), replace = TRUE),
          new_MiddleName = sample(words_for_names$word, nrow(hashed_client), replace = TRUE),
          new_LastName = sample(words_for_names$word, nrow(hashed_client), replace = TRUE),
@@ -193,11 +194,7 @@ hashed_client <- hashed_client %>%
              !str_detect(NameSuffix, "Josiah") ~ NameSuffix
          )) %>%
   select(-c(new_FirstName, new_MiddleName, new_LastName,
-            FirstInitial, MiddleInitial, LastInitial))
-
-
-
-hashed_client <- hashed_client %>%
+            FirstInitial, MiddleInitial, LastInitial)) %>%
   left_join(Enrollment %>%
               select(PersonalID, EntryDate) %>%
               group_by(PersonalID) %>%
@@ -292,8 +289,8 @@ picking_projects <- Project %>%
   left_join(funding_sources, by = "Funder") %>%
   select(ProjectID, ProjectName, ProjectType, enrollments, events, last_entry, FunderName)
 
-datalab_projects <- Project %>%
-  inner_join(data.frame(matrix(
+if (programs_to_get == "all") {
+  project_matrix <- matrix(
     c(1386,	"DataLab - Coordinated Entry",
       1362,	"DataLab - ES-EE ESG I",
       549,	"DataLab - ES-EE ESG II (with CE elements)",
@@ -319,7 +316,16 @@ datalab_projects <- Project %>%
       1453,	"DataLab - TH VA"
       # 24,	"DataLab - TH YHDP"
     ), ncol = 2, byrow = TRUE
-  )) %>%
+  )
+} elseif (programs_to_get == "nbn") {
+  project_matrix <- matrix(
+    c(5,	"DataLab - ES-NbN ESG"
+    ), ncol = 2, byrow = TRUE
+  )
+}
+
+datalab_projects <- Project %>%
+  inner_join(data.frame(project_matrix) %>%
     `colnames<-`(c("ProjectID", "NewProjectName"))
   , by = "ProjectID") %>%
   mutate(ProjectName = NewProjectName,

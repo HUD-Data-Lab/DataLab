@@ -394,29 +394,37 @@ pivot_existing_only <- function(data, group_name, client_label) {
 }
 
 # used in Q22 questions
-add_length_of_time_groups <- function(data, start_date, end_date, report_type) {
+add_length_of_time_groups <- function(data, start_date, end_date, report_type,
+                                      in_project = TRUE) {
   start_date <- enquo(start_date) 
   end_date <- enquo(end_date) 
   
-  nbn_data <- recent_program_enrollment %>%
-    filter(ProjectID %in% Project$ProjectID[Project$ProjectType == 1 &
-                                               Project$TrackingMethod == 3]) %>%
-    left_join(all_bed_nights, 
-              by = "EnrollmentID") %>%
-    group_by(EnrollmentID) %>%
-    summarise(nbn_number_of_days = n_distinct(na.omit(ymd(DateProvided)))) %>%
-    ungroup() %>%
-    select(EnrollmentID, nbn_number_of_days)
+  if(in_project) {
+    nbn_data <- recent_program_enrollment %>%
+      filter(ProjectID %in% Project$ProjectID[Project$ProjectType == 1 &
+                                                Project$TrackingMethod == 3]) %>%
+      left_join(all_bed_nights, 
+                by = "EnrollmentID") %>%
+      group_by(EnrollmentID) %>%
+      summarise(nbn_number_of_days = n_distinct(na.omit(ymd(DateProvided)))) %>%
+      ungroup() %>%
+      select(EnrollmentID, nbn_number_of_days)
+    
+    time_groups <- data %>%
+      left_join(nbn_data, by = "EnrollmentID") %>%
+      mutate(number_of_days = 
+               if_else(
+                 ProjectID %in% Project$ProjectID[Project$ProjectType == 1 &
+                                                    Project$TrackingMethod == 3],
+                 nbn_number_of_days,
+                 as.integer(trunc((!!start_date %--% !!end_date) / days(1)))))
+  } else {
+    time_groups <- data %>%
+      mutate(number_of_days = as.integer(trunc((!!start_date %--% !!end_date) / days(1))))
+  }
   
-  time_groups <- data %>%
-    left_join(nbn_data, by = "EnrollmentID") %>%
-    mutate(number_of_days = 
-             if_else(
-               ProjectID %in% Project$ProjectID[Project$ProjectType == 1 &
-                                                  Project$TrackingMethod == 3],
-               nbn_number_of_days,
-               as.integer(trunc((!!start_date %--% !!end_date) / days(1)))),
-           number_of_days_group = case_when(
+  time_groups <- time_groups %>%
+    mutate(number_of_days_group = case_when(
              is.na(number_of_days) |
                !!start_date > !!end_date ~ "Data.Not.Collected",
              number_of_days <= 7 ~ "0 to 7 days",
@@ -625,13 +633,14 @@ create_destination_groups <- function(included_enrollments) {
                !is.na(LocationDescription)) %>%
       mutate(LocationDescription = case_when(
         Location %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+        Location %in% c(30, 99) ~ "Data.Not.Collected",
         TRUE ~ LocationDescription))
     
     group_of_residences <- included_enrollments %>%
       inner_join(residences_to_include, by = c("Destination" = "Location"))  %>%
       return_household_groups(., LocationDescription, unique(residences_to_include$LocationDescription)) %>%
       full_join(residences_to_include %>%
-                  filter(Location != 9), 
+                  filter(Location %nin% c(9, 30)), 
                 by = "LocationDescription") %>%
       arrange(APR_ExitOrder) %>%
       adorn_totals("row") %>%
@@ -757,12 +766,13 @@ create_prior_residence_groups <- function(included_enrollments) {
                                 "all")) {
       
       filtered_income_information <- exit_income %>%
-        filter((condition_presence == "disabling_condition" &
-                  DisablingCondition == 1) |
-                 (condition_presence == "no_disabling_condition" &
-                    DisablingCondition == 0) |
-                 (condition_presence == "all" &
-                    DisablingCondition %in% c(0, 1))) %>%
+        filter(IncomeFromAnySource %in% c(0, 1) &
+                 ((condition_presence == "disabling_condition" &
+                     DisablingCondition == 1) |
+                    (condition_presence == "no_disabling_condition" &
+                       DisablingCondition == 0) |
+                    (condition_presence == "all" &
+                       DisablingCondition %in% c(0, 1)))) %>%
         mutate(Other.Source = if_else(
           Unemployment == 1 |
             VADisabilityNonService == 1 |

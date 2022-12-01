@@ -10,7 +10,7 @@
 # <https://www.gnu.org/licenses/>. 
 
 generate_new_kits <- TRUE
-compare_to_last <- TRUE
+compare_to_last <- FALSE
 if (compare_to_last) {
   compare_to_dir <- choose.dir()}
 
@@ -257,16 +257,16 @@ if (compare_to_last) {
       # "1552",    # DataLab - PSH CoC I
       # "1550",    # DataLab - PSH HOPWA  
       # "1551",    # DataLab - PSH VASH  
-      "1554",    # DataLab - RRH CoC I
-      "1555"#,    # DataLab - RRH CoC II
+      # "1554",    # DataLab - RRH CoC I
+      # "1555"#,    # DataLab - RRH CoC II
       # "1556",    # DataLab - RRH ESG I
       # "1553",    # Datalab - RRH VA  
       # "1557",    # DataLab - SH VA-HCHV     
-      # "1565",    # DataLab - SO CoC
+      "1565"#,    # DataLab - SO CoC
       # "1566"#,    # DataLab - SO ESG
       # "1568",    # Datalab - SO PATH   
-      # "1567",    # DataLab - SSO CoC  
-      # "1561",    # DataLab - TH CoC
+      # "1567"#,    # DataLab - SSO CoC
+      # "1561"#,    # DataLab - TH CoC
       # "1560",    # DataLab - TH ESG
       # "1558",    # DataLab - TH HOPWA   
       # "1559",    # Datalab - TH RHY   
@@ -723,7 +723,6 @@ if (compare_to_last) {
       
       
       Q6c <- recent_program_enrollment_dq %>%
-        # left_join(client_plus, by = "PersonalID") %>%
         left_join(annual_assessment_dates, by = "HouseholdID") %>%
         left_join(income_sources %>%
                     filter(DataCollectionStage == 1) %>%
@@ -775,8 +774,7 @@ if (compare_to_last) {
                        exit_number_of_sources > 0) |
                     (exit_IncomeFromAnySource == 1 &
                        (is.na(exit_number_of_sources) |
-                          exit_number_of_sources == 0)))
-        )%>%
+                          exit_number_of_sources == 0)))) %>%
         summarise(Destination.3.12 = n_distinct(PersonalID[Destination.3.12]),
                   Income.and.Sources.4.02.at.Start = n_distinct(PersonalID[Income.and.Sources.4.02.at.Start]),
                   Income.and.Sources.4.02.at.Annual.Assessment = n_distinct(PersonalID[Income.and.Sources.4.02.at.Annual.Assessment]),
@@ -888,7 +886,7 @@ if (compare_to_last) {
                     mutate(days_for_entry = case_when(EntryDate >= report_start_date &
                                                         EntryDate <= report_end_date ~ trunc((EntryDate %--% enroll_DateCreated) / days(1))),
                            TimeForEntry = case_when(
-                             days_for_entry < 0 ~ "Error",
+                             # days_for_entry < 0 ~ "Error",
                              days_for_entry == 0 ~ "0 days",
                              days_for_entry <= 3 ~ "1-3 days",
                              days_for_entry <= 6 ~ "4-6 days",
@@ -902,7 +900,7 @@ if (compare_to_last) {
         full_join(recent_program_enrollment_dq %>%
                     mutate(days_for_exit = case_when(!is.na(ExitDate) ~ trunc((ExitDate %--% exit_DateCreated) / days(1))),
                            TimeForEntry = case_when(
-                             days_for_exit < 0 ~ "Error",
+                             # days_for_exit < 0 ~ "Error",
                              days_for_exit == 0 ~ "0 days",
                              days_for_exit <= 3 ~ "1-3 days",
                              days_for_exit <= 6 ~ "4-6 days",
@@ -1095,7 +1093,7 @@ if (compare_to_last) {
                        is.na(DateOfEngagement)))
       
       # this one specifies enrollment as directed in the programming specifications
-      all_CLS_for_Q9 <- recent_program_enrollment %>%
+      only_CLS_for_Q9 <- recent_program_enrollment %>%
         left_join(CurrentLivingSituation %>%
                     rename(CLS_InformationDate = InformationDate,
                            CLS = CurrentLivingSituation), by = "EnrollmentID") %>%
@@ -1105,16 +1103,23 @@ if (compare_to_last) {
                  (CLS_InformationDate <= DateOfEngagement |
                     is.na(DateOfEngagement)) &
                  CLS_InformationDate <= report_end_date) %>%
-        select(EnrollmentID, CLS_InformationDate, CLS) %>%
-        union(recent_program_enrollment %>%
-                filter(DateOfEngagement <= report_end_date) %>%
-                rename(CLS_InformationDate = DateOfEngagement) %>%
-                mutate(CLS = 999) %>%
-                select(EnrollmentID, CLS_InformationDate, CLS)) %>%
-        arrange(CLS) %>%
-        group_by(EnrollmentID, CLS_InformationDate) %>%
-        slice(1L) %>%
-        ungroup()
+        select(EnrollmentID, CLS_InformationDate, CLS) 
+      
+      dates_of_engagement <- recent_program_enrollment %>%
+        filter(DateOfEngagement <= report_end_date) %>%
+        left_join(only_CLS_for_Q9, by = "EnrollmentID") %>%
+        group_by(EnrollmentID) %>%
+        mutate(had_CLS = max(DateOfEngagement == CLS_InformationDate), 
+               CLS = 999) %>%
+        slice(1) %>%
+        ungroup() %>%
+        select(-CLS_InformationDate) %>%
+        filter(is.na(had_CLS) | had_CLS != 1) %>%
+        rename(CLS_InformationDate = DateOfEngagement) %>%
+        select(EnrollmentID, CLS_InformationDate, CLS)
+      
+      all_CLS_for_Q9 <- only_CLS_for_Q9 %>%
+        union(dates_of_engagement)
       
       first_CLS_group <- all_CLS_for_Q9 %>%
         arrange(CLS_InformationDate) %>%
@@ -1131,7 +1136,7 @@ if (compare_to_last) {
         filter((ProjectType == 4 |
                   (ProjectType == 1 &
                      TrackingMethod == 3)) &
-                 (PersonalID %in% recent_CLS_for_Q9$PersonalID |
+                 (EnrollmentID %in% recent_CLS_for_Q9$EnrollmentID |
                     (DateOfEngagement >= report_start_date &
                        DateOfEngagement <= report_end_date))) %>%
         keep_adults_and_hoh_only() %>%
@@ -1344,6 +1349,7 @@ if (compare_to_last) {
                   by = "EnrollmentID")
       
       Q14a <- Q14 %>%
+        filter(!is.na(DomesticViolenceVictim)) %>%
         mutate(dv_experience = case_when(DomesticViolenceVictim == 1 ~ "Yes",
                                          DomesticViolenceVictim == 0 ~ "No",
                                          DomesticViolenceVictim %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
@@ -1837,7 +1843,8 @@ if (compare_to_last) {
               EntryDate == HoH_EntryDate ~ HoH_ADHS,
             (is.na(age) | age >= 18) &
               DateToStreetESSH <= EntryDate ~ DateToStreetESSH)) %>%
-        add_length_of_time_groups(., homelessness_start_date, housing_date, "days_prior_to_housing") %>%
+        add_length_of_time_groups(., homelessness_start_date, housing_date, 
+                                  "days_prior_to_housing", in_project = FALSE) %>%
         mutate(number_of_days_group = case_when(is.na(housing_date) ~ "Not yet moved into housing",
                                                 TRUE ~ number_of_days_group)) %>%
         rename(days_prior_to_housing = number_of_days_group)
