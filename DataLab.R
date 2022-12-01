@@ -13,6 +13,7 @@ generate_new_kits <- TRUE
 compare_to_last <- FALSE
 if (compare_to_last) {
   compare_to_dir <- choose.dir()}
+combining_files <- FALSE
 
 # this bracket will run everything; use with care!
 {
@@ -20,34 +21,53 @@ if (compare_to_last) {
   source("DataLab_Lists.R")
   
   
-  # combines all files
-  {
-
-    datalab_zips <- list.files(paste0(getwd(), "/HMIS Test Kit 2.0/HMIS CSVs"),
-                               full.names = TRUE)
-    
-    for (zip in datalab_zips) {
-      for (file in names(hmis_csvs)){
-        
-        data <- read_csv(unzip(zip, paste0(file, ".csv")),
-                         col_types = get(file, hmis_csvs))
-        
-        if (exists(file)) {
-          data <- get(file) %>%
-            full_join(data, by = intersect(colnames(get(file)),
-                                           colnames(data)))
-        } 
-        
-        assign(file, data)
-        
-        file.remove(paste0(file, ".csv"))
-      }
+if (combining_files) {
+  file_source_dir <- choose.dir()
+  
+  datalab_zips <- list.files(file_source_dir, full.names = TRUE)
+  
+  for (zip in datalab_zips) {
+    for (file in names(hmis_csvs)){
+      
+      data <- read_csv(unzip(zip, paste0(file, ".csv")),
+                       col_types = get(file, hmis_csvs))
+      
+      if (exists(file)) {
+        data <- get(file) %>%
+          full_join(data, by = intersect(colnames(get(file)),
+                                         colnames(data)))
+      } 
+      
+      assign(file, data)
+      
+      file.remove(paste0(file, ".csv"))
     }
   }
+} else {
+  file_source <- file.choose()
+  
+  for (file in names(hmis_csvs)){
+    
+    data <- read_csv(unzip(file_source, paste0(file, ".csv")),
+                     col_types = get(file, hmis_csvs))
+    
+    if (exists(file)) {
+      data <- get(file) %>%
+        full_join(data, by = intersect(colnames(get(file)),
+                                       colnames(data)))
+    } 
+    
+    assign(file, data)
+    
+    file.remove(paste0(file, ".csv"))
+  }
+}
   
   # set variables
-  report_start_date <- ymd(Export[1,]$ExportStartDate)
-  report_end_date <- ymd(Export[1,]$ExportEndDate)
+  # report_start_date <- ymd(Export[1,]$ExportStartDate)
+  # report_end_date <- ymd(Export[1,]$ExportEndDate)
+  report_start_date <- ymd("2021-10-1")
+  report_end_date <- ymd("2022-9-30")
   
   # remove deleted records exportID colummns before proceeding with processing
   for (file in names(hmis_csvs)){
@@ -84,6 +104,11 @@ if (compare_to_last) {
       data$Funder[data$ProjectID == 1552] <- 2
       data$Funder[data$ProjectID == 1554] <- 3
       data$Funder[data$ProjectID == 1565] <- 4
+    }
+    
+    if (file == "Export") {
+      data$SoftwareName <- "DataLab"
+      data$SoftwareVersion <- "1.0"
     }
     
     assign(file, data)
@@ -248,36 +273,24 @@ if (compare_to_last) {
   # used for building
   {
     project_list <- c(
-      # "942",    # DataLab - Coordinated Entry 
-      # "1546"#,    # DataLab - ES-EE ESG I
-      # "1547",    # DataLab - ES-EE ESG II (with CE elements) 
-      # "1544",    # DataLab - ES-EE RHY   
-      # "1548"#,    # DataLab - ES-NbN ESG
-      # "1564"#,    # DataLab - HP ESG
-      # "1552",    # DataLab - PSH CoC I
-      # "1550",    # DataLab - PSH HOPWA  
-      # "1551",    # DataLab - PSH VASH  
-      # "1554",    # DataLab - RRH CoC I
-      # "1555"#,    # DataLab - RRH CoC II
-      # "1556",    # DataLab - RRH ESG I
-      # "1553",    # Datalab - RRH VA  
-      # "1557",    # DataLab - SH VA-HCHV     
-      "1565"#,    # DataLab - SO CoC
-      # "1566"#,    # DataLab - SO ESG
-      # "1568",    # Datalab - SO PATH   
-      # "1567"#,    # DataLab - SSO CoC
-      # "1561"#,    # DataLab - TH CoC
-      # "1560",    # DataLab - TH ESG
-      # "1558",    # DataLab - TH HOPWA   
-      # "1559",    # Datalab - TH RHY   
-      # "1563",    # DataLab - TH VA  
-      # "1562"    # Datalab - TH YHDP  
+      1362#,	"DataLab - ES-EE ESG I",
+      # 93,	"DataLab - ES-NbN ESG",
+      # 1409,	"DataLab - HP ESG",
+      # 780,	"DataLab - PSH CoC I",
+      # 1428,	"DataLab - RRH CoC I",
+      # 1495,	"DataLab - RRH CoC II",
+      # 1060,	"DataLab - RRH ESG I",
+      # 1647,	"DataLab - SO CoC",
+      # 1419,	"DataLab - SO ESG",
+      # 1615,	"DataLab - SSO CoC",
+      # 388,	"DataLab - TH CoC",
+      # 340,	"DataLab - TH ESG"
     )
     }
   
   # used for running all reports
   {
-  full_project_list <- c(1552, Project$ProjectID[Project$ProjectID %in% Funder$ProjectID[Funder$Funder %in% 1:11]])
+  full_project_list <- c(Project$ProjectID[Project$ProjectID %in% Funder$ProjectID[Funder$Funder %in% 1:11]])
   }
   
   items_to_keep <- c("items_to_keep", ls())
@@ -659,12 +672,18 @@ if (compare_to_last) {
       # accounts for test kit CoC codes, remove XX- values for real data
       valid_cocs <- c(valid_cocs, "XX-500", "XX-501")
       
-      Q6b <- recent_program_enrollment_dq %>%
-        # left_join(client_plus, by = "PersonalID") %>%
+      Q6b_detail <- recent_program_enrollment_dq %>%
         left_join(EnrollmentCoC %>%
                     filter(DataCollectionStage == 1) %>%
                     select(EnrollmentID, CoCCode),
                   by = "EnrollmentID") %>%
+        select(c(all_of(standard_detail_columns),
+                 all_of(demographic_detail_columns),
+                 "CoCCode")) %>%
+        mutate(CoC_Valid = CoCCode %in% valid_cocs,
+               Disability_Check = EnrollmentID %in% additional_disability_check$EnrollmentID)
+        
+      Q6b <- Q6b_detail %>%
         mutate(Veteran.Status.3.07 = (VeteranStatus %in% c(8, 9, 99) &
                                age_group == "Adults") |
                  (age_group == "Children" &
@@ -673,13 +692,10 @@ if (compare_to_last) {
                Relationship.to.Head.of.Household.3.15 = is.na(RelationshipToHoH) |
                  RelationshipToHoH %nin% 1:5 |
                  HouseholdID %in% Q6b_hoh_count$HouseholdID,
-               Client.Location.3.16 = RelationshipToHoH == 1 &
-                 (is.na(CoCCode) |
-                    CoCCode %nin% valid_cocs),
+               Client.Location.3.16 = RelationshipToHoH == 1 & !CoC_Valid,
                Disabling.Condition.3.08 = DisablingCondition %in% c(8, 9, 99) |
                  is.na(DisablingCondition) |
-                 (DisablingCondition == 0 &
-                    EnrollmentID %in% additional_disability_check$EnrollmentID)) %>%
+                 (DisablingCondition == 0 & Disability_Check)) %>%
         summarise(Veteran.Status.3.07 = n_distinct(PersonalID[Veteran.Status.3.07]),
                   Project.Start.Date.3.10 = n_distinct(PersonalID[Project.Start.Date.3.10]),
                   Relationship.to.Head.of.Household.3.15 = n_distinct(PersonalID[Relationship.to.Head.of.Household.3.15]),
@@ -722,7 +738,9 @@ if (compare_to_last) {
         select(EnrollmentID, annual_IncomeFromAnySource, annual_number_of_sources)
       
       
-      Q6c <- recent_program_enrollment_dq %>%
+      Q6c_detail <- recent_program_enrollment_dq %>%
+        select(c(all_of(standard_detail_columns), "age_group", 
+                 "Destination")) %>%
         left_join(annual_assessment_dates, by = "HouseholdID") %>%
         left_join(income_sources %>%
                     filter(DataCollectionStage == 1) %>%
@@ -774,7 +792,8 @@ if (compare_to_last) {
                        exit_number_of_sources > 0) |
                     (exit_IncomeFromAnySource == 1 &
                        (is.na(exit_number_of_sources) |
-                          exit_number_of_sources == 0)))) %>%
+                          exit_number_of_sources == 0)))) 
+      Q6c <- Q6c_detail %>%
         summarise(Destination.3.12 = n_distinct(PersonalID[Destination.3.12]),
                   Income.and.Sources.4.02.at.Start = n_distinct(PersonalID[Income.and.Sources.4.02.at.Start]),
                   Income.and.Sources.4.02.at.Annual.Assessment = n_distinct(PersonalID[Income.and.Sources.4.02.at.Annual.Assessment]),
@@ -788,7 +807,8 @@ if (compare_to_last) {
           Group == "Income.and.Sources.4.02.at.Start" ~ Error.Count / (Q5a$Count.of.Clients.for.DQ[2] + Q5a$Count.of.Clients.for.DQ[15]),
           Group == "Income.and.Sources.4.02.at.Annual.Assessment" ~ Error.Count / Q5a$Count.of.Clients.for.DQ[16],
           Group == "Income.and.Sources.4.02.at.Exit" ~ Error.Count / Q5a$Count.of.Clients.for.DQ[7])
-        )
+        ) %>%
+        ifnull(., 0)
     }
     
     # Q6d
@@ -796,7 +816,6 @@ if (compare_to_last) {
       Entering.into.project.type <- c("ES.SH.Street.Outreach", "TH", "PH.all")
       
       Q6d_data <- recent_program_enrollment_dq %>%
-            # left_join(client_plus, by = "PersonalID") %>%
             filter(EntryDate >= mdy("10/1/2016") &
                      ProjectType %in% c(1, 2, 3, 4, 8, 9, 10, 13)) %>%
             keep_adults_and_hoh_only() %>%
@@ -2259,12 +2278,19 @@ if (compare_to_last) {
     
     
     if (generate_new_kits) {
+      
+      write_csvs_for(project_list)
+      
       if(APR_relevant) {
         for (question in APR_files) {
           if (exists(question)) {
             
-            to_write <- get(question)%>% 
-              set_hud_format()
+            to_write <- get(question)
+            
+            if(question != "Q4a") {
+              to_write <- to_write %>% 
+                set_hud_format()
+            }
             
             write_csv(to_write, file.path(paste0("created_files/ICF - ", question, ".csv")))
           } else {
@@ -2280,9 +2306,13 @@ if (compare_to_last) {
         for (question in CAPER_files) {
           if (exists(question)) {
             
-            to_write <- get(question) %>% 
-              set_hud_format()
+            to_write <- get(question)
             
+            if(question != "Q4a") {
+              to_write <- to_write %>% 
+                set_hud_format()
+            }
+             
             write_csv(to_write, file.path(paste0("created_files/ICF - ", question, ".csv")))
           } else {
             missing_files <- c(missing_files, paste("CAPER -", projects_included, "-", question))

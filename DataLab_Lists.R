@@ -439,7 +439,8 @@ split_household_group_list <- c(Total = 0, Without.Children = 0,
 #   APR/CAPER detail exports
 
 standard_detail_columns <- c("ProjectName", "HouseholdID", "PersonalID",
-                             "EnrollmentID", "EntryDate", "ExitDate")
+                             "EnrollmentID", "RelationshipToHoH",
+                             "EntryDate", "ExitDate")
 
 # ------------------------------------------------------------------------------
 # ----------------------- Housing Program Detail Columns -----------------------
@@ -448,9 +449,9 @@ standard_detail_columns <- c("ProjectName", "HouseholdID", "PersonalID",
 #   APR/CAPER detail exports
 
 housing_program_detail_columns <- c("ProjectName", "HouseholdID", 
-                                    "PersonalID", "RelationshipToHoH", 
-                                    "HoH_HMID", "EnrollmentID", 
-                                    "EntryDate", "ExitDate")
+                                    "PersonalID", "EnrollmentID",
+                                    "RelationshipToHoH", "EntryDate", 
+                                    "HoH_HMID", "ExitDate")
 
 
 # ------------------------------------------------------------------------------
@@ -459,5 +460,19 @@ housing_program_detail_columns <- c("ProjectName", "HouseholdID",
 # used in:
 #   APR/CAPER detail exports
 
-demographic_detail_columns <- c("age", "new_veteran_status", "household_type",
-                             "chronic")
+demographic_detail_columns <- c("age", "age_group", "VeteranStatus", 
+                                "household_type", "DisablingCondition",
+                                "chronic")
+
+
+
+# ------------------------------------------------------------------------------
+# ------------------------ LOT Homeless Detail Columns -------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   APR/CAPER detail exports
+
+lot_homeless_detail_columns <- c("LivingSituation", "LengthOfStay", 
+                                "LOSUnderThreshold","PreviousStreetESSH", 
+                                "DateToStreetESSH", "TimesHomelessPastThreeYears", 
+                                "MonthsHomelessPastThreeYears")

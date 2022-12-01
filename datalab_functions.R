@@ -60,7 +60,9 @@ nsfw_word <- function(test_word) {
     str_detect(test_word, "blood") |
     str_detect(test_word, "demon") |
     str_detect(test_word, "devil") |
-    str_detect(test_word, "dyk")
+    str_detect(test_word, "dyk") |
+    str_detect(test_word, "tobacc") |
+    str_detect(test_word, "poop")
 }
 
 sequential_ssn <- function(test_ssn) {
@@ -967,4 +969,52 @@ set_hud_format <- function(data_for_csv) {
   
   data_for_csv %>%
     `colnames<-`(c("", gsub(".", " ", new_header, fixed = TRUE)))
+}
+
+
+# write csvs for projects
+write_csvs_for <- function(project_ids, zip_title) {
+  
+  if(missing(zip_title)) {
+    zip_title <- Project$ProjectName[Project$ProjectID %in% project_ids][1]
+  } 
+  
+  enrollment_info <- get("Enrollment") %>%
+    filter(ProjectID %in% project_ids) %>%
+    select(EnrollmentID, PersonalID, UserID)
+  
+  org_info <- get("Project")%>%
+    filter(ProjectID %in% project_ids) %>%
+    select(OrganizationID)
+  
+  for (file in names(hmis_csvs)) {
+    
+    data <- get(file)
+    
+    if ("ProjectID" %in% colnames(data)) {
+      data <- data %>%
+        filter(ProjectID %in% project_ids)
+    } else if ("EnrollmentID" %in% colnames(data)) {
+      data <- data %>%
+        filter(EnrollmentID %in% enrollment_info$EnrollmentID)
+    } else if ("PersonalID" %in% colnames(data)) {
+      data <- data %>%
+        filter(PersonalID %in% enrollment_info$PersonalID)
+    } else if ("OrganizationID" %in% colnames(data)) {
+      data <- data %>%
+        filter(OrganizationID %in% org_info$OrganizationID)
+    } else if ("UserID" %in% colnames(data)) {
+      data <- data %>%
+        filter(UserID %in% enrollment_info$UserID)
+    } else if (file != "Export") {
+      stop(paste(file))
+    }
+    
+    write_csv(data, file.path(paste0("created_files/", file, ".csv")))
+  }
+  
+  archive_write_dir(paste0(zip_title, ".zip"),
+                    paste0(getwd(), "/created_files"))
+  unlink(paste0(getwd(), "/created_files/*"))
+  
 }
