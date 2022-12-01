@@ -43,7 +43,7 @@ APR_files <- c("Q4a", "Q5a", "Q6a", "Q6b", "Q6c", "Q6d", "Q6e", "Q6f", "Q7a", "Q
                "Q22e", "Q23c", "Q25a", "Q25b", "Q25c", "Q25d", "Q25e", "Q25f",
                "Q25g", "Q25h", "Q25i", "Q26a", "Q26b", "Q26c", "Q26d", "Q26e",
                "Q26f", "Q26g", "Q26h", "Q26i", "Q27a", "Q27b", "Q27c", "Q27d",
-               "Q27e", "Q27f", "Q27g", "Q27h", "Q27i")
+               "Q27e", "Q27f", "Q27g", "Q27h", "Q27i", "Q27j", "Q27k", "Q27l")
 
 
 # ------------------------------------------------------------------------------
@@ -310,7 +310,7 @@ vet_chronic_categories <- c("Chronically Homeless Veteran",
                        "Non-Chronically Homeless Veteran",
                        "Not a Veteran",
                        "Client doesn’t know/Client refused",
-                       "Data not collected (no exit interview completed)")
+                       "Data not collected")
 
 
 # ------------------------------------------------------------------------------
@@ -322,7 +322,7 @@ vet_chronic_categories <- c("Chronically Homeless Veteran",
 chronic_categories <- c("Chronically Homeless",
                         "Not Chronically Homeless",
                         "Client doesn’t know/Client refused",
-                        "Data not collected (no exit interview completed)")
+                        "Data not collected")
 
 
 # ------------------------------------------------------------------------------
@@ -440,7 +440,7 @@ split_household_group_list <- c(Total = 0, Without.Children = 0,
 
 standard_detail_columns <- c("ProjectName", "HouseholdID", "PersonalID",
                              "EnrollmentID", "RelationshipToHoH",
-                             "EntryDate", "ExitDate")
+                             "EntryDate", "ExitDate", "household_type")
 
 # ------------------------------------------------------------------------------
 # ----------------------- Housing Program Detail Columns -----------------------
@@ -451,7 +451,7 @@ standard_detail_columns <- c("ProjectName", "HouseholdID", "PersonalID",
 housing_program_detail_columns <- c("ProjectName", "HouseholdID", 
                                     "PersonalID", "EnrollmentID",
                                     "RelationshipToHoH", "EntryDate", 
-                                    "HoH_HMID", "ExitDate")
+                                    "HoH_HMID", "ExitDate", "household_type")
 
 
 # ------------------------------------------------------------------------------

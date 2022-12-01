@@ -1018,3 +1018,59 @@ write_csvs_for <- function(project_ids, zip_title) {
   unlink(paste0(getwd(), "/created_files/*"))
   
 }
+
+
+# make table for 'time in program' questions
+create_lot_table <- function(filtered_enrollments) {
+  filtered_enrollments %>%
+    select(c("ProjectID", all_of(housing_program_detail_columns),
+             "household_type")) %>%
+    add_length_of_time_groups(., EntryDate, 
+                              ifnull(ExitDate, ymd(report_end_date) + days(1)),
+                              "APR") %>%
+    add_length_of_time_groups(., EntryDate, 
+                              ifnull(ExitDate, ymd(report_end_date) + days(1)),
+                              "CAPER") %>%
+    select(-number_of_days.y) %>%
+    rename(days_enrolled = number_of_days.x,
+           APR_enrollment_length_group = number_of_days_group.x,
+           CAPER_enrollment_length_group = number_of_days_group.y)
+}
+
+# make table for 'time to house' questions
+create_time_to_move_in <- function(filtered_enrollments) {
+  filtered_enrollments %>%
+    select(c("ProjectType", "ProjectID", 
+             all_of(housing_program_detail_columns), "household_type")) %>%
+    filter(ProjectType %in% c(3, 13) & 
+             ((HoH_HMID >= report_start_date &
+                 HoH_HMID <= report_end_date) |
+                (is.na(HoH_HMID) &
+                   ExitDate <= report_end_date))) %>%
+    mutate(move_in_date = case_when(
+      EntryDate > HoH_HMID ~ EntryDate,
+      TRUE ~ HoH_HMID)) %>%
+    add_length_of_time_groups(., EntryDate, move_in_date, "days_prior_to_housing") %>%
+    rename(days_to_house = number_of_days,
+           housing_length_group = number_of_days_group)
+}
+
+# make table for 'time homeless before housing' questions
+create_time_prior_to_housing <- function(filtered_enrollments) {
+  filtered_enrollments %>%
+    filter(ProjectType %in% c(1, 2, 3, 8, 9, 13)) %>%
+    mutate(housing_date = case_when(
+      ProjectType %nin% c(3, 9, 13) |
+        EntryDate > HoH_HMID ~ EntryDate,
+      TRUE ~ HoH_HMID),
+      homelessness_start_date = case_when(
+        age < 18 &
+          EntryDate == HoH_EntryDate ~ HoH_ADHS,
+        (is.na(age) | age >= 18) &
+          DateToStreetESSH <= EntryDate ~ DateToStreetESSH)) %>%
+    add_length_of_time_groups(., homelessness_start_date, housing_date, 
+                              "days_prior_to_housing", in_project = FALSE) %>%
+    mutate(number_of_days_group = case_when(is.na(housing_date) ~ "Not yet moved into housing",
+                                            TRUE ~ number_of_days_group)) %>%
+    rename(days_prior_to_housing = number_of_days_group)
+}
