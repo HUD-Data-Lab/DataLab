@@ -8,6 +8,7 @@ library(generator)
 programs_to_get <- "all"
 # programs_to_get <- "nbn"
 
+source("local_functions.R")
 source("datalab_functions.R")
 source("DataLab_Lists.R")
 

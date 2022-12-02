@@ -273,14 +273,14 @@ combining_files <- FALSE
   # used for building
   {
     project_list <- c(
-      1362#,	"DataLab - ES-EE ESG I",
+      # 1362#,	"DataLab - ES-EE ESG I",
       # 93,	"DataLab - ES-NbN ESG",
       # 1409,	"DataLab - HP ESG",
-      # 780,	"DataLab - PSH CoC I",
+      # 780#,	"DataLab - PSH CoC I",
       # 1428,	"DataLab - RRH CoC I",
-      # 1495,	"DataLab - RRH CoC II",
-      # 1060,	"DataLab - RRH ESG I",
-      # 1647,	"DataLab - SO CoC",
+      # 1495#,	"DataLab - RRH CoC II",
+      1060#,	"DataLab - RRH ESG I",
+      # 1647#,	"DataLab - SO CoC",
       # 1419,	"DataLab - SO ESG",
       # 1615,	"DataLab - SSO CoC",
       # 388,	"DataLab - TH CoC",
@@ -993,7 +993,7 @@ combining_files <- FALSE
       Q7a_moved_in <- Q7a_detail %>%
         filter(HoH_HMID <= report_end_date) %>% 
         mutate(client_group = "For PSH & RRH - the total persons served who moved into housing") %>%
-        return_household_groups(., client_group, "For PSH & RRH -the total persons served who moved into housing") 
+        return_household_groups(., client_group, "For PSH & RRH - the total persons served who moved into housing") 
       
       Q7a <- Q7a_detail %>%
         return_household_groups(., age_group, age_groups) %>%
@@ -1940,6 +1940,8 @@ combining_files <- FALSE
         left_join(Q22a1_total, by = "APR_enrollment_length_group") %>%
         left_join(Q22a1_leavers, by = "APR_enrollment_length_group") %>%
         left_join(Q22a1_stayers, by = "APR_enrollment_length_group") %>%
+        full_join(data.frame(APR_enrollment_length_group = c("Data Not Collected")),
+                  by = "APR_enrollment_length_group") %>%
         adorn_totals("row") %>%
         ifnull(., 0)
     }
@@ -1966,6 +1968,8 @@ combining_files <- FALSE
         left_join(Q22a2_total, by = "CAPER_enrollment_length_group") %>%
         left_join(Q22a2_leavers, by = "CAPER_enrollment_length_group") %>%
         left_join(Q22a2_stayers, by = "CAPER_enrollment_length_group") %>%
+        full_join(data.frame(CAPER_enrollment_length_group = c("Data Not Collected")),
+                             by = "CAPER_enrollment_length_group") %>%
         adorn_totals("row") %>%
         ifnull(., 0)
     }
@@ -2017,8 +2021,10 @@ combining_files <- FALSE
                                             "Not yet moved into housing",
                                             "Data.Not.Collected"))
       
-      Q22c <- Q22c_detail %>%
-        return_household_groups(., housing_length_group, time_to_house_groups$housing_length_group) %>%
+      Q22c <- data.frame(time_to_house_groups) %>%
+        left_join(Q22c_detail %>%
+                    return_household_groups(., housing_length_group, time_to_house_groups$housing_length_group),
+                  by = "housing_length_group") %>%
         adorn_totals("row") %>%
         mutate(housing_length_group = case_when(
           housing_length_group == "Total" ~ "Total (persons moved into housing)",
@@ -2042,6 +2048,8 @@ combining_files <- FALSE
       Q22d <- Q22a1_detail %>%
         return_household_groups(., CAPER_enrollment_length_group, 
                                 length_of_participation$enrollment_length_group) %>%
+        full_join(data.frame(CAPER_enrollment_length_group = c("Data Not Collected")),
+                  by = "CAPER_enrollment_length_group") %>%
         adorn_totals("row") %>%
         ifnull(., 0) 
     }
@@ -2154,6 +2162,7 @@ combining_files <- FALSE
       
       Q25a <- Q25a_detail %>%
         return_household_groups(., category, vet_chronic_categories) %>%
+        select(-With.Only.Children) %>%
         adorn_totals("row") %>%
         ifnull(., 0)
       }
@@ -2180,6 +2189,7 @@ combining_files <- FALSE
       
       Q25b <- Q25b_detail %>%
         return_household_groups(., category, vet_chronic_categories) %>%
+        select(-With.Only.Children) %>%
         adorn_totals("row") %>%
         ifnull(., 0)
     }
@@ -2194,7 +2204,8 @@ combining_files <- FALSE
                   by = "PersonalID") 
       
       Q25c <- Q25c_detail %>%
-        create_gender_groups(.)
+        create_gender_groups(.) %>%
+        select(-With.Only.Children)
     }
     
     # Q25d
@@ -2468,6 +2479,8 @@ combining_files <- FALSE
         left_join(Q27e_total, by = "APR_enrollment_length_group") %>%
         left_join(Q27e_leavers, by = "APR_enrollment_length_group") %>%
         left_join(Q27e_stayers, by = "APR_enrollment_length_group") %>%
+        full_join(data.frame(APR_enrollment_length_group = c("Data Not Collected")),
+                  by = "APR_enrollment_length_group") %>%
         adorn_totals("row") %>%
         ifnull(., 0)
     }
@@ -2639,22 +2652,31 @@ combining_files <- FALSE
             to_write <- get(question)
             
             if(question != "Q4a") {
-              to_write <- to_write %>% 
+              to_write <- to_write %>%
                 set_hud_format()
               
               write.csv(get(paste0(question, "_detail")),
-                        file.path(paste0("created_files/", question, " (D).csv")),
+                        file.path(paste0("created_files_2/", question, ".csv")),
                         row.names = FALSE)
             }
             
-            write_csv(to_write, file.path(paste0("created_files/", question, " (A).csv")))
+            to_write <- to_write %>% 
+              ifnull(., 0) 
+            
+            to_write[is.na(to_write)] <- ""
+            
+            write_csv(to_write, file.path(paste0("created_files/", question, ".csv")))
           } else {
             missing_files <- c(missing_files, paste("APR -", projects_included, "-", question))
           }
         }
-        archive_write_dir(paste0("APR - ", projects_included, ".zip"),
+        archive_write_dir(paste0("APR - ", projects_included, " (A).zip"),
                           paste0(getwd(), "/created_files"))
         unlink(paste0(getwd(), "/created_files/*"))
+        
+        archive_write_dir(paste0("APR - ", projects_included, " (D).zip"),
+                          paste0(getwd(), "/created_files_2"))
+        unlink(paste0(getwd(), "/created_files_2/*"))
       }
       
       if(CAPER_relevant) {
@@ -2668,18 +2690,27 @@ combining_files <- FALSE
                 set_hud_format()
               
               write.csv(get(paste0(question, "_detail")),
-                        file.path(paste0("created_files/", question, " (D).csv")),
+                        file.path(paste0("created_files_2/", question, ".csv")),
                         row.names = FALSE)
             }
             
-            write_csv(to_write, file.path(paste0("created_files/", question, " (A).csv")))
+            to_write <- to_write %>% 
+              ifnull(., 0) 
+            
+            to_write[is.na(to_write)] <- ""
+            
+            write_csv(to_write, file.path(paste0("created_files/", question, ".csv")))
           } else {
             missing_files <- c(missing_files, paste("CAPER -", projects_included, "-", question))
           }
         }
-        archive_write_dir(paste0("CAPER - ", projects_included, ".zip"),
+        archive_write_dir(paste0("CAPER - ", projects_included, " (A).zip"),
                           paste0(getwd(), "/created_files"))
         unlink(paste0(getwd(), "/created_files/*"))
+        
+        archive_write_dir(paste0("CAPER - ", projects_included, " (D).zip"),
+                          paste0(getwd(), "/created_files_2"))
+        unlink(paste0(getwd(), "/created_files_2/*"))
       }
     }
     
