@@ -33,38 +33,6 @@ trunc_userid <- function(df) {
 
 entry_annual_exit <- c("entry", "annual", "exit")
 
-# identifies words in list to exclude
-# recommend leaving this collapsed
-nsfw_word <- function(test_word) {
-  test_word %in% profanity_alvarez |
-    test_word %in% profanity_arr_bad |
-    test_word %in% profanity_banned |
-    test_word %in% profanity_racist |
-    test_word %in% profanity_zac_anger |
-    test_word %in% c("ass", "concupiscent", "lascivious", "lecherous", 
-                     "lewd", "libidinous", "lubricious", "lustful", 
-                     "man-eater", "obscene", "orgiastic", "priapic", 
-                     "randy", "negro", "cannibal") |
-    str_detect(test_word, "beast") |
-    str_detect(test_word, "brut") |
-    str_detect(test_word, "erot") |
-    str_detect(test_word, "flesh") |
-    str_detect(test_word, "sex") |
-    str_detect(test_word, "christ") |
-    str_detect(test_word, "breed") |
-    str_detect(test_word, "dead") |
-    str_detect(test_word, "maniac") |
-    str_detect(test_word, "murder") |
-    str_detect(test_word, "pervert") |
-    str_detect(test_word, "phile") |
-    str_detect(test_word, "blood") |
-    str_detect(test_word, "demon") |
-    str_detect(test_word, "devil") |
-    str_detect(test_word, "dyk") |
-    str_detect(test_word, "tobacc") |
-    str_detect(test_word, "poop")
-}
-
 sequential_ssn <- function(test_ssn) {
   if (suppressWarnings(is.na(as.numeric(test_ssn)))) {
     TRUE
@@ -719,6 +687,15 @@ create_prior_residence_groups <- function(included_enrollments) {
         LocationDescription == "Total" ~ paste(str_to_title(residence_type), "Subtotal"),
         TRUE ~ LocationDescription
       ))
+    
+    group_title_row <- group_of_residences[0,]
+    group_title_row[1,1] <- if_else(residence_type == "homeless",
+                                    "Homeless Situations",
+                                    if_else(residence_type == "institution",
+                                            "Institutional Settings",
+                                            "Other Locations"))
+    
+    group_of_residences <- rbind(group_title_row, group_of_residences)
     
     if (exists(("residence_table"))) {
       residence_table <- residence_table %>%
