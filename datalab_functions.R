@@ -620,7 +620,10 @@ create_destination_groups <- function(included_enrollments) {
         TRUE ~ LocationDescription))
     
     group_title_row <- group_of_residences[0,]
-    group_title_row[1,1] <- str_to_title(residence_type)
+    group_title_row[1,1] <- if_else(
+      residence_type == "institution", 
+      "Institutional Settings",
+      paste(str_to_title(residence_type), "Destinations"))
     
     group_of_residences <- rbind(group_title_row, group_of_residences)
     
