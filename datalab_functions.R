@@ -166,6 +166,7 @@ determine_total_income <- function(enrollments_and_income, annual = FALSE) {
              if_else(ChildSupport == 1 & ChildSupportAmount > 0, ChildSupportAmount, 0) +
              if_else(Alimony == 1 & AlimonyAmount > 0, AlimonyAmount, 0) +
              if_else(OtherIncomeSource == 1 & OtherIncomeAmount > 0, OtherIncomeAmount, 0),
+           #  use this line for systems that auto-calculate total monthly income
            calculated_total_income = case_when(!is.na(TotalMonthlyIncome) &
                                                  TotalMonthlyIncome > 0 ~ TotalMonthlyIncome,
                                                amounts_combined > 0 ~ amounts_combined,
@@ -265,12 +266,18 @@ categorize_income <- function(enrollments_total_income, annual = FALSE) {
   income_category_table <- enrollments_total_income %>%
     mutate(income_category = case_when(
       earned_income > 0 &
-        earned_income == calculated_total_income ~ "Adults with Only Earned Income (i.e., Employment Income)",
+        # modified this line to account for clients who have a specific earned 
+        # income record that is greater than their entered total income;
+        # only applies to systems that do not auto-calculate
+        earned_income >= calculated_total_income ~ "Adults with Only Earned Income (i.e., Employment Income)",
       earned_income > 0 &
         earned_income < calculated_total_income ~ "Adults with Both Earned and Other Income",
-      earned_income == 0 &
+      (earned_income == 0 |
+         is.na(earned_income)) &
         calculated_total_income > 0 ~ "Adults with Only Other Income",
       calculated_total_income == 0 ~ "Adults with No Income",
+      is.na(calculated_total_income) &
+        !annual ~ "Missing Income Information",
       TRUE ~ total_income_group
     )) %>%
     group_by(income_category) %>%
@@ -637,6 +644,9 @@ create_destination_groups <- function(included_enrollments) {
   
   exit_categories <- data.frame(Outcome = possible_outcomes) %>%
     left_join(included_enrollments %>%
+                mutate(ProjectType = case_when(
+                  ProjectType == 12 ~ 3,
+                  TRUE ~ ProjectType)) %>%
                 inner_join(DestinationClassification, by = c("Destination" = "Location",
                                                              "ProjectType" = "ProjectType")) %>%
                 return_household_groups(., Outcome, possible_outcomes),
@@ -681,8 +691,9 @@ create_prior_residence_groups <- function(included_enrollments) {
         TRUE ~ LocationDescription))
     
     group_of_residences <- included_enrollments %>%
-      mutate(LivingSituation = if_else(LivingSituation == 9, 
-                                       as.integer(8), LivingSituation)) %>%
+      mutate(LivingSituation = case_when(LivingSituation == 9 ~ as.integer(8), 
+                                         is.na(LivingSituation) ~ as.integer(99),
+                                         TRUE ~ LivingSituation)) %>%
       inner_join(residences_to_include, by = c("LivingSituation" = "Location")) %>%
       return_household_groups(., LocationDescription, residences_to_include$LocationDescription) %>%
       adorn_totals("row") %>%
@@ -867,30 +878,30 @@ create_summary_table <- function(filtered_enrollments, column_name) {
     # left_join(client_plus, by = "PersonalID") %>%
     # left_join(chronicity_data, by = "EnrollmentID") %>%
     summarise(Total.number.of.persons.served = n_distinct(PersonalID),
-              Number.of.adults.age.18.or.over = uniqueN(PersonalID[age_group == "Adults"]),
-              Number.of.children.under.age.18 = uniqueN(PersonalID[age_group == "Children"]),
-              Number.of.persons.with.unknown.age = uniqueN(PersonalID[age_group %in% c("Client.Does.Not.Know.or.Refused", "Data.Not.Collected")]),
-              Number.of.leavers = uniqueN(PersonalID[!is.na(ExitDate)]),
-              Number.of.adult.leavers = uniqueN(PersonalID[age_group == "Adults" &
-                                                             !is.na(ExitDate)]),
-              Number.of.adult.and.head.of.household.leavers = uniqueN((PersonalID[(age_group == "Adults" |
+              Number.of.adults.age.18.or.over = uniqueN(na.omit(PersonalID[age_group == "Adults"])),
+              Number.of.children.under.age.18 = uniqueN(na.omit(PersonalID[age_group == "Children"])),
+              Number.of.persons.with.unknown.age = uniqueN(na.omit(PersonalID[age_group %in% c("Client.Does.Not.Know.or.Refused", "Data.Not.Collected")])),
+              Number.of.leavers = uniqueN(na.omit(PersonalID[!is.na(ExitDate)])),
+              Number.of.adult.leavers = uniqueN(na.omit(PersonalID[age_group == "Adults" &
+                                                             !is.na(ExitDate)])),
+              Number.of.adult.and.head.of.household.leavers = uniqueN(na.omit((PersonalID[(age_group == "Adults" |
                                                                                      RelationshipToHoH == 1) &
-                                                                                    !is.na(ExitDate)])),
-              Number.of.stayers = uniqueN(PersonalID[is.na(ExitDate)]),
-              Number.of.adult.stayers = uniqueN(PersonalID[age_group == "Adults" &
-                                                             is.na(ExitDate)]),
-              Number.of.veterans = uniqueN(PersonalID[new_veteran_status == 1]),
-              Number.of.chronically.homeless.persons = uniqueN(PersonalID[chronic == "Y"]),
-              Number.of.youth.under.age.25 = uniqueN(PersonalID[youth == 1]),
-              Number.of.parenting.youth.under.age.25.with.children = uniqueN(PersonalID[has_children == 1 & youth == 1]),
-              Number.of.adult.heads.of.household = uniqueN(PersonalID[age_group == "Adults" &
-                                                                        RelationshipToHoH == 1]),
-              Number.of.child.and.unknown.age.heads.of.household = uniqueN(PersonalID[age_group != "Adults" &
-                                                                                        RelationshipToHoH == 1]),
-              Heads.of.households.and.adult.stayers.in.the.project.365.days.or.more = uniqueN(PersonalID[is.na(ExitDate) &
+                                                                                    !is.na(ExitDate)]))),
+              Number.of.stayers = uniqueN(na.omit(PersonalID[is.na(ExitDate)])),
+              Number.of.adult.stayers = uniqueN(na.omit(PersonalID[age_group == "Adults" &
+                                                             is.na(ExitDate)])),
+              Number.of.veterans = uniqueN(na.omit(PersonalID[new_veteran_status == 1])),
+              Number.of.chronically.homeless.persons = uniqueN(na.omit(PersonalID[chronic == "Y"])),
+              Number.of.youth.under.age.25 = uniqueN(na.omit(PersonalID[youth == 1])),
+              Number.of.parenting.youth.under.age.25.with.children = uniqueN(na.omit(PersonalID[has_children == 1 & youth == 1])),
+              Number.of.adult.heads.of.household = uniqueN(na.omit(PersonalID[age_group == "Adults" &
+                                                                        RelationshipToHoH == 1])),
+              Number.of.child.and.unknown.age.heads.of.household = uniqueN(na.omit(PersonalID[age_group != "Adults" &
+                                                                                        RelationshipToHoH == 1])),
+              Heads.of.households.and.adult.stayers.in.the.project.365.days.or.more = uniqueN(na.omit(PersonalID[is.na(ExitDate) &
                                                                                                            trunc((EntryDate %--% report_end_date) / days(1)) >= 365 &
                                                                                                            (age_group == "Adults" |
-                                                                                                              RelationshipToHoH == 1)])
+                                                                                                              RelationshipToHoH == 1)]))
     ) %>% 
     mutate(rowname = column_name) %>% 
     pivot_longer(!rowname, names_to = "Group", values_to = "values") %>% 
@@ -953,7 +964,7 @@ set_hud_format <- function(data_for_csv) {
 
 
 # write csvs for projects
-write_csvs_for <- function(project_ids, zip_title) {
+write_csvs_for <- function(project_ids, zip_title, write_to) {
   
   if(missing(zip_title)) {
     zip_title <- Project$ProjectName[Project$ProjectID %in% project_ids][1]
@@ -993,8 +1004,11 @@ write_csvs_for <- function(project_ids, zip_title) {
     write_csv(data, file.path(paste0("created_files/", file, ".csv")))
   }
   
+  general_wd <- getwd()
+  setwd(paste0(general_wd, "/", write_to))
   archive_write_dir(paste0(zip_title, ".zip"),
-                    paste0(getwd(), "/created_files"))
+                    paste0(general_wd, "/created_files"))
+  setwd(general_wd)
   unlink(paste0(getwd(), "/created_files/*"))
   
 }

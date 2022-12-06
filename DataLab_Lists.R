@@ -356,7 +356,7 @@ income_type_categories <- c("Adults with Only Earned Income (i.e., Employment In
                        "Adults with Only Other Income", 
                        "Adults with Both Earned and Other Income",
                        "Adults with No Income", "Client.Does.Not.Know.or.Refused", 
-                       "Data.Not.Collected")
+                       "Missing Income Information")
 
 
 # ------------------------------------------------------------------------------
@@ -365,7 +365,8 @@ income_type_categories <- c("Adults with Only Earned Income (i.e., Employment In
 # used in:
 #   APR/CAPER - Q18
 
-annual_income_type_categories <- c(income_type_categories, "No Annual Required", "Required Annual Missing")
+annual_income_type_categories <- c(income_type_categories, 
+                                   "No Annual Required", "Required Annual Missing")
 
 
 # ------------------------------------------------------------------------------
