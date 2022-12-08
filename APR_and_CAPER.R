@@ -61,7 +61,9 @@ combining_files <- FALSE
         left_join(Project %>%
                     select(ProjectID, ProjectType, TrackingMethod, ProjectName),
                   by = "ProjectID") %>%
-        left_join(Exit, by = "EnrollmentID")
+        left_join(Exit %>%
+                    select(-PersonalID),
+                  by = "EnrollmentID")
       
       recent_program_enrollment <- all_program_enrollments %>%
         group_by(PersonalID) %>%
@@ -246,8 +248,11 @@ combining_files <- FALSE
       # Q6
       # Q6a
       {
-        Q6a_name <- recent_program_enrollment_dq %>%
-          inner_join(Client, by = "PersonalID") %>%
+        Q6a_data <- recent_program_enrollment_dq %>%
+          inner_join(Client %>%
+                       select(-ExportID), by = "PersonalID")
+        
+        Q6a_name <- Q6a_data %>%
           mutate(dq_flag = case_when(
             NameDataQuality %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
             NameDataQuality == 99 |
@@ -257,8 +262,7 @@ combining_files <- FALSE
             TRUE ~ "OK")) %>%
           select(PersonalID, FirstName, LastName, NameDataQuality, dq_flag)
         
-        Q6a_ssn <- recent_program_enrollment_dq %>%
-          inner_join(Client, by = "PersonalID") %>%
+        Q6a_ssn <- Q6a_data %>%
           mutate(sequential = lapply(SSN, sequential_ssn),
                  dq_flag = case_when(
                    SSNDataQuality %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
@@ -283,9 +287,7 @@ combining_files <- FALSE
                    TRUE ~ "OK")) %>%
           select(PersonalID, SSN, SSNDataQuality, dq_flag)
         
-        Q6a_dob <- recent_program_enrollment_dq %>%
-          inner_join(Client, by = "PersonalID") %>%
-          # left_join(client_plus, by = "PersonalID") %>%
+        Q6a_dob <- Q6a_data %>%
           mutate(dq_flag = case_when(
             DOBDataQuality %in% c(8, 9) &
               is.na(DOB) ~ "Client.Does.Not.Know.or.Refused",
@@ -304,8 +306,7 @@ combining_files <- FALSE
           select(PersonalID, DOB, DOBDataQuality, DateCreated, age_group,
                  RelationshipToHoH, dq_flag)
         
-        Q6a_race <- recent_program_enrollment_dq %>%
-          inner_join(Client, by = "PersonalID") %>%
+        Q6a_race <- Q6a_data %>%
           mutate(dq_flag = case_when(
             RaceNone %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
             RaceNone == 99 |
@@ -318,16 +319,14 @@ combining_files <- FALSE
           select(PersonalID, AmIndAKNative, Asian, BlackAfAmerican,
                  NativeHIPacific, White, RaceNone, dq_flag)
         
-        Q6a_ethnicity <- recent_program_enrollment_dq %>%
-          inner_join(Client, by = "PersonalID") %>%
+        Q6a_ethnicity <- Q6a_data %>%
           mutate(dq_flag = case_when(
             Ethnicity %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
             Ethnicity == 99 ~ "Information.Missing",
             TRUE ~ "OK")) %>%
           select(PersonalID, Ethnicity, dq_flag)
         
-        Q6a_gender <- recent_program_enrollment_dq %>%
-          inner_join(Client, by = "PersonalID") %>%
+        Q6a_gender <- Q6a_data %>%
           mutate(dq_flag = case_when(
             GenderNone %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
             GenderNone == 99 |
@@ -899,7 +898,7 @@ combining_files <- FALSE
         # same question as before--is this the most recent CLS for the *person* or the *enrollment*?
         recent_CLS_for_Q9 <- recent_program_enrollment %>%
           left_join(CurrentLivingSituation %>%
-                      select(-PersonalID) %>%
+                      select(-c(PersonalID, ExportID)) %>%
                       rename(CLS_InformationDate = InformationDate,
                              CLS = CurrentLivingSituation), by = "EnrollmentID") %>%
           filter(CLS_InformationDate >= report_start_date &
@@ -910,6 +909,7 @@ combining_files <- FALSE
         # this one specifies enrollment as directed in the programming specifications
         only_CLS_for_Q9 <- recent_program_enrollment %>%
           left_join(CurrentLivingSituation %>%
+                      select(-ExportID) %>%
                       rename(CLS_InformationDate = InformationDate,
                              CLS = CurrentLivingSituation), by = "EnrollmentID") %>%
           filter(CLS_InformationDate >= EntryDate &
@@ -1269,7 +1269,7 @@ combining_files <- FALSE
       {
         entry_income <- recent_program_enrollment %>%
           left_join(IncomeBenefits %>%
-                      select(-PersonalID) %>%
+                      select(-c(PersonalID, ExportID)) %>%
                       filter(DataCollectionStage == 1),
                     by = c("EnrollmentID", "EntryDate" = "InformationDate"))
         
@@ -1283,7 +1283,7 @@ combining_files <- FALSE
         exit_income <- recent_program_enrollment %>%
           filter(!is.na(ExitDate)) %>%
           left_join(IncomeBenefits %>%
-                      select(-PersonalID) %>%
+                      select(-c(PersonalID, ExportID)) %>%
                       filter(DataCollectionStage == 3),
                     by = c("EnrollmentID", "ExitDate" = "InformationDate"))
         
@@ -2403,7 +2403,24 @@ combining_files <- FALSE
     
     if (generate_new_kits) {
       
-      write_csvs_for(project_list, zip_title = projects_included)
+      folder_name <- paste("Test Kit", format(Sys.Date(), "%m.%d.%y"))
+      
+      if (!dir.exists(folder_name)) {
+        dir.create(folder_name)
+      }
+      
+      if (!dir.exists(paste0(folder_name, "/HMIS CSVs"))) {
+        dir.create(paste0(folder_name, "/HMIS CSVs"))
+      }
+      
+      if (!dir.exists(paste0(folder_name, "/Reports"))) {
+        dir.create(paste0(folder_name, "/Reports"))
+      }
+      
+      if (projects_included != "Multiple Projects") {
+        write_csvs_for(project_list, zip_title = projects_included,
+                       write_to <- paste0(folder_name, "/HMIS CSVs"))
+      }
       
       if(APR_relevant) {
         for (question in APR_files) {
@@ -2430,12 +2447,17 @@ combining_files <- FALSE
             missing_files <- c(missing_files, paste("APR -", projects_included, "-", question))
           }
         }
-        archive_write_dir(paste0("APR - ", projects_included, " (A).zip"),
-                          paste0(getwd(), "/created_files"))
-        unlink(paste0(getwd(), "/created_files/*"))
+        general_wd <- getwd()
+        setwd(paste0(general_wd, "/", folder_name, "/Reports"))
         
+        archive_write_dir(paste0("APR - ", projects_included, " (A).zip"),
+                          paste0(general_wd, "/created_files"))
         archive_write_dir(paste0("APR - ", projects_included, " (D).zip"),
-                          paste0(getwd(), "/created_files_2"))
+                          paste0(general_wd, "/created_files_2"))
+        
+        setwd(general_wd)
+        
+        unlink(paste0(getwd(), "/created_files/*"))
         unlink(paste0(getwd(), "/created_files_2/*"))
       }
       
@@ -2464,12 +2486,16 @@ combining_files <- FALSE
             missing_files <- c(missing_files, paste("CAPER -", projects_included, "-", question))
           }
         }
-        archive_write_dir(paste0("CAPER - ", projects_included, " (A).zip"),
-                          paste0(getwd(), "/created_files"))
-        unlink(paste0(getwd(), "/created_files/*"))
+        general_wd <- getwd()
+        setwd(paste0(general_wd, "/", folder_name, "/Reports"))
         
+        archive_write_dir(paste0("CAPER - ", projects_included, " (A).zip"),
+                          paste0(general_wd, "/created_files"))
         archive_write_dir(paste0("CAPER - ", projects_included, " (D).zip"),
-                          paste0(getwd(), "/created_files_2"))
+                          paste0(general_wd, "/created_files_2"))
+        setwd(general_wd)
+        
+        unlink(paste0(getwd(), "/created_files/*"))
         unlink(paste0(getwd(), "/created_files_2/*"))
       }
     }

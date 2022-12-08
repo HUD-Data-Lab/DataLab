@@ -439,7 +439,8 @@ YouthEducationStatus <- trunc_userid(YouthEducationStatus) %>%
 # write to zipped folder
 {
   for (file in names(hmis_csvs)) {
-    write.csv(get(file), file.path(paste0("created_files/", file, ".csv")), row.names=FALSE)
+    write.csv(get(file), file.path(paste0("created_files/", file, ".csv")), 
+              row.names=FALSE, na="")
   }
   
   archive_write_dir(paste0("DataLab - Hashed CSVs.zip"),

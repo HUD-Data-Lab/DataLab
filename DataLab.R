@@ -64,7 +64,6 @@ report_end_date <- ymd("2022-9-30")
 for (file in names(hmis_csvs)){
   
   data <- get(file) %>%
-    select(-ExportID) %>%
     distinct()
   
   if ("DateDeleted" %in% colnames(get(file))) {
@@ -87,8 +86,7 @@ for (file in names(hmis_csvs)){
     data <- data %>%
       rename(exit_DateCreated = DateCreated) %>%
       filter(ExitDate >= report_start_date &
-               ExitDate <= report_end_date) %>%
-      select(-PersonalID)
+               ExitDate <= report_end_date)
   }
   
   if (file == "Funder") {
@@ -217,7 +215,9 @@ chronic_individual <- Enrollment %>%
 
 chronic_household <- Enrollment %>%
   select(PersonalID, EnrollmentID, HouseholdID, EntryDate, RelationshipToHoH) %>%
-  left_join(Client, by = "PersonalID") %>%
+  left_join(Client %>%
+              select(-ExportID), 
+            by = "PersonalID") %>%
   mutate(date_for_age = (if_else(
     EntryDate <= report_start_date,
     report_start_date,

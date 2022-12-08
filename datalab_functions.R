@@ -1001,7 +1001,18 @@ write_csvs_for <- function(project_ids, zip_title, write_to) {
       stop(paste(file))
     }
     
-    write_csv(data, file.path(paste0("created_files/", file, ".csv")))
+    if ("enroll_DateCreated" %in% colnames(data)) {
+      data <- data %>%
+        select(-enroll_DateCreated)
+    }
+    
+    if ("exit_DateCreated" %in% colnames(data)) {
+      data <- data %>%
+        select(-exit_DateCreated)
+    }
+    
+    write.csv(data, file.path(paste0("created_files/", file, ".csv")), 
+              row.names=FALSE, na="")
   }
   
   general_wd <- getwd()
