@@ -1,0 +1,127 @@
+---
+title: "CE_APR_Markdown"
+author: "HUD DataLab"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU Affero General Public License for more details at
+# <https://www.gnu.org/licenses/>. 
+
+knitr::opts_chunk$set(echo = TRUE)
+
+generate_new_kits <- TRUE
+compare_to_last <- FALSE
+if (compare_to_last) {
+  compare_to_dir <- choose.dir()}
+combining_files <- FALSE
+
+source("DataLab.R")
+
+```
+
+## Client Universe
+
+Depending on the HMIS implementation, CE data could be scattered across the system in multiple projects. In general, the universe for this report requires the system to scan for any projects that collected 4.19 [Coordinated Entry Assessment] and/or 4.20 [Coordinated Entry Event] within the HMIS for a single CoC for the following clients and enrollments to include in the report.
+
+The information to be reported on Coordinated Entry for the APR beginning October 1, 2021, is "system-wide". The system being reported on is the CoC where the Supportive Services Only: Coordinated Entry (SSO: CE) project was funded. To identify the appropriate data, use the following ordered steps:
+
+1.  Select all projects, regardless of [project type], that are set up to collect 4.19 and/or 4.20.
+
+```{r}
+
+CE_element_projects <- Project %>%
+  inner_join(Enrollment %>%
+               filter(EnrollmentID %in%
+                        union(Assessment$EnrollmentID, 
+                              Event$EnrollmentID)) %>%
+               select(ProjectID) %>%
+               distinct(),
+             by = "ProjectID")
+
+```
+
+2.  Of these projects, select all projects where [Continuum Project] (element 2.02.5) = yes (1).
+
+```{r}
+
+CE_element_projects <- CE_element_projects %>%
+  filter(ContinuumProject == 1)
+
+```
+
+3.  Of these projects, select all projects where the only CoC code is that which is the same as the CoC where the SSO: CE project was funded by using [continuum code] (element 2.03.1).
+
+4.  This is the expected list of projects to output in Q4, i.e. these are the projects with the potential to have relevant clients.
+
+```{r}
+
+multi_CoC_projects <- ProjectCoC %>%
+  group_by(ProjectID) %>%
+  summarise(CoCs = uniqueN(CoCCode)) %>%
+  filter(CoCs > 1)
+
+CE_element_projects_CoC <- CE_element_projects %>%
+  filter(ProjectID %in% 
+           ProjectCoC$ProjectID[ProjectCoC$CoCCode == relevant_CoC]) %>%
+  mutate(multi_CoC = ProjectID %in% multi_CoC_projects$ProjectID)
+
+```
+
+5.  For projects which have multiple CoC codes, filter enrollments by the [client location] (element 3.16). For each enrollment, use the most recent [client location] dated \<= either the [date of assessment] (4.19.1) or [date of event] (4.20.1) to determine the relevant CoC of CE Assessments and CE Events assigned to that enrollment.
+
+```{r}
+
+assessment_CoC_assignment <- Assessment %>%
+  left_join(CurrentLivingSituation)
+
+```
+
+```{r}
+
+location_dates <- Assessment %>%
+  select(EnrollmentID, AssessmentDate) %>%
+  full_join(Event %>%
+              select(EnrollmentID, EventDate),
+            by = "EnrollmentID") %>%
+  group_by(EnrollmentID) %>%
+  summarise(max_EventDate = max(EventDate, na.rm = TRUE),
+            max_AssessmentDate = max(AssessmentDate, na.rm = TRUE)) %>%
+  ungroup() %>%
+  left_join(EnrollmentCoC %>%
+              select(EnrollmentID, CoCCode, InformationDate),
+            by = "EnrollmentID") %>%
+  filter(InformationDate <= max_EventDate |
+           InformationDate <= max_AssessmentDate) %>%
+  group_by(EnrollmentID) %>%
+  arrange(desc(InformationDate)) %>%
+  slice(1L)
+  
+
+all_program_enrollments <- Enrollment %>%
+  # filter(ProjectID %in% project_list) %>%
+  inner_join(CE_element_projects_CoC %>%
+              select(ProjectID, ProjectType, TrackingMethod, ProjectName),
+            by = "ProjectID") %>%
+  left_join(Exit %>%
+              select(-PersonalID),
+            by = "EnrollmentID") %>%
+  left_join(location_dates, by = "EnrollmentID")
+      
+recent_program_enrollment <- all_program_enrollments %>%
+  group_by(PersonalID) %>%
+  arrange(desc(EntryDate)) %>%
+  slice(1L) %>%
+  ungroup() 
+
+```

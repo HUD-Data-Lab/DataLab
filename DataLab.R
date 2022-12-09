@@ -10,6 +10,7 @@
 # <https://www.gnu.org/licenses/>. 
 
 source("datalab_functions.R")
+source("DataLab_hc_variables.R")
 source("DataLab_Lists.R")
 
 if (combining_files) {
@@ -53,12 +54,6 @@ if (combining_files) {
     file.remove(paste0(file, ".csv"))
   }
 }
-
-# set variables
-# report_start_date <- ymd(Export[1,]$ExportStartDate)
-# report_end_date <- ymd(Export[1,]$ExportEndDate)
-report_start_date <- ymd("2021-10-1")
-report_end_date <- ymd("2022-9-30")
 
 # remove deleted records exportID colummns before proceeding with processing
 for (file in names(hmis_csvs)){

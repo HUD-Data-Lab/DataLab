@@ -5,6 +5,10 @@ library(lubridate)
 library(tidyverse)
 library(archive)
 
+# install.packages("remotes")
+# remotes::install_github("COHHIO/HMIS")
+library(HMIS)
+
 `%nin%` = Negate(`%in%`)
 
 ifnull <- function(value, replace_with) {
@@ -1078,4 +1082,69 @@ create_time_prior_to_housing <- function(filtered_enrollments) {
     mutate(number_of_days_group = case_when(is.na(housing_date) ~ "Not yet moved into housing",
                                             TRUE ~ number_of_days_group)) %>%
     rename(days_prior_to_housing = number_of_days_group)
+}
+
+# get additional client info
+add_client_info <- function(filtered_enrollments) {
+  filtered_enrollments  %>%
+    mutate(date_for_age = (if_else(
+      EntryDate <= report_start_date,
+      report_start_date,
+      EntryDate))) %>%
+    select(PersonalID, date_for_age, HouseholdID, RelationshipToHoH) %>%
+    distinct() %>%
+    inner_join(Client, by = "PersonalID") %>%
+    mutate(age = trunc((DOB %--% date_for_age) / years(1)),
+           detailed_age_group = case_when(age < 5 ~ "Under 5",
+                                          age <= 12 ~ "5-12",
+                                          age <= 17 ~ "13-17",
+                                          age <= 24 ~ "18-24",
+                                          age <= 34 ~ "25-34",
+                                          age <= 44 ~ "35-44",
+                                          age <= 54 ~ "45-54",
+                                          age <= 61 ~ "55-61",
+                                          age >= 62 ~ "62+",
+                                          !is.na(DOBDataQuality) &
+                                            DOBDataQuality %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+                                          TRUE ~ "Data.Not.Collected"), 
+           age_group = case_when(age >= 18 ~ "Adults",
+                                 age < 18 ~ "Children",
+                                 TRUE ~ detailed_age_group),
+           new_veteran_status = if_else(
+             age_group == "Children", as.integer(0), VeteranStatus),
+           gender_combined = case_when(
+             Questioning == 1 ~ "Questioning",
+             NoSingleGender == 1 |
+               (Female == 1 &
+                  Male == 1) ~ "No Single Gender",
+             Transgender == 1 ~ "Transgender",
+             Female == 1 ~ "Female",
+             Male == 1 ~ "Male",
+             GenderNone %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+             TRUE ~ "Data.Not.Collected"),
+           race_combined = case_when(
+             AmIndAKNative + Asian + BlackAfAmerican +
+               NativeHIPacific + White > 1 ~ "Multiple Races",
+             White == 1 ~ "White",
+             BlackAfAmerican == 1 ~ "Black, African American, or African",
+             Asian == 1 ~ "Asian or Asian American",
+             AmIndAKNative == 1 ~ "American Indian, Alaska Native, or Indigenous",
+             NativeHIPacific == 1 ~ "Native Hawaiian or Pacific Islander",
+             RaceNone %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+             TRUE ~ "Data.Not.Collected")) %>%
+    # get a second opinion on when to apply the household type calcs
+    group_by(HouseholdID) %>%
+    mutate(oldest_age = max(age, na.rm = TRUE),
+           youth_household = if_else(oldest_age <= 24 &
+                                       oldest_age >= 0, 1, 0),
+           youth = if_else(youth_household & age >= 12, 1, 0),
+           has_children = max(
+             if_else(age >= 0 &
+                       age < 18 &
+                       RelationshipToHoH == 2,
+                     1, 0))) %>%
+    ungroup() %>%
+    select(PersonalID, age, age_group, detailed_age_group, VeteranStatus, 
+           youth_household, youth, has_children, new_veteran_status,
+           gender_combined, race_combined)
 }
