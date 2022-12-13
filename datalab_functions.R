@@ -1215,6 +1215,8 @@ get_household_info <- function(filtered_enrollments) {
              RelationshipToHoH == 1 ~ EntryDate
            ), na.rm = TRUE))) %>%
     ungroup() %>%
+    # may need to add a case_when(HoH_HMID > EntryDate ~ NULL)
+    # condition here, pending AAQ 205645
     mutate(household_type = case_when(
       adults == 1 &
         children == 1 ~ "AdultsAndChildren",
@@ -1223,4 +1225,169 @@ get_household_info <- function(filtered_enrollments) {
       TRUE ~ "ChildrenOnly"
     )) %>%
     select(PersonalID, household_type, HoH_HMID, HoH_ADHS, HoH_EntryDate)
+}
+
+
+# create first DQ table in glossary
+create_dq_Q1 <- function(filtered_enrollments) {
+  DQ1_data <- filtered_enrollments %>%
+    inner_join(Client %>%
+                 select(-ExportID), by = "PersonalID")
+  
+  DQ1_name <- DQ1_data %>%
+    mutate(dq_flag = case_when(
+      NameDataQuality %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+      NameDataQuality == 99 |
+        is.na(FirstName) |
+        is.na(LastName) ~ "Information.Missing",
+      NameDataQuality == 2 ~ "Data.Issues",
+      TRUE ~ "OK")) %>%
+    select(PersonalID, FirstName, LastName, NameDataQuality, dq_flag)
+  
+  DQ1_ssn <- DQ1_data %>%
+    mutate(sequential = lapply(SSN, sequential_ssn),
+           dq_flag = case_when(
+             SSNDataQuality %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+             SSNDataQuality == 99 |
+               #  below is what the data standards currently say
+               # is.na(SSNDataQuality) ~ "Information.Missing",
+               #  below is how the data standards are generally interpreted
+               is.na(SSN) ~ "Information.Missing",
+             SSNDataQuality == 2 |
+               suppressWarnings(is.na(as.numeric(SSN))) |
+               nchar(SSN) != 9 |
+               substr(SSN, 1, 3) == "000" |
+               substr(SSN, 1, 3) == "666" |
+               substr(SSN, 1, 1) == "9" |
+               substr(SSN, 4, 5) == "00" |
+               substr(SSN, 6, 9) == "0000" |
+               SSN %in% c("111111111", "222222222", "333333333",
+                          "444444444", "555555555", "666666666",
+                          "777777777", "888888888", "999999999") |
+               sequential == TRUE
+             ~ "Data.Issues",
+             TRUE ~ "OK")) %>%
+    select(PersonalID, SSN, SSNDataQuality, dq_flag)
+  
+  DQ1_dob <- DQ1_data %>%
+    mutate(dq_flag = case_when(
+      DOBDataQuality %in% c(8, 9) &
+        is.na(DOB) ~ "Client.Does.Not.Know.or.Refused",
+      is.na(DOBDataQuality) |
+        (DOBDataQuality == 99 &
+           is.na(DOB)) ~ "Information.Missing",
+      DOBDataQuality == 2 |
+        (DOBDataQuality %in% c(8, 9, 99) &
+           !is.na(DOB)) |
+        DOB < mdy("1/1/1915") |
+        DOB > DateCreated |
+        (DOB >= EntryDate &
+           (age_group == "Adults" |
+              RelationshipToHoH == 1)) ~ "Data.Issues",
+      TRUE ~ "OK")) %>%
+    select(PersonalID, DOB, DOBDataQuality, DateCreated, age_group,
+           RelationshipToHoH, dq_flag)
+  
+  DQ1_race <- DQ1_data %>%
+    mutate(dq_flag = case_when(
+      RaceNone %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+      RaceNone == 99 |
+        (AmIndAKNative == 0 &
+           Asian == 0 &
+           BlackAfAmerican == 0 &
+           NativeHIPacific == 0 &
+           White == 0) ~ "Information.Missing",
+      TRUE ~ "OK")) %>%
+    select(PersonalID, AmIndAKNative, Asian, BlackAfAmerican,
+           NativeHIPacific, White, RaceNone, dq_flag)
+  
+  DQ1_ethnicity <- DQ1_data %>%
+    mutate(dq_flag = case_when(
+      Ethnicity %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+      Ethnicity == 99 ~ "Information.Missing",
+      TRUE ~ "OK")) %>%
+    select(PersonalID, Ethnicity, dq_flag)
+  
+  DQ1_gender <- DQ1_data %>%
+    mutate(dq_flag = case_when(
+      GenderNone %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+      GenderNone == 99 |
+        (Female == 0 &
+           Male == 0 &
+           NoSingleGender == 0 &
+           Transgender == 0 &
+           Questioning == 0) ~ "Information.Missing",
+      TRUE ~ "OK")) %>%
+    select(PersonalID, Female, Male, NoSingleGender, Transgender,
+           Questioning, GenderNone, dq_flag)
+  
+  columns <- c("DataElement", "Client.Does.Not.Know.or.Refused", 
+               "Information.Missing", "Data.Issues", "OK")
+  
+  DQ1 <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), columns) %>%
+    mutate(across(DataElement, factor)) 
+  
+  DQ1_detail <- filtered_enrollments %>%
+    select(all_of(standard_detail_columns))
+  
+  elements <- list("Name", "SSN", "DOB", "Race", "Ethnicity", "Gender")
+  
+  for (element in elements) {
+    table <- get(paste0("DQ1_", tolower(element))) 
+    
+    detail_title <- paste0(element, "_DQ")
+    DQ1_detail <- DQ1_detail %>%
+      left_join(table %>%
+                  select(-intersect(
+                    colnames(DQ1_detail),
+                    colnames(table)[colnames(table) != "PersonalID"])), 
+                by = "PersonalID") %>%
+      rename({{detail_title}} := dq_flag)
+    
+    table <- table %>%
+      group_by(dq_flag) %>%
+      summarise(Clients = n()) %>% 
+      pivot_wider(names_from = "dq_flag", values_from = "Clients") %>%
+      mutate(DataElement = element)
+    
+    DQ1 <- DQ1 %>%
+      full_join(table, by = intersect(columns, colnames(table)))
+    
+    rm(table)
+    
+    if (exists("error_clients")) {
+      error_clients <- error_clients %>%
+        union(get(paste0("DQ1_", tolower(element))) %>%
+                filter(dq_flag != "OK") %>%
+                select(PersonalID))
+      
+    } else {
+      error_clients <- get(paste0("DQ1_", tolower(element))) %>%
+        filter(dq_flag != "OK") %>%
+        select(PersonalID)
+    }
+  }
+  
+  DQ1 <- DQ1 %>%
+    select(-OK) %>%
+    mutate(Client.Does.Not.Know.or.Refused = if_else(is.na(`Client.Does.Not.Know.or.Refused`), 
+                                                     0, as.double(`Client.Does.Not.Know.or.Refused`)),
+           Information.Missing = if_else(is.na(Information.Missing), 
+                                         0, as.double(Information.Missing)),
+           Data.Issues = if_else(is.na(Data.Issues), 
+                                 0, as.double(Data.Issues)),
+           Total = `Client.Does.Not.Know.or.Refused` + Information.Missing + Data.Issues) %>%
+    add_row(DataElement = "Overall Score", 
+            `Client.Does.Not.Know.or.Refused` = 0, Information.Missing = 0, Data.Issues = 0, 
+            Total = nrow(unique(error_clients))) %>%
+    mutate(ErrorRate = Total / Q5a$Count.of.Clients.for.DQ[1])
+  
+  DQ1[DQ1$DataElement == "Overall Score", c("Client.Does.Not.Know.or.Refused",
+                                            "Information.Missing")] <- NA
+  DQ1$Data.Issues[4:7] <- NA
+  
+  DQ1_results <- list()
+  DQ1_results[[1]] <- DQ1
+  DQ1_results[[2]] <- DQ1_detail
+  DQ1_results
 }
