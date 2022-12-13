@@ -1391,3 +1391,30 @@ create_dq_Q1 <- function(filtered_enrollments) {
   DQ1_results[[2]] <- DQ1_detail
   DQ1_results
 }
+
+# Q8a on the CoC APR, CAPER, and CE APR
+households_served_table <- function(filtered_enrollments) {
+  hh_served_detail <- filtered_enrollments %>%
+    select(all_of(housing_program_detail_columns)) %>%
+    mutate(count_as_household = RelationshipToHoH == 1,
+           count_as_move_in_household = RelationshipToHoH == 1 &
+             HoH_HMID <= report_end_date)
+  
+  hh_served_all <- hh_served_detail %>%
+    filter(count_as_household) %>% 
+    mutate(client_group = "Total Households") %>%
+    return_household_groups(., client_group, "Total Households") 
+  
+  hh_served_moved_in <- hh_served_detail %>%
+    filter(count_as_move_in_household) %>% 
+    mutate(client_group = "Moved In Households") %>%
+    return_household_groups(., client_group, "Moved In Households") 
+  
+  hh_served <- hh_served_all %>%
+    union(hh_served_moved_in)
+  
+  hh_served_results <- list()
+  hh_served_results[[1]] <- hh_served
+  hh_served_results[[2]] <- hh_served_detail
+  hh_served_results
+}

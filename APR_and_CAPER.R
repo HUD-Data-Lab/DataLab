@@ -540,25 +540,9 @@ combining_files <- FALSE
       
       # Q8a
       {
-        Q8a_detail <- recent_program_enrollment %>%
-          select(all_of(housing_program_detail_columns)) %>%
-          mutate(count_as_household = RelationshipToHoH == 1,
-                 count_as_move_in_household = RelationshipToHoH == 1 &
-                   HoH_HMID <= report_end_date)
-        
-        Q8a_all <- Q8a_detail %>%
-          filter(count_as_household) %>% 
-          mutate(client_group = "Total Households") %>%
-          return_household_groups(., client_group, "Total Households") 
-        
-        Q8a_moved_in <- Q8a_detail %>%
-          filter(count_as_move_in_household) %>% 
-          mutate(client_group = "Moved In Households") %>%
-          return_household_groups(., client_group, "Moved In Households") 
-        
-        Q8a <- Q8a_all %>%
-          union(Q8a_moved_in)
-        
+        Q8a_data <- households_served_table(recent_program_enrollment)
+        Q8a <- Q8a_data[[1]]
+        Q8a_detail <- Q8a_data[[2]]
       }
       
       # Q8b

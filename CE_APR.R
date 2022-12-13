@@ -19,6 +19,7 @@ source("DataLab.R")
 
 starting_env <- environment()
 # environment <- starting_env
+items_to_keep <- c("items_to_keep", ls())
 
 # this is for testing variations in CoC code in test kit data,
 # commented out for QA
@@ -142,6 +143,43 @@ enrollment_recent_assessment <- enrollment_data %>%
 
 # Q6
 
-mylist <- list()
-mylist[[1]] <- Q4a
-mylist[[2]] <- Q5a
+{
+  Q6a_data <- create_dq_Q1(dq_recent_assessment)
+  Q6a <- Q6a_data[[1]]
+  Q6a_detail <- Q6a_data[[2]]
+}
+
+
+# Q7a
+{
+  Q7a_detail <- enrollment_recent_assessment %>%
+    select(all_of(housing_program_detail_columns),
+           all_of(demographic_detail_columns))
+  
+  Q7a_all <- Q7a_detail %>%
+    mutate(client_group = "Total") %>%
+    return_household_groups(., client_group, c("Total")) 
+  
+  Q7a_moved_in <- Q7a_all[0, ]
+  Q7a_moved_in[1, 1] <- "For PSH & RRH - the total persons served who moved into housing" 
+  
+  Q7a <- Q7a_detail %>%
+    return_household_groups(., age_group, age_groups) %>%
+    rename(client_group = age_group) %>%
+    union(Q7a_all) %>%
+    union(Q7a_moved_in)
+}
+
+
+# Q8
+{
+  Q8a_data <- households_served_table(enrollment_recent_assessment)
+  Q8a <- Q8a_data[[1]]
+  Q8a_detail <- Q8a_data[[2]]
+  Q8a[2, 2:6] <- NA
+}
+
+
+# --------------------------------------
+
+rm(list = ls()[ls() %nin% items_to_keep])
