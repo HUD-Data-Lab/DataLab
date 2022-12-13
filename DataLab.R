@@ -10,7 +10,6 @@
 # <https://www.gnu.org/licenses/>. 
 
 source("datalab_functions.R")
-source("DataLab_hc_variables.R")
 source("DataLab_Lists.R")
 
 if (combining_files) {
@@ -55,11 +54,20 @@ if (combining_files) {
   }
 }
 
+source("DataLab_hc_variables.R")
+
 # remove deleted records exportID colummns before proceeding with processing
 for (file in names(hmis_csvs)){
   
   data <- get(file) %>%
     distinct()
+  
+  new_ExportID <- data$ExportID[1]
+  
+  data <- data %>%
+    select(-ExportID) %>%
+    distinct() %>%
+    mutate(ExportID = new_ExportID)
   
   if ("DateDeleted" %in% colnames(get(file))) {
     data <- data %>%

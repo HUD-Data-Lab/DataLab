@@ -13,19 +13,35 @@ generate_new_kits <- TRUE
 compare_to_last <- FALSE
 if (compare_to_last) {
   compare_to_dir <- choose.dir()}
-combining_files <- FALSE
-
-# hold_ProjectCoC <- ProjectCoC
-ProjectCoC <- ProjectCoC %>%
-  mutate(CoCCode = case_when(
-    ProjectID %in% c(340, 780, 1647) ~ "XX-500",
-    TRUE ~ CoCCode)) %>%
-  union(hold_ProjectCoC %>%
-          filter(ProjectID == 1647))
-
-relevant_CoC <- "XX-501"
+combining_files <- TRUE
 
 source("DataLab.R")
+
+starting_env <- environment()
+# environment <- starting_env
+
+# this is for testing variations in CoC code in test kit data,
+# commented out for QA
+# ProjectCoC <- ProjectCoC %>%
+#   mutate(CoCCode = case_when(
+#     ProjectID %in% c(340, 780, 1647) ~ "XX-500",
+#     TRUE ~ CoCCode)) %>%
+#   union(hold_ProjectCoC %>%
+#           filter(ProjectID == 1647))
+
+# need to modify this per AAQ 204781
+CE_element_projects <- Project %>%
+  inner_join(Enrollment %>%
+               filter(EnrollmentID %in%
+                        union(Assessment$EnrollmentID, 
+                              Event$EnrollmentID)) %>%
+               select(ProjectID) %>%
+               distinct(),
+             by = "ProjectID")
+
+CE_element_projects <- CE_element_projects %>%
+  filter(ContinuumProject == 1)
+
 
 multi_CoC_projects <- ProjectCoC %>%
   group_by(ProjectID) %>%
@@ -33,10 +49,99 @@ multi_CoC_projects <- ProjectCoC %>%
   filter(CoCs > 1)
 
 
-CE_element_projects <- Project %>%
-  inner_join(Enrollment %>%
-               filter(EnrollmentID %in%
-                        union(Assessment$EnrollmentID, Event$EnrollmentID)) %>%
-               select(ProjectID) %>%
-               distinct(),
-             by = "ProjectID")
+CE_element_projects_CoC <- CE_element_projects %>%
+  filter(ProjectID %in% 
+           ProjectCoC$ProjectID[ProjectCoC$CoCCode == relevant_CoC]) %>%
+  mutate(multi_CoC = ProjectID %in% multi_CoC_projects$ProjectID)
+
+
+enrollment_CoC_over_time <- Enrollment %>%
+  select(EnrollmentID, HouseholdID, EntryDate) %>%
+  left_join(Exit %>%
+              select(EnrollmentID, ExitDate),
+            by = "EnrollmentID") %>%
+  inner_join(EnrollmentCoC %>%
+               select(HouseholdID, CoCCode, InformationDate), 
+             by = "HouseholdID") %>%
+  filter(CoCCode == relevant_CoC &
+           InformationDate >= EntryDate &
+           (InformationDate <= ExitDate |
+              is.na(ExitDate))) %>%
+  select(-c(EntryDate, ExitDate))
+
+most_recent_assessment <- Assessment %>%
+  inner_join(enrollment_CoC_over_time, 
+             by = "EnrollmentID") %>%
+  filter(AssessmentDate >= report_start_date &
+           AssessmentDate <= report_end_date & 
+           (InformationDate <= AssessmentDate |
+              is.na(InformationDate))) %>%
+  group_by(PersonalID) %>%
+  arrange(desc(AssessmentDate)) %>%
+  slice(1L) %>%
+  ungroup()
+
+event_plus <- Event %>%
+  inner_join(enrollment_CoC_over_time,
+            by = "EnrollmentID") %>%
+  filter(EventDate <= (report_end_date + days(90)) & 
+           (InformationDate <= EventDate |
+              is.na(InformationDate)))
+
+
+# get additional client information (age for reporting)
+client_plus <- add_client_info(Enrollment) 
+
+enrollment_data <- Enrollment %>%
+  left_join(Exit %>%
+              select(-PersonalID),
+            by = "EnrollmentID") %>%
+  left_join(Project %>%
+              select(ProjectID, ProjectType, TrackingMethod, ProjectName),
+            by = "ProjectID")
+
+household_info <- get_household_info(enrollment_data)
+
+enrollment_recent_assessment <- enrollment_data %>%
+  inner_join(most_recent_assessment %>%
+               select(HouseholdID, AssessmentDate), 
+             by = "HouseholdID") %>%
+  filter(AssessmentDate >= EntryDate &
+           (AssessmentDate <= ExitDate |
+              is.na(ExitDate))) %>%
+  left_join(client_plus, by = "PersonalID") %>%
+  left_join(household_info, by = "PersonalID") %>%
+  mutate(chronic = NA)
+
+# Q4a
+{
+  Q4a <- program_information_table(enrollment_recent_assessment$ProjectID,
+                                   enrollment_recent_assessment)
+  }
+
+
+# Q5
+{
+  dq_recent_assessment <- enrollment_recent_assessment %>%
+    filter(ProjectType != 4 |
+             (!is.na(DateOfEngagement) &
+                DateOfEngagement <= report_end_date))
+  
+  Q5a_detail <- enrollment_recent_assessment %>%
+    select(c(all_of(standard_detail_columns),
+             all_of(demographic_detail_columns))) %>%
+    mutate(IncludedInDQ = EnrollmentID %in% dq_recent_assessment$EnrollmentID)
+  
+  Q5a <- create_summary_table(dq_recent_assessment, "Count.of.Clients.for.DQ") %>%
+    left_join(create_summary_table(enrollment_recent_assessment, "Count.of.Clients"), 
+              by = "Group")
+  
+  Q5a[c(5:9, 11, 13, 16), 2:3] <- NA
+}
+
+
+# Q6
+
+mylist <- list()
+mylist[[1]] <- Q4a
+mylist[[2]] <- Q5a

@@ -89,39 +89,6 @@ assessment_CoC_assignment <- Assessment %>%
 
 ```{r}
 
-location_dates <- Assessment %>%
-  select(EnrollmentID, AssessmentDate) %>%
-  full_join(Event %>%
-              select(EnrollmentID, EventDate),
-            by = "EnrollmentID") %>%
-  group_by(EnrollmentID) %>%
-  summarise(max_EventDate = max(EventDate, na.rm = TRUE),
-            max_AssessmentDate = max(AssessmentDate, na.rm = TRUE)) %>%
-  ungroup() %>%
-  left_join(EnrollmentCoC %>%
-              select(EnrollmentID, CoCCode, InformationDate),
-            by = "EnrollmentID") %>%
-  filter(InformationDate <= max_EventDate |
-           InformationDate <= max_AssessmentDate) %>%
-  group_by(EnrollmentID) %>%
-  arrange(desc(InformationDate)) %>%
-  slice(1L)
-  
 
-all_program_enrollments <- Enrollment %>%
-  # filter(ProjectID %in% project_list) %>%
-  inner_join(CE_element_projects_CoC %>%
-              select(ProjectID, ProjectType, TrackingMethod, ProjectName),
-            by = "ProjectID") %>%
-  left_join(Exit %>%
-              select(-PersonalID),
-            by = "EnrollmentID") %>%
-  left_join(location_dates, by = "EnrollmentID")
-      
-recent_program_enrollment <- all_program_enrollments %>%
-  group_by(PersonalID) %>%
-  arrange(desc(EntryDate)) %>%
-  slice(1L) %>%
-  ungroup() 
 
 ```
