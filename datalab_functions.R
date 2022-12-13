@@ -1197,9 +1197,10 @@ program_information_table <- function(project_list, filtered_enrollments) {
                    "Total Active Households"))
 }
 
-get_household_info <- function(filtered_enrollments) {
+get_household_info <- function(filtered_enrollments, 
+                               client_table = client_plus) {
   filtered_enrollments %>%
-    left_join(client_plus, by = "PersonalID") %>%
+    inner_join(client_table, by = "PersonalID") %>%
     group_by(HouseholdID) %>%
     mutate(adults = max(if_else(age_group == "Adults", 1, 0)),
            children = max(if_else(age_group == "Children", 1, 0)),
