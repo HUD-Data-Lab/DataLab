@@ -490,9 +490,18 @@ lot_homeless_detail_columns <- c("LivingSituation", "LengthOfStay",
 
 
 # ------------------------------------------------------------------------------
-# --------------------------- CE Detail Columns --------------------------
+# ------------------------------ CE Detail Columns -----------------------------
 # ------------------------------------------------------------------------------
 # used in:
 #   CE APR detail exports
 
 ce_detail_columns <- c(standard_detail_columns, "AssessmentDate")
+
+
+# ------------------------------------------------------------------------------
+# -------------------------------- Event Prefixes ------------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   CE APR 
+event_prefixes <- rep("Event_", length(Event))
+event_prefixes[[which(colnames(Event) == "PersonalID")]] <- ""

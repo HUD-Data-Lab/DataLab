@@ -228,36 +228,7 @@ enrollment_recent_assessment <- enrollment_data %>%
 
 # Q9c
 {
-  event_prefixes <- rep("Event_", length(Event))
-  event_prefixes[[which(colnames(Event) == "PersonalID")]] <- ""
-  
-  individual_cutoff_dates <- hh_info_at_recent_assessment %>%
-    select(PersonalID) %>%
-    left_join(Assessment %>%
-                filter(PersonalID %in% hh_info_at_recent_assessment$PersonalID &
-                         AssessmentDate > report_end_date &
-                         AssessmentDate <= report_end_date + days(90)) %>%
-                select(PersonalID, AssessmentDate),
-              by = "PersonalID") %>%
-    rename(cutoff_date = AssessmentDate)
-  
-  Q9c_detail <- hh_info_at_recent_assessment %>%
-    inner_join(Event %>%
-                 filter(Event %in% 1:4) %>%
-                 left_join(EventTypes, by = "Event") %>%
-                 `colnames<-`(c(paste0(event_prefixes, colnames(Event)), "Label")), 
-               by = "PersonalID") %>%
-    left_join(individual_cutoff_dates, by = "PersonalID") %>%
-    filter(RelationshipToHoH == 1 &
-             Event_EventDate >= AssessmentDate &
-             Event_EventDate <= report_end_date + days(90) &
-             (is.na(cutoff_date) |
-                Event_EventDate < cutoff_date)) %>%
-    select(all_of(ce_detail_columns), Event_Event, Event_EnrollmentID, 
-           Event_EventDate, Event_ProbSolDivRRResult, Label) %>%
-    mutate(same_enrollment = Event_EnrollmentID == EnrollmentID,
-           test = is.na(ExitDate)) %>%
-    arrange(desc(same_enrollment), desc(Event_EventDate)) 
+  Q9c_detail <- get_relevant_events(hh_info_at_recent_assessment, 1:4) 
   
   Q9c_data <- Q9c_detail %>%
     group_by(PersonalID) %>%
@@ -276,9 +247,17 @@ enrollment_recent_assessment <- enrollment_data %>%
   Q9c[7, 1:6] <- c("Percent of successful referrals to Problem Solving/Diversion/Rapid Resolution",
                    Q9c[5, 2:6] / Q9c[6, 2:6])
   Q9c <- ifnull(Q9c, 0)
-  
 }
 
+# Q9d
+{
+  Q9d_detail <- get_relevant_events(hh_info_at_recent_assessment, 5:18) 
+  
+  Q9d_data <- Q9d_detail %>%
+    group_by(PersonalID) %>%
+    slice(1L) %>%
+    ungroup()
+}
 # --------------------------------------
 
 rm(list = ls()[ls() %nin% items_to_keep])

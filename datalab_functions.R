@@ -1419,3 +1419,34 @@ households_served_table <- function(filtered_enrollments) {
   hh_served_results[[2]] <- hh_served_detail
   hh_served_results
 }
+
+get_relevant_events <- function(filtered_enrollments, event_type_list) {
+  
+  individual_cutoff_dates <- filtered_enrollments %>%
+    select(PersonalID) %>%
+    left_join(Assessment %>%
+                filter(PersonalID %in% filtered_enrollments$PersonalID &
+                         AssessmentDate > report_end_date &
+                         AssessmentDate <= report_end_date + days(90)) %>%
+                select(PersonalID, AssessmentDate),
+              by = "PersonalID") %>%
+    rename(cutoff_date = AssessmentDate)
+  
+  filtered_enrollments %>%
+    inner_join(Event %>%
+                 filter(Event %in% event_type_list) %>%
+                 left_join(EventTypes, by = "Event") %>%
+                 `colnames<-`(c(paste0(event_prefixes, colnames(Event)), "Label")), 
+               by = "PersonalID") %>%
+    left_join(individual_cutoff_dates, by = "PersonalID") %>%
+    filter(RelationshipToHoH == 1 &
+             Event_EventDate >= AssessmentDate &
+             Event_EventDate <= report_end_date + days(90) &
+             (is.na(cutoff_date) |
+                Event_EventDate < cutoff_date)) %>%
+    select(all_of(ce_detail_columns), Event_Event, Event_EnrollmentID, 
+           Event_EventDate, Event_ProbSolDivRRResult, Label) %>%
+    mutate(same_enrollment = Event_EnrollmentID == EnrollmentID,
+           test = is.na(ExitDate)) %>%
+    arrange(desc(same_enrollment), desc(Event_EventDate)) 
+}
