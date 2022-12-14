@@ -82,12 +82,13 @@ most_recent_assessment <- Assessment %>%
   slice(1L) %>%
   ungroup()
 
-event_plus <- Event %>%
-  inner_join(enrollment_CoC_over_time,
-            by = "EnrollmentID") %>%
-  filter(EventDate <= (report_end_date + days(90)) & 
-           (InformationDate <= EventDate |
-              is.na(InformationDate)))
+# event_filtered <- Event %>%
+#   inner_join(enrollment_CoC_over_time,
+#             by = "EnrollmentID") %>%
+#   filter(EventDate <= (report_end_date + days(90)) & 
+#            (InformationDate <= EventDate |
+#               is.na(InformationDate))) %>%
+#   select(colnmaes(Event))
 
 
 # get additional client information (age for reporting)
@@ -105,7 +106,7 @@ household_info <- get_household_info(enrollment_data)
 
 enrollment_recent_assessment <- enrollment_data %>%
   inner_join(most_recent_assessment %>%
-               select(HouseholdID, AssessmentDate), 
+               select(HouseholdID, AssessmentDate, AssessmentType, PrioritizationStatus), 
              by = "HouseholdID") %>%
   filter(AssessmentDate >= EntryDate &
            (AssessmentDate <= ExitDate |
@@ -129,7 +130,7 @@ enrollment_recent_assessment <- enrollment_data %>%
                 DateOfEngagement <= report_end_date))
   
   Q5a_detail <- enrollment_recent_assessment %>%
-    select(c(all_of(standard_detail_columns),
+    select(c(all_of(ce_detail_columns),
              all_of(demographic_detail_columns))) %>%
     mutate(IncludedInDQ = EnrollmentID %in% dq_recent_assessment$EnrollmentID)
   
@@ -142,7 +143,6 @@ enrollment_recent_assessment <- enrollment_data %>%
 
 
 # Q6
-
 {
   Q6a_data <- create_dq_Q1(dq_recent_assessment)
   Q6a <- Q6a_data[[1]]
@@ -153,7 +153,7 @@ enrollment_recent_assessment <- enrollment_data %>%
 # Q7a
 {
   Q7a_detail <- enrollment_recent_assessment %>%
-    select(all_of(housing_program_detail_columns),
+    select(all_of(ce_detail_columns),
            all_of(demographic_detail_columns))
   
   Q7a_all <- Q7a_detail %>%
@@ -179,6 +179,105 @@ enrollment_recent_assessment <- enrollment_data %>%
   Q8a[2, 2:6] <- NA
 }
 
+
+# Q9
+# Q9a
+{
+  clients_at_recent_assessment <- client_plus %>%
+    select(-intersect(colnames(client_plus),
+                      colnames(enrollment_recent_assessment)[colnames(enrollment_recent_assessment) != "PersonalID"])) %>%
+    filter(PersonalID %in% enrollment_recent_assessment$PersonalID)
+  
+  hh_info_at_recent_assessment <- enrollment_recent_assessment %>%
+    select(-colnames(household_info)[colnames(household_info) != "PersonalID"]) %>%
+    left_join(get_household_info(enrollment_recent_assessment,
+                                 clients_at_recent_assessment), 
+              by = "PersonalID")
+  
+  Q9a_detail <- hh_info_at_recent_assessment %>%
+    select(all_of(ce_detail_columns), AssessmentType) %>%
+    mutate(assessment_type = case_when(AssessmentType == 1 ~ "Phone",
+                                       AssessmentType == 2 ~ "Virtual",
+                                       AssessmentType == 3 ~ "In-person")) 
+  
+  Q9a <- Q9a_detail %>%
+    filter(RelationshipToHoH == 1) %>%
+    return_household_groups(., assessment_type, 
+                            c("Phone", "Virtual", "In-person")) %>%
+    adorn_totals("row")
+}
+
+# Q9b
+{
+  Q9b_detail <- hh_info_at_recent_assessment %>%
+    select(all_of(ce_detail_columns), PrioritizationStatus) %>%
+    mutate(prioritization_status = case_when(PrioritizationStatus == 1 ~ "Placed on Prioritization List (Prioritized)",
+                                       PrioritizationStatus == 2 ~ "Not Placed on Prioritization List")) 
+  
+  Q9b <- Q9b_detail %>%
+    filter(RelationshipToHoH == 1) %>%
+    return_household_groups(., prioritization_status, 
+                            c("Placed on Prioritization List (Prioritized)", 
+                              "Not Placed on Prioritization List")) %>%
+    adorn_totals("row") %>%
+    untabyl()
+  
+  Q9b[3, 2:6] <- Q9b[1, 2:6] / Q9b[3, 2:6]
+  
+}
+
+# Q9c
+{
+  event_prefixes <- rep("Event_", length(Event))
+  event_prefixes[[which(colnames(Event) == "PersonalID")]] <- ""
+  
+  individual_cutoff_dates <- hh_info_at_recent_assessment %>%
+    select(PersonalID) %>%
+    left_join(Assessment %>%
+                filter(PersonalID %in% hh_info_at_recent_assessment$PersonalID &
+                         AssessmentDate > report_end_date &
+                         AssessmentDate <= report_end_date + days(90)) %>%
+                select(PersonalID, AssessmentDate),
+              by = "PersonalID") %>%
+    rename(cutoff_date = AssessmentDate)
+  
+  Q9c_detail <- hh_info_at_recent_assessment %>%
+    inner_join(Event %>%
+                 filter(Event %in% 1:4) %>%
+                 left_join(EventTypes, by = "Event") %>%
+                 `colnames<-`(c(paste0(event_prefixes, colnames(Event)), "Label")), 
+               by = "PersonalID") %>%
+    left_join(individual_cutoff_dates, by = "PersonalID") %>%
+    filter(RelationshipToHoH == 1 &
+             Event_EventDate >= AssessmentDate &
+             Event_EventDate <= report_end_date + days(90) &
+             (is.na(cutoff_date) |
+                Event_EventDate < cutoff_date)) %>%
+    select(all_of(ce_detail_columns), Event_Event, Event_EnrollmentID, 
+           Event_EventDate, Event_ProbSolDivRRResult, Label) %>%
+    mutate(same_enrollment = Event_EnrollmentID == EnrollmentID,
+           test = is.na(ExitDate)) %>%
+    arrange(desc(same_enrollment), desc(Event_EventDate)) 
+  
+  Q9c_data <- Q9c_detail %>%
+    group_by(PersonalID) %>%
+    slice(1L) %>%
+    ungroup() 
+  
+  Q9c <- Q9c_data %>%
+    return_household_groups(., Label, EventTypes$Label[1:4]) %>%
+    adorn_totals("row") %>%
+    union(Q9c_data %>%
+            filter(Event_ProbSolDivRRResult == 1) %>%
+            mutate(Label = "Result: Client housed/Re-Housed in a safe alternative") %>%
+            return_household_groups(., Label, 
+                                    "Result: Client housed/Re-Housed in a safe alternative"))
+  
+  Q9c[7, 1:6] <- c("Percent of successful referrals to Problem Solving/Diversion/Rapid Resolution",
+                   Q9c[5, 2:6] / Q9c[6, 2:6])
+  Q9c <- ifnull(Q9c, 0)
+  
+}
 
 # --------------------------------------
 

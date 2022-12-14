@@ -187,6 +187,16 @@ InsuranceTypes <- read_excel("SupplementalTables.xlsx",
 
 
 # ------------------------------------------------------------------------------
+# --------------------------- Event Type List ----------------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   CE APR
+
+EventTypes <- read_excel("SupplementalTables.xlsx",
+                             sheet = "EventTypes",
+                             col_types = c("numeric", "text"))
+
+# ------------------------------------------------------------------------------
 # ----------------------------- Race List --------------------------------------
 # ------------------------------------------------------------------------------
 # used in:
@@ -477,3 +487,12 @@ lot_homeless_detail_columns <- c("LivingSituation", "LengthOfStay",
                                 "LOSUnderThreshold","PreviousStreetESSH", 
                                 "DateToStreetESSH", "TimesHomelessPastThreeYears", 
                                 "MonthsHomelessPastThreeYears")
+
+
+# ------------------------------------------------------------------------------
+# --------------------------- CE Detail Columns --------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   CE APR detail exports
+
+ce_detail_columns <- c(standard_detail_columns, "AssessmentDate")
