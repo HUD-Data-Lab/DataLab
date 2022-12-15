@@ -503,5 +503,18 @@ ce_detail_columns <- c(standard_detail_columns, "AssessmentDate")
 # ------------------------------------------------------------------------------
 # used in:
 #   CE APR 
+
 event_prefixes <- rep("Event_", length(Event))
 event_prefixes[[which(colnames(Event) == "PersonalID")]] <- ""
+
+
+# ------------------------------------------------------------------------------
+# ------------------------------ Referral Results  -----------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   CE APR 
+
+referral_results <- c("Successful referral: client accepted",
+                      "Unsuccessful referral: client rejected",
+                      "Unsuccessful referral: provider rejected",
+                      "No result recorded")

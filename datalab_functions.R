@@ -1445,7 +1445,8 @@ get_relevant_events <- function(filtered_enrollments, event_type_list) {
              (is.na(cutoff_date) |
                 Event_EventDate < cutoff_date)) %>%
     select(all_of(ce_detail_columns), Event_Event, Event_EnrollmentID, 
-           Event_EventDate, Event_ProbSolDivRRResult, Label) %>%
+           Event_EventDate, Event_ProbSolDivRRResult, Event_ReferralResult,
+           Event_ReferralCaseManageAfter, Label) %>%
     mutate(same_enrollment = Event_EnrollmentID == EnrollmentID,
            test = is.na(ExitDate)) %>%
     arrange(desc(same_enrollment), desc(Event_EventDate)) 

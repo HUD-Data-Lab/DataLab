@@ -245,7 +245,7 @@ enrollment_recent_assessment <- enrollment_data %>%
                                     "Result: Client housed/Re-Housed in a safe alternative"))
   
   Q9c[7, 1:6] <- c("Percent of successful referrals to Problem Solving/Diversion/Rapid Resolution",
-                   Q9c[5, 2:6] / Q9c[6, 2:6])
+                   Q9c[6, 2:6] / Q9c[2, 2:6])
   Q9c <- ifnull(Q9c, 0)
 }
 
@@ -257,6 +257,48 @@ enrollment_recent_assessment <- enrollment_data %>%
     group_by(PersonalID) %>%
     slice(1L) %>%
     ungroup()
+  
+  prioritized_referred_data <- Q9b_detail %>%
+    filter(RelationshipToHoH == 1 &
+             prioritization_status == "Placed on Prioritization List (Prioritized)") %>%
+    mutate(Label = PersonalID %in% Q9d_detail$PersonalID) %>%
+    return_household_groups(., Label, 
+                            c(TRUE, FALSE)) %>%
+    adorn_totals("row")
+  
+  prioritized_referred <- prioritized_referred_data[0, ]
+  prioritized_referred[1, 1:6] <- c("Of the total HH prioritized (Q9b row 1) what percentage received a referral",
+                            prioritized_referred_data[1, 2:6] / prioritized_referred_data[3, 2:6])
+  
+  referral_result_data <- Q9d_data %>%
+    filter(Event_Event %in% c(10:15, 17:18)) %>%
+    mutate(Label = referral_results[Event_ReferralResult],
+           Label = if_else(is.na(Label), "No result recorded", Label))
+  
+  referral_result_table <- referral_result_data %>%
+    return_household_groups(., Label, referral_results)
+  
+  housing_program_referrals <- referral_result_data %>%
+    return_household_groups(., RelationshipToHoH, c(1))
+  
+  successful_housing_program_referrals <- referral_result_table[0, ]
+  successful_housing_program_referrals[1, 1:6] <- c(
+    "Percent of successful referrals to residential projects",
+    referral_result_table[1, 2:6] / housing_program_referrals[1, 2:6])
+  
+  aftercare_results <- Q9d_data %>%
+    filter(Event_Event == 5 &
+             Event_ReferralCaseManageAfter == 1) %>%
+    mutate(Label = "Result: Enrolled in Aftercare project") %>%
+    return_household_groups(., Label, "Result: Enrolled in Aftercare project")
+  
+  Q9d <- Q9d_data %>%
+    return_household_groups(., Label, EventTypes$Label[5:18]) %>%
+    adorn_totals("row") %>%
+    union(prioritized_referred) %>%
+    union(referral_result_table) %>%
+    union(aftercare_results) %>%
+    union(successful_housing_program_referrals)
 }
 # --------------------------------------
 
