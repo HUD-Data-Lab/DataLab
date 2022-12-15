@@ -1422,6 +1422,9 @@ households_served_table <- function(filtered_enrollments) {
 
 get_relevant_events <- function(filtered_enrollments, event_type_list) {
   
+  event_prefixes <- rep("Event_", length(Event))
+  event_prefixes[[which(colnames(Event) == "PersonalID")]] <- ""
+  
   individual_cutoff_dates <- filtered_enrollments %>%
     select(PersonalID) %>%
     left_join(Assessment %>%

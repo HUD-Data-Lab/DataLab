@@ -10,9 +10,9 @@
 # <https://www.gnu.org/licenses/>. 
 
 generate_new_kits <- TRUE
-compare_to_last <- FALSE
-if (compare_to_last) {
-  compare_to_dir <- choose.dir()}
+# compare_to_last <- FALSE
+# if (compare_to_last) {
+#   compare_to_dir <- choose.dir()}
 combining_files <- TRUE
 
 source("DataLab.R")

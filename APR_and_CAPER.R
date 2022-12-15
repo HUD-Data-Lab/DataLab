@@ -10,7 +10,7 @@
 # <https://www.gnu.org/licenses/>. 
 
 generate_new_kits <- TRUE
-compare_to_last <- FALSE
+compare_to_last <- TRUE
 if (compare_to_last) {
   compare_to_dir <- choose.dir()}
 combining_files <- FALSE
@@ -2216,7 +2216,7 @@ combining_files <- FALSE
       
       if(APR_relevant) {
         
-        zip <- paste0(compare_to_dir, "/APR - ", projects_included, ".zip")
+        zip <- paste0(compare_to_dir, "/APR - ", projects_included, " (A).zip")
         zip_contents <- unzip(zip, list = TRUE)
         
         for (question in intersect(APR_files, ls())) {
@@ -2249,7 +2249,7 @@ combining_files <- FALSE
       }
       
       if(CAPER_relevant) {
-        zip <- paste0(compare_to_dir, "/CAPER - ", projects_included, ".zip")
+        zip <- paste0(compare_to_dir, "/CAPER - ", projects_included, " (A).zip")
         zip_contents <- unzip(zip, list = TRUE)
         
         for (question in intersect(CAPER_files, ls())) {
