@@ -10,7 +10,7 @@
 # <https://www.gnu.org/licenses/>. 
 
 generate_new_kits <- TRUE
-compare_to_last <- TRUE
+compare_to_last <- FALSE
 if (compare_to_last) {
   compare_to_dir <- choose.dir()}
 combining_files <- FALSE
@@ -2287,11 +2287,11 @@ combining_files <- FALSE
   
   
   if (compare_to_last) {
-    differences <- differences %>% 
+    differences <- differences %>%
       filter(str_detect(differences, "Mean") &
                question != "Q4a")
-    
-    write_csv(differences, 
+
+    write_csv(differences,
               paste0("Change Tracker ", Sys.Date(), ".csv"))
   }
   

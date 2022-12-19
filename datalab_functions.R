@@ -1007,12 +1007,12 @@ write_csvs_for <- function(project_ids, zip_title, write_to) {
     
     if ("enroll_DateCreated" %in% colnames(data)) {
       data <- data %>%
-        select(-enroll_DateCreated)
+        rename(DateCreated = enroll_DateCreated)
     }
     
     if ("exit_DateCreated" %in% colnames(data)) {
       data <- data %>%
-        select(-exit_DateCreated)
+        rename(DateCreated = exit_DateCreated)
     }
     
     write.csv(data, file.path(paste0("created_files/", file, ".csv")), 
