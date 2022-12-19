@@ -9,11 +9,11 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>.
 
-relevant_CoC <- "XX-500"
-# relevant_CoC <- "XX-501"
+# relevant_CoC <- "XX-500"
+relevant_CoC <- "XX-501"
 
 # set variables
-report_start_date <- ymd(Export[1,]$ExportStartDate)
-report_end_date <- ymd(Export[1,]$ExportEndDate)
-# report_start_date <- ymd("2021-10-1")
-# report_end_date <- ymd("2022-9-30")
+# report_start_date <- ymd(Export[1,]$ExportStartDate)
+# report_end_date <- ymd(Export[1,]$ExportEndDate)
+report_start_date <- ymd("2021-10-1")
+report_end_date <- ymd("2022-9-30")
