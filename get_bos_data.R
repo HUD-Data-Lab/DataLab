@@ -32,6 +32,11 @@ for (file in names(hmis_csvs)){
       trunc_userid(.)
   }
   
+  if(file == "Assessment") {
+    data <- data %>%
+      mutate(AssessmentType = ifnull(AssessmentType, 3))
+  }
+  
   assign(file, data)
   
   # write.csv(data, file = paste0(save_to, "\\", file, ".csv"), row.names = FALSE)
