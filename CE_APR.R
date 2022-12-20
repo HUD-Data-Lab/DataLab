@@ -13,12 +13,10 @@ generate_new_kits <- TRUE
 # compare_to_last <- FALSE
 # if (compare_to_last) {
 #   compare_to_dir <- choose.dir()}
-combining_files <- TRUE
+combining_files <- FALSE
 
 source("DataLab.R")
 
-starting_env <- environment()
-# environment <- starting_env
 items_to_keep <- c("items_to_keep", ls())
 
 # this is for testing variations in CoC code in test kit data,
@@ -30,10 +28,12 @@ items_to_keep <- c("items_to_keep", ls())
 #   union(hold_ProjectCoC %>%
 #           filter(ProjectID == 1647))
 
-# need to modify this per AAQ 204781
+# need to modify this per conversation with PCL
 CE_element_projects <- Project %>%
   inner_join(Enrollment %>%
                filter(EnrollmentID %in%
+                        # should this be restricted to only those in the 
+                        # report period?
                         union(Assessment$EnrollmentID, 
                               Event$EnrollmentID)) %>%
                select(ProjectID) %>%
@@ -88,7 +88,7 @@ most_recent_assessment <- Assessment %>%
 #   filter(EventDate <= (report_end_date + days(90)) & 
 #            (InformationDate <= EventDate |
 #               is.na(InformationDate))) %>%
-#   select(colnmaes(Event))
+#   select(colnames(Event))
 
 
 # get additional client information (age for reporting)
@@ -300,6 +300,124 @@ enrollment_recent_assessment <- enrollment_data %>%
     union(aftercare_results) %>%
     union(successful_housing_program_referrals)
 }
+
+
+# Q10
+{
+  all_columns <- c("Crisis Needs Assessment",
+                   "Housing Needs Assessment",
+                   EventTypes$Label)
+  
+  Q10_assessments <- Assessment %>%
+    # filter(PersonalID %in% enrollment_recent_assessment$PersonalID) %>%
+    filter(AssessmentDate >= report_start_date &
+             AssessmentDate <= report_end_date) %>%
+    mutate(event_type = "Assessment") %>%
+    rename(unique_id = AssessmentID,
+           group = AssessmentLevel,
+           event_date = AssessmentDate) %>%
+    select(PersonalID, EnrollmentID, event_type, event_date, unique_id, group)
+  
+  Q10_assessment_table <- Q10_assessments %>%
+    group_by(group) %>%
+    summarise(Total.Occurrences = uniqueN(unique_id)) %>%
+    ungroup() %>%
+    mutate(group = all_columns[group])
+  
+  Q10_events <- Event %>%
+    # filter(PersonalID %in% enrollment_recent_assessment$PersonalID) %>%
+    filter(EventDate >= report_start_date &
+             EventDate <= report_end_date) %>%
+    mutate(event_type = "Event") %>%
+    rename(unique_id = EventID,
+           group = Event,
+           event_date = EventDate) %>%
+    select(PersonalID, EnrollmentID, event_type, event_date, unique_id,
+           group, ReferralResult, ProbSolDivRRResult, ReferralCaseManageAfter)
+  
+  Q10_event_table <- Q10_events %>%
+    group_by(group) %>%
+    summarise(Total.Occurrences = uniqueN(unique_id),
+              Successful.Referral = uniqueN(unique_id[group %in% c(10:15, 17:18) & 
+                                                      ReferralResult == 1]),
+              Unsuccessful.Referral.client.rejected = uniqueN(unique_id[group %in% c(10:15, 17:18) & 
+                                                                        ReferralResult == 2]),
+              Unsuccessful.Referral.provider.rejected = uniqueN(unique_id[group %in% c(10:15, 17:18) & 
+                                                                          ReferralResult == 3]),
+              Rehoused.in.safe.alternative = uniqueN(unique_id[group == 2 & 
+                                                               ProbSolDivRRResult == 1]),
+              Enrolled.in.aftercare = uniqueN(unique_id[group == 5 & 
+                                                        ReferralCaseManageAfter == 1])
+    ) %>%
+    ungroup() %>%
+    mutate(group = group + 2,
+           group = all_columns[group])
+  
+  Q10_detail <- Q10_assessments %>%
+    full_join(Q10_events, 
+              by = intersect(colnames(Q10_assessments),
+                             colnames(Q10_events)))
+  
+  Q10 <- as.data.frame(all_columns) %>%
+    rename(group = all_columns) %>%
+    left_join(Q10_assessment_table %>%
+                full_join(Q10_event_table, by = c("group", "Total.Occurrences")), 
+              by = "group")
+  
+}
+
+# --------------------------------------
+# --------------------------------------
 # --------------------------------------
 
-rm(list = ls()[ls() %nin% items_to_keep])
+if (generate_new_kits) {
+  
+  folder_name <- paste("Test Kit", format(Sys.Date(), "%m.%d.%y"))
+  
+  if (!dir.exists(folder_name)) {
+    dir.create(folder_name)
+  }
+  
+  if (!dir.exists(paste0(folder_name, "/Reports"))) {
+    dir.create(paste0(folder_name, "/Reports"))
+  }
+  
+    for (question in CE_APR_files) {
+      if (exists(question)) {
+        
+        to_write <- get(question)
+        
+        if(question != "Q4a") {
+          to_write <- to_write %>%
+            set_hud_format()
+          
+          write.csv(get(paste0(question, "_detail")),
+                    file.path(paste0("created_files_2/", question, ".csv")),
+                    row.names = FALSE)
+        }
+        
+        to_write <- to_write %>% 
+          ifnull(., 0) 
+        
+        to_write[is.na(to_write)] <- ""
+        
+        write_csv(to_write, file.path(paste0("created_files/", question, ".csv")))
+      } else {
+        missing_files <- c(missing_files, paste("CE APR -", projects_included, "-", question))
+      }
+    }
+    general_wd <- getwd()
+    setwd(paste0(general_wd, "/", folder_name, "/Reports"))
+    
+    archive_write_dir("CE APR - DataLab - Systemwide (A).zip",
+                      paste0(general_wd, "/created_files"))
+    archive_write_dir("CE APR - DataLab - Systemwide (D).zip",
+                      paste0(general_wd, "/created_files_2"))
+    
+    setwd(general_wd)
+    
+    unlink(paste0(getwd(), "/created_files/*"))
+    unlink(paste0(getwd(), "/created_files_2/*"))
+
+}
+

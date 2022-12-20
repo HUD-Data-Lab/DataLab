@@ -13,7 +13,7 @@ generate_new_kits <- TRUE
 compare_to_last <- FALSE
 if (compare_to_last) {
   compare_to_dir <- choose.dir()}
-combining_files <- FALSE
+combining_files <- kit_type == "old_kit"
 
 # this bracket will run everything; use with care!
 {

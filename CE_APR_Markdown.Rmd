@@ -21,12 +21,14 @@ output: word_document
 knitr::opts_chunk$set(echo = TRUE)
 
 generate_new_kits <- TRUE
-compare_to_last <- FALSE
-if (compare_to_last) {
-  compare_to_dir <- choose.dir()}
+# compare_to_last <- FALSE
+# if (compare_to_last) {
+#   compare_to_dir <- choose.dir()}
 combining_files <- FALSE
 
 source("DataLab.R")
+
+items_to_keep <- c("items_to_keep", ls())
 
 ```
 
@@ -43,6 +45,8 @@ The information to be reported on Coordinated Entry for the APR beginning Octobe
 CE_element_projects <- Project %>%
   inner_join(Enrollment %>%
                filter(EnrollmentID %in%
+                        # should this be restricted to only those in the 
+                        # report period?
                         union(Assessment$EnrollmentID, 
                               Event$EnrollmentID)) %>%
                select(ProjectID) %>%
@@ -66,26 +70,216 @@ CE_element_projects <- CE_element_projects %>%
 
 ```{r}
 
-multi_CoC_projects <- ProjectCoC %>%
-  group_by(ProjectID) %>%
-  summarise(CoCs = uniqueN(CoCCode)) %>%
-  filter(CoCs > 1)
 
-CE_element_projects_CoC <- CE_element_projects %>%
-  filter(ProjectID %in% 
-           ProjectCoC$ProjectID[ProjectCoC$CoCCode == relevant_CoC]) %>%
-  mutate(multi_CoC = ProjectID %in% multi_CoC_projects$ProjectID)
 
 ```
 
-5.  For projects which have multiple CoC codes, filter enrollments by the [client location] (element 3.16). For each enrollment, use the most recent [client location] dated \<= either the [date of assessment] (4.19.1) or [date of event] (4.20.1) to determine the relevant CoC of CE Assessments and CE Events assigned to that enrollment.
+5.  For projects which have multiple CoC codes, filter enrollments by the [client location] (element 3.16). For each enrollment, use the most recent [client location] dated <= either the [date of assessment] (4.19.1) or [date of event] (4.20.1) to determine the relevant CoC of CE Assessments and CE Events assigned to that enrollment.
+
+It is recognized that the use of this method:
+•	May count persons who were, for example, assessed in a CE project funded by the CoC where a person residing in another location was served (e.g., CE is in one CoC - person was residing on the streets of another CoC). This is fine, as the CoC providing the service is “credited” for the work.
+•	Attempts to remove activity reported for another CoC in multi-jurisdictional implementations.
 
 ```{r}
 
-assessment_CoC_assignment <- Assessment %>%
-  left_join(CurrentLivingSituation)
+
 
 ```
+
+## Questions 4 through 9
+•	Clients in any HMIS project using Method 2 - Active Clients by Date of Service where the enrollment has data in element 4.19 (CE Assessment) with a Date of Assessment in the date range of the report.     
+•	When including CE Events (element 4.20) for these clients, the system should include data up to 90 days past the report end date. Detailed instructions for this are found on 9c and 9d.
+•	Unless otherwise instructed, use data from the enrollment with the latest assessment.    
+•	Include household members attached to the head of household’s enrollment who were active at the time of that latest assessment, as determined by the household members’ entry and exit dates.
+
+## Question 10
+The universe of data for this question is expanded to include all CE activity during the report date range. This includes data in elements 4.19 (CE Assessment) and 4.20 (CE Event) regardless of project or enrollment in which the data was collected.
+
+```{r}
+
+
+
+```
+
+## Determining Age-Related Variables
+Per the HMIS Reporting Glossary, Age is a global variable determined from a client’s Date of Birth. These reporting specifications comply with the methods of determining Age per the HMIS Reporting Glossary. In the event a client has more than one active project stay in the report date range, a client’s age for every section of the report is as of the latest [project start date] or [report start date], whichever comes later.
+This report references the following age-related variables in several tables, and as such these will not be repeated in the reference information for each individual question: 
+Youth = any client age >= 12 and <= 24 provided that not one household member is above that age range. If so, exclude the entire household including the person age >= 12 and <= 24.
+Child = any client age < 18. The [relationship to head of household] (element 3.15) does not matter unless a specific reporting question also includes this element. 
+Adults and heads of household = Anyone age >= 18 or where [relationship to head of household] = “self” (1). This includes “unaccompanied children” who, by definition in HMIS, are heads of household. 
+
+```{r}
+
+
+
+```
+
+## Determining Each Client’s Household Type and Counting Distinct Households
+This report uses the following methods from the HMIS Reporting Glossary:
+
+1.	Unduplicated Client Counts by Household Type
+2.	Unduplicated Household Counts by Individual Attribute
+3.	Unduplicated Household Counts
+The relevant method utilized will be detailed in the Reference Information for each question in these Specifications as applicable. Because this report uses data from each client’s latest project stay, each client may have only one household type as determined by the household composition on that latest stay. This includes the head of household, which is used for determining counts of households according to household type.
+
+```{r}
+
+
+
+```
+
+# Report Details
+(Questions 1-3 are NOT generated from HMIS data, and thus are not detailed in these specifications)
+## Q4: HMIS Information
+### Q4a: Project Identifiers in HMIS
+### Universe: NA
+### HMIS Reporting Glossary Reference: None
+### Programming Instructions:
+1.	Be sure to include data on all projects with clients and enrollments included on any question in this APR.
+2.	Q4a provides descriptor information on the project that is associated with the APR being submitted, as well as data on projects with which it is affiliated, if any. The information must be generated by the HMIS as it will be utilized in national unduplication efforts and validation for submissions.
+3.	Report each project included in the APR run on a separate line beginning on line 2.
+4.	Columns A through K should draw from project descriptor data elements in the HMIS.
+5.	Columns H, I, and J may have multiple values for a single project. Supply multiple values as a comma-separated list. 
+6.	Column L should contain the general product name of the HMIS and be automatically supplied by the system. This value is simply repeated for each project (each line) of output.
+7.	Columns M and N should contain the start and end dates which the user supplied in order to execute the report. These dates are simply repeated for each project (each line) of output.
+8.	Column O should be a simple unduplicated count of the total clients who have any CE  Event or Assessment data in the report date range attached to their enrollment at the project on that row. If any one person in a household has a relevant CE Event or Assessment, include all others in the household active on the date of that record  - either [date of assessment] (4.19.1) or [date of event] (4.20.1). Count each client once per project  regardless of how many Events or Assessments they have.
+9.	Similarly, column P should be a simple count of total active households in the project for that row using the same data selection criteria as 8.
+10.	When generating the CSV version of this table, be sure to wrap the data in all text columns in double quotes. Certain columns such as organization name may naturally contain a comma, and other columns such as CoC number may contain multiple values in a comma-separated list. Double quotes will ensure the data will be grouped and parsed in the correct columns.
+
+```{r}
+
+
+
+```
+
+## Q5: Report Validations 
+### Q5a: Report Validations Table
+### Universe: Active clients with an assessment in the report date range
+### HMIS Reporting Glossary Reference: Data Quality Q1.
+### Programming Instructions
+1.	Use data from whichever enrollment has the client’s latest CE Assessment (element 4.19) in the reporting year.
+2.	Cells B5 through B9, B11, B13 and B16 are included in this table and should be in the resulting CSV to maintain formatting consistency between this APR, the CoC APR, ESG CAPER, and uploads to Sage. However, the output for those cells should contain either zeros or nothing (just a comma in the CSV).
+
+```{r}
+
+
+
+```
+
+## 6: Data Quality
+### Universe: Active clients with an assessment in the report date range
+### HMIS Reporting Glossary Reference: Data Quality Q1.
+### Q6a: Data Quality: Personally Identifiable Information
+
+```{r}
+
+
+
+```
+
+## Q7: Persons Served
+### Q7a: Number of Persons Served
+### Universe: Active clients with an assessment in the report date range
+### HMIS Reporting Glossary Reference: Active Clients; Date of Birth / Age; Household Types; Unduplicated Household Counts and Unduplicated Client Counts by Household Type.
+### Programming Instructions: 
+1.	All projects regardless of type: report active clients report the distinct counts of active clients by age and household type.
+2.	Row 7 is included in this table and should be in the resulting CSV to maintain formatting consistency between this APR, the CoC APR, ESG CAPER, and uploads to Sage. However, the output for those cells should contain either zeros or nothing (just a comma in the CSV), regardless of project type(s) included in the specific CE APR run.
+
+```{r}
+
+
+
+```
+
+## Q8: Households Served
+### Q8a: Number of Households Served
+### Universe: Active households with an assessment in the report date range
+### HMIS Reporting Glossary Reference: Active Clients; Date of Birth / Age; Household Types; Unduplicated Household Counts; and Unduplicated Client Counts by Household Type.
+### Programming Instructions: 
+1.	Q8a reports the total number of households served during the report date range. Information on households served must be reported in total and by household type. The “Total” column is an unduplicated count of distinct households served during the report date range. See Determining Each Client’s Household Type and Counting Distinct Households for additional instruction. 
+2.	Row 3 is included in this table and should be in the resulting CSV to maintain formatting consistency between this APR, the CoC APR, ESG CAPER, and uploads to Sage. However, the output for those cells should contain either zeros or nothing (just a comma in the CSV), regardless of project type(s) included in the specific CE APR run. 
+
+```{r}
+
+
+
+```
+
+## Q9. Participation in Coordinated Entry
+#### Q9a: Assessment Type - Households Assessed in the Date Range 
+#### Universe: Active clients with an assessment in the report date range
+#### HMIS Reporting Glossary Reference: Active Clients; Date of Birth / Age; Household Types; Unduplicated Household Counts and Unduplicated Client Counts by Household Type.
+#### Programming Instructions: 
+1.	Use data from the latest [Coordinated Entry Assessment] (element 4.19) for each head of household in the client universe as described in the client universe instructions.
+2.	Calculate the household type according to the members present at the [date of assessment] (4.19.1) of that latest assessment record.
+3.	Report the count of households using the [personal ID] of the head of household according to the household type and [assessment type] (4.19.3). Column Z indicates the relevant Data Standards response for each assessment type.
+4.	Report the total count of households in row 4.
+
+```{r}
+
+
+
+```
+
+### Q9b: Prioritization Status - Households Prioritized in the Date Range
+### Universe: Active clients with an assessment in the report date range
+### HMIS Reporting Glossary Reference: Active Clients; Date of Birth / Age; Household Types; Unduplicated Household Counts and Unduplicated Client Counts by Household Type.
+### Programming Instructions: 
+1.	Use data from the latest [Coordinated Entry Assessment] (element 4.19) for each head of household in the client universe as described in the client universe instructions.
+2.	Calculate the household type according to the members present at the [date of assessment] (4.19.1) of that latest assessment record.
+3.	Report the count of households using the [personal ID] of the head of household according to the household type and [prioritization status] (4.19.7). Column Z indicates the relevant Data Standards response for each assessment type. CE Assessment records missing data in the [prioritization status] field should be reported on line 2.
+4.	Report the percentage of households prioritized on line 3.
+
+```{r}
+
+
+
+```
+
+### Q9c: Access Events - Households with an Access Event
+### Universe: Active clients with an assessment in the report date range
+### HMIS Reporting Glossary Reference: Active Clients; Date of Birth / Age; Household Types; Unduplicated Household Counts and Unduplicated Client Counts by Household Type.
+### Programming Instructions: 
+1.	Determine the [date of assessment] (4.19.1) from the latest [Coordinated Entry Assessment] (element 4.19) for each head of household in the client universe as described in the client universe instructions.
+2.	Calculate the household type according to the members present at that latest assessment record.
+3.	Search for [Coordinated Entry Event] (4.20) records assigned to the same head of household with a [date of event] (4.20.1) where all of the following are true: 
+a.	[Date of event] >= [date of assessment] from step 1
+b.	[Date of event] <= ([report end date] + 90 days)
+c.	[Date of event] < Any [dates of assessment] which are between [report end date] and ([report end date] + 90 days)
+Refer to the example below for clarification.
+4.	For each client, if any of the records found belong to the same [project id] (2.02.1) as the CE assessment from step 1, use the latest of those to report the client in the table above.
+5.	If, for a given client, none of the records found belong to the same [project id] as the CE assessment from step 1, use the latest of those to report the client in the table above.
+6.	The intention of the criteria is to locate the most recent logically relevant record pertaining to the CE assessment record reported in Q9a and Q9b by giving preference to data entered by the same project. 
+
+```{r}
+
+
+
+```
+
+### Q9d. Referral Events - Households Who Were Referred
+### Universe: Active clients with an assessment in the report date range
+### HMIS Reporting Glossary Reference: Active Clients; Date of Birth / Age; Household Types; Unduplicated Household Counts and Unduplicated Client Counts by Household Type.
+### Programming Instructions:
+1.	Use the same instructions as Q9c to locate the relevant [Coordinated Entry Event] for each head of household.
+2.	Rows 1 through 15 and 17 through 21: Report households according to household type and data from relevant [Coordinated Entry Event] record.
+3.	Row 16: Report the percentage of households prioritized (from Q9b row 1) who received a referral. Note that the universe of households for this row is different from rows 1 – 14. But like the rows above, each prioritized household can only be counted once, using the same [Coordinated Entry Event] data selection criteria to determine a single CE event record for each household.
+4.	Row 22: Report the percentage of clients successfully referred to residential projects, i.e. [total in row 17] / [sum of total in rows 6 through 11, 13 and 14].
+
+```{r}
+
+
+
+```
+
+## Q10. Total Coordinated Entry Activity During the Year
+### Universe: All Coordinated Entry Assessment (4.19) and/or Coordinated Entry Event (4.20) data in the report date range.  Include data for clients regardless if they have a qualifying assessment in the date range.
+### Programming Instructions: 
+1.	Rows 1 and 2: Count the number of CE Assessments in the report date range by [assessment level] (4.19.4).
+2.	Rows 3, 5, 6, 8, 9, 10, 11, 19: Count the number of CE Events in the report date range by [event] (4.20.2) responses which have no dependent fields.
+3.	Row 4: Count the total number of CE Events in the report date range where [event] = “Problem Solving…” (response 2) in column B. Count the number of those same events (response 2) which have [Problem Solving/Diversion/Rapid Resolution intervention or service result - Client housed/re-housed in a safe alternative] (4.20.A) = “Yes” (response 1) in column F.
+4.	Row 7: Count the total number of CE Events in the report date range where [event] = “Referral to post-placement…” (response 5) in column B. Count the number of those same events (response 5) which have [Referral to post-placement/follow-up case management result - Enrolled in Aftercare project] (4.20.B) = “Yes” (response 1) in column G.
+5.	Rows 12 through 17 and 19 -20: Count the total number of CE Events in the report date range where [event] = responses 10 through 15, 17, and 18 in column B. Count the number of events with each different [referral result] (4.20.D) in columns C through E. Records missing [referral result] should be reported only in column B.
 
 ```{r}
 

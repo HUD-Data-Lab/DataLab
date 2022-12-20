@@ -9,6 +9,9 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
+kit_type <- "old_kit"
+combining_files <- kit_type == "old_kit"
+
 source("datalab_functions.R")
 source("DataLab_Lists.R")
 
