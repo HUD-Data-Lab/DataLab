@@ -353,10 +353,8 @@ enrollment_recent_assessment <- enrollment_recent_assessment %>%
                    "Housing Needs Assessment",
                    EventTypes$Label)
   
-  Q10_assessments <- Assessment %>%
+  Q10_assessments <- relevant_assessments %>%
     # filter(PersonalID %in% enrollment_recent_assessment$PersonalID) %>%
-    filter(AssessmentDate >= report_start_date &
-             AssessmentDate <= report_end_date) %>%
     mutate(event_type = "Assessment") %>%
     rename(unique_id = AssessmentID,
            group = AssessmentLevel,
@@ -369,10 +367,9 @@ enrollment_recent_assessment <- enrollment_recent_assessment %>%
     ungroup() %>%
     mutate(group = all_columns[group])
   
-  Q10_events <- Event %>%
+  Q10_events <- relevant_events %>%
     # filter(PersonalID %in% enrollment_recent_assessment$PersonalID) %>%
-    filter(EventDate >= report_start_date &
-             EventDate <= report_end_date) %>%
+    filter(EventDate <= report_end_date) %>%
     mutate(event_type = "Event") %>%
     rename(unique_id = EventID,
            group = Event,
