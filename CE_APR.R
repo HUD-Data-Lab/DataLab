@@ -248,7 +248,10 @@ enrollment_recent_assessment <- enrollment_recent_assessment %>%
     filter(RelationshipToHoH == 1) %>%
     return_household_groups(., assessment_type, 
                             c("Phone", "Virtual", "In-person")) %>%
-    adorn_totals("row")
+    adorn_totals("row") %>%
+    mutate(assessment_type = case_when(
+      assessment_type == "Total" ~ "Total Households Assessed",
+      TRUE ~ assessment_type))
 }
 
 # Q9b
@@ -264,7 +267,10 @@ enrollment_recent_assessment <- enrollment_recent_assessment %>%
                             c("Placed on Prioritization List (Prioritized)", 
                               "Not Placed on Prioritization List")) %>%
     adorn_totals("row") %>%
-    untabyl()
+    untabyl() %>%
+    mutate(prioritization_status = case_when(
+      prioritization_status == "Total" ~ "Percent of Assessed Prioritized Of the total HH Assessed report the percent of those placed on the prioritization list",
+      TRUE ~ prioritization_status))
   
   Q9b[3, 2:6] <- Q9b[1, 2:6] / Q9b[3, 2:6]
   
