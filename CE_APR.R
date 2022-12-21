@@ -190,7 +190,8 @@ enrollment_recent_assessment <- enrollment_recent_assessment %>%
   
   Q5a <- create_summary_table(dq_recent_assessment, "Count.of.Clients.for.DQ") %>%
     left_join(create_summary_table(enrollment_recent_assessment, "Count.of.Clients"), 
-              by = "Group")
+              by = "Group") %>%
+    rename(Category = Group)
   
   Q5a[c(5:9, 11, 13, 16), 2:3] <- NA
 }
