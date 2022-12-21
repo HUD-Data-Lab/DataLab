@@ -41,6 +41,7 @@ multi_CoC_projects <- ProjectCoC %>%
 
 enrollment_coc_plus <- EnrollmentCoC %>%
   left_join(multi_CoC_projects, by = "ProjectID") %>%
+  # confirmed by Fran 12.21.22, issue #2
   mutate(filter_CoC_code = case_when(
     relevant_to_CoC & num_of_CoCs == 1 ~ relevant_CoC,
     num_of_CoCs > 1 ~ CoCCode))
@@ -59,6 +60,9 @@ relevant_assessments <- Assessment %>%
   arrange(desc(InformationDate)) %>%
   slice(1L) %>%
   ungroup() %>%
+  # okay to filter events and assessments prior to
+  # identifying which one is more recent
+  # verified by Fran 12.21.22, issue #3
   filter(filter_CoC_code == relevant_CoC)
 
 
@@ -81,6 +85,9 @@ relevant_events <- Event %>%
 CE_element_projects <- Project %>%
   inner_join(Enrollment %>%
                filter(EnrollmentID %in%
+                        # okay to filter projects based on whether
+                        # they contain CE data in the report period
+                        # verified by Fran 12.21.22, issue #1 
                         union(relevant_assessments$EnrollmentID, 
                               relevant_events$EnrollmentID)) %>%
                select(ProjectID) %>%
@@ -136,6 +143,10 @@ enrollment_recent_assessment <- enrollment_data %>%
                arrange(desc(AssessmentDate)) %>%
                slice(1L) %>%
                ungroup(),
+             #  okay to use most recent assessment for any household 
+             #  member to determine the date of the most recent assessment,
+             #  not restricted to HoH
+             #  verified by Fran 12.21.22, issue #4
              by = "HouseholdID") %>%
   filter(AssessmentDate >= EntryDate &
            (AssessmentDate <= ExitDate |
@@ -145,6 +156,9 @@ enrollment_recent_assessment <- enrollment_data %>%
 # get additional client information (age for reporting)
 client_plus <- add_client_info(enrollment_recent_assessment)
   
+# okay to use date of assessment to determine  
+# household type for questions 7-9d
+# verified by Fran 12.21.22, issue #5
 household_info <- get_household_info(enrollment_recent_assessment,
                                      return_type = "household")
 
