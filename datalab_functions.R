@@ -1434,7 +1434,7 @@ households_served_table <- function(filtered_enrollments) {
   hh_served_results
 }
 
-get_relevant_events <- function(filtered_enrollments, event_type_list) {
+get_relevant_events <- function(filtered_enrollments) {
   
   event_prefixes <- rep("Event_", length(Event))
   event_prefixes[[which(colnames(Event) == "PersonalID")]] <- ""
@@ -1451,7 +1451,6 @@ get_relevant_events <- function(filtered_enrollments, event_type_list) {
   
   filtered_enrollments %>%
     inner_join(Event %>%
-                 filter(Event %in% event_type_list) %>%
                  left_join(EventTypes, by = "Event") %>%
                  `colnames<-`(c(paste0(event_prefixes, colnames(Event)), "Label")), 
                by = "PersonalID") %>%

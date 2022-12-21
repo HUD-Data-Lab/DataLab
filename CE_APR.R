@@ -271,13 +271,16 @@ enrollment_recent_assessment <- enrollment_recent_assessment %>%
 
 # Q9c
 {
-  Q9c_detail <- get_relevant_events(enrollment_recent_assessment, 1:4) 
+  Q9c_detail <- get_relevant_events(enrollment_recent_assessment) 
   
-  Q9c_data <- Q9c_detail %>%
+  Q9c_and_d_data <- Q9c_detail %>%
     filter(RelationshipToHoH == 1) %>%
     group_by(PersonalID) %>%
     slice(1L) %>%
-    ungroup() 
+    ungroup()
+  
+  Q9c_data <- Q9c_and_d_data %>%
+    filter(Event_Event %in% 1:4)
   
   Q9c <- Q9c_data %>%
     return_household_groups(., Label, EventTypes$Label[1:4]) %>%
@@ -295,18 +298,15 @@ enrollment_recent_assessment <- enrollment_recent_assessment %>%
 
 # Q9d
 {
-  Q9d_detail <- get_relevant_events(hh_info_at_recent_assessment, 5:18) 
+  Q9d_detail <-  "See Q9c_detail.csv"
   
-  Q9d_data <- Q9d_detail %>%
-    filter(RelationshipToHoH == 1) %>%
-    group_by(PersonalID) %>%
-    slice(1L) %>%
-    ungroup()
+  Q9d_data <- Q9c_and_d_data %>%
+    filter(Event_Event %in% 5:18)
   
   prioritized_referred_data <- Q9b_detail %>%
     filter(RelationshipToHoH == 1 &
              prioritization_status == "Placed on Prioritization List (Prioritized)") %>%
-    mutate(Label = PersonalID %in% Q9d_detail$PersonalID) %>%
+    mutate(Label = PersonalID %in% Q9d_data$PersonalID) %>%
     return_household_groups(., Label, 
                             c(TRUE, FALSE)) %>%
     adorn_totals("row")
