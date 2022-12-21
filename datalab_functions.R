@@ -1087,6 +1087,10 @@ create_time_prior_to_housing <- function(filtered_enrollments) {
 # get additional client info
 add_client_info <- function(filtered_enrollments) {
   filtered_enrollments  %>%
+    group_by(PersonalID) %>%
+    arrange(desc(EntryDate)) %>%
+    slice(1L) %>%
+    ungroup() %>%
     mutate(date_for_age = (if_else(
       EntryDate <= report_start_date,
       report_start_date,
@@ -1198,8 +1202,10 @@ program_information_table <- function(project_list, filtered_enrollments) {
 }
 
 get_household_info <- function(filtered_enrollments, 
-                               client_table = client_plus) {
-  filtered_enrollments %>%
+                               client_table = client_plus,
+                               return_type = "person") {
+  
+  data <- filtered_enrollments %>%
     inner_join(client_table, by = "PersonalID") %>%
     group_by(HouseholdID) %>%
     mutate(adults = max(if_else(age_group == "Adults", 1, 0)),
@@ -1224,8 +1230,16 @@ get_household_info <- function(filtered_enrollments,
       unknown == 1 ~ "Unknown",
       adults == 1 ~ "AdultsOnly",
       TRUE ~ "ChildrenOnly"
-    )) %>%
-    select(PersonalID, household_type, HoH_HMID, HoH_ADHS, HoH_EntryDate)
+    )) 
+  
+  if (return_type == "person") {
+    data %>%
+      select(PersonalID, household_type, HoH_HMID, HoH_ADHS, HoH_EntryDate)
+  } else {
+    data %>%
+      select(HouseholdID, household_type, HoH_HMID, HoH_ADHS, HoH_EntryDate) %>%
+      distinct()
+  }
 }
 
 

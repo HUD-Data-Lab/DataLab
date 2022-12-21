@@ -13,112 +13,165 @@ generate_new_kits <- TRUE
 # compare_to_last <- FALSE
 # if (compare_to_last) {
 #   compare_to_dir <- choose.dir()}
-combining_files <- FALSE
 
 source("DataLab.R")
 
 items_to_keep <- c("items_to_keep", ls())
+hold_ProjectCoC <- ProjectCoC
 
 # this is for testing variations in CoC code in test kit data,
 # commented out for QA
-# ProjectCoC <- ProjectCoC %>%
-#   mutate(CoCCode = case_when(
-#     ProjectID %in% c(340, 780, 1647) ~ "XX-500",
-#     TRUE ~ CoCCode)) %>%
-#   union(hold_ProjectCoC %>%
-#           filter(ProjectID == 1647))
-
-# need to modify this per conversation with PCL
-CE_element_projects <- Project %>%
-  inner_join(Enrollment %>%
-               filter(EnrollmentID %in%
-                        # should this be restricted to only those in the 
-                        # report period?
-                        union(Assessment$EnrollmentID, 
-                              Event$EnrollmentID)) %>%
-               select(ProjectID) %>%
-               distinct(),
-             by = "ProjectID")
-
-CE_element_projects <- CE_element_projects %>%
-  filter(ContinuumProject == 1)
+ProjectCoC <- ProjectCoC %>%
+  mutate(CoCCode = case_when(
+    ProjectID %in% c(340, 780, 1647) ~ "XX-500",
+    ProjectID == 1615 ~ "XX-502",
+    # ProjectID %in% c(340, 780, 1647) ~ "XX-501",
+    TRUE ~ CoCCode)) %>%
+  union(ProjectCoC %>%
+          filter(ProjectID == 1647))
 
 
 multi_CoC_projects <- ProjectCoC %>%
+  mutate(relevant_to_CoC = relevant_CoC == CoCCode) %>%
   group_by(ProjectID) %>%
-  summarise(CoCs = uniqueN(CoCCode)) %>%
-  filter(CoCs > 1)
+  summarise(num_of_CoCs = uniqueN(CoCCode),
+            relevant_to_CoC = max(relevant_to_CoC)) %>%
+  ungroup()
 
 
-CE_element_projects_CoC <- CE_element_projects %>%
-  filter(ProjectID %in% 
-           ProjectCoC$ProjectID[ProjectCoC$CoCCode == relevant_CoC]) %>%
-  mutate(multi_CoC = ProjectID %in% multi_CoC_projects$ProjectID)
+enrollment_coc_plus <- EnrollmentCoC %>%
+  left_join(multi_CoC_projects, by = "ProjectID") %>%
+  mutate(filter_CoC_code = case_when(
+    relevant_to_CoC & num_of_CoCs == 1 ~ relevant_CoC,
+    num_of_CoCs > 1 ~ CoCCode))
 
 
-enrollment_CoC_over_time <- Enrollment %>%
-  select(EnrollmentID, HouseholdID, EntryDate) %>%
-  left_join(Exit %>%
-              select(EnrollmentID, ExitDate),
+relevant_assessments <- Assessment %>%
+  inner_join(enrollment_coc_plus %>%
+              select(EnrollmentID, InformationDate, filter_CoC_code,
+                     HouseholdID), 
             by = "EnrollmentID") %>%
-  inner_join(EnrollmentCoC %>%
-               select(HouseholdID, CoCCode, InformationDate), 
-             by = "HouseholdID") %>%
-  filter(CoCCode == relevant_CoC &
-           InformationDate >= EntryDate &
-           (InformationDate <= ExitDate |
-              is.na(ExitDate))) %>%
-  select(-c(EntryDate, ExitDate))
-
-most_recent_assessment <- Assessment %>%
-  inner_join(enrollment_CoC_over_time, 
-             by = "EnrollmentID") %>%
   filter(AssessmentDate >= report_start_date &
            AssessmentDate <= report_end_date & 
            (InformationDate <= AssessmentDate |
               is.na(InformationDate))) %>%
+  group_by(AssessmentID) %>%
+  arrange(desc(InformationDate)) %>%
+  slice(1L) %>%
+  ungroup() %>%
+  filter(filter_CoC_code == relevant_CoC)
+
+
+relevant_events <- Event %>%
+  inner_join(enrollment_coc_plus %>%
+              select(EnrollmentID, InformationDate, filter_CoC_code,
+                     HouseholdID), 
+            by = "EnrollmentID") %>%
+  filter(EventDate >= report_start_date &
+           EventDate <= report_end_date + days(90) &
+           (InformationDate <= EventDate |
+              is.na(InformationDate))) %>%
+  group_by(EventID) %>%
+  arrange(desc(InformationDate)) %>%
+  slice(1L) %>%
+  ungroup() %>%
+  filter(filter_CoC_code == relevant_CoC)
+
+
+CE_element_projects <- Project %>%
+  inner_join(Enrollment %>%
+               filter(EnrollmentID %in%
+                        union(relevant_assessments$EnrollmentID, 
+                              relevant_events$EnrollmentID)) %>%
+               select(ProjectID) %>%
+               distinct(),
+             by = "ProjectID") %>%
+  filter(ContinuumProject == 1)
+
+
+# enrollment_CoC_over_time <- Enrollment %>%
+#   select(EnrollmentID, HouseholdID, EntryDate) %>%
+#   left_join(Exit %>%
+#               select(EnrollmentID, ExitDate),
+#             by = "EnrollmentID") %>%
+#   inner_join(EnrollmentCoC %>%
+#                select(HouseholdID, CoCCode, InformationDate), 
+#              by = "HouseholdID") %>%
+#   filter(CoCCode == relevant_CoC &
+#            InformationDate >= EntryDate &
+#            (InformationDate <= ExitDate |
+#               is.na(ExitDate))) %>%
+#   select(-c(EntryDate, ExitDate))
+
+most_recent_assessment <- relevant_assessments %>%
   group_by(PersonalID) %>%
   arrange(desc(AssessmentDate)) %>%
   slice(1L) %>%
   ungroup()
+  
 
-# event_filtered <- Event %>%
-#   inner_join(enrollment_CoC_over_time,
-#             by = "EnrollmentID") %>%
-#   filter(EventDate <= (report_end_date + days(90)) & 
-#            (InformationDate <= EventDate |
-#               is.na(InformationDate))) %>%
-#   select(colnames(Event))
+assessment_and_event_dates <- relevant_events %>%
+  select(HouseholdID, EventDate) %>%
+  rename(activity_date = EventDate) %>%
+  union(relevant_assessments %>%
+          select(HouseholdID, AssessmentDate) %>%
+          rename(activity_date = AssessmentDate)) %>%
+  distinct()
 
-
-# get additional client information (age for reporting)
-client_plus <- add_client_info(Enrollment) 
 
 enrollment_data <- Enrollment %>%
   left_join(Exit %>%
               select(-PersonalID),
             by = "EnrollmentID") %>%
-  left_join(Project %>%
-              select(ProjectID, ProjectType, TrackingMethod, ProjectName),
-            by = "ProjectID")
+  inner_join(CE_element_projects %>%
+               select(ProjectID, ProjectType, TrackingMethod, ProjectName),
+             by = "ProjectID") 
 
-household_info <- get_household_info(enrollment_data)
 
 enrollment_recent_assessment <- enrollment_data %>%
   inner_join(most_recent_assessment %>%
-               select(HouseholdID, AssessmentDate, AssessmentType, PrioritizationStatus), 
+               select(HouseholdID, AssessmentDate) %>%
+               group_by(HouseholdID) %>%
+               arrange(desc(AssessmentDate)) %>%
+               slice(1L) %>%
+               ungroup(),
              by = "HouseholdID") %>%
   filter(AssessmentDate >= EntryDate &
            (AssessmentDate <= ExitDate |
-              is.na(ExitDate))) %>%
+              is.na(ExitDate))) 
+
+
+# get additional client information (age for reporting)
+client_plus <- add_client_info(enrollment_recent_assessment)
+  
+household_info <- get_household_info(enrollment_recent_assessment,
+                                     return_type = "household")
+
+enrollment_recent_assessment <- enrollment_recent_assessment %>%
   left_join(client_plus, by = "PersonalID") %>%
-  left_join(household_info, by = "PersonalID") %>%
+  left_join(household_info, by = "HouseholdID") %>%
   mutate(chronic = NA)
 
 # Q4a
 {
-  Q4a <- program_information_table(enrollment_recent_assessment$ProjectID,
-                                   enrollment_recent_assessment)
+  Q4a_detail <- enrollment_data %>%
+    select(c(all_of(ce_detail_columns[ce_detail_columns %nin% c("household_type",
+                                                                "AssessmentDate")]),
+             ProjectID)) %>%
+    left_join(assessment_and_event_dates %>%
+                filter(activity_date <= report_end_date), 
+              by = "HouseholdID") %>%
+    group_by(EnrollmentID) %>%
+    mutate(active_at_event = !is.na(activity_date) &
+             activity_date >= EntryDate &
+             (activity_date <= ExitDate |
+                is.na(ExitDate)),
+           active_at_event = max(active_at_event)) %>%
+    ungroup() %>%
+    filter(active_at_event == 1)
+    
+  Q4a <- program_information_table(Q4a_detail$ProjectID,
+                                   Q4a_detail)
   }
 
 
