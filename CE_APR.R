@@ -21,14 +21,14 @@ hold_ProjectCoC <- ProjectCoC
 
 # this is for testing variations in CoC code in test kit data,
 # commented out for QA
-ProjectCoC <- ProjectCoC %>%
-  mutate(CoCCode = case_when(
-    ProjectID %in% c(340, 780, 1647) ~ "XX-500",
-    ProjectID == 1615 ~ "XX-502",
-    # ProjectID %in% c(340, 780, 1647) ~ "XX-501",
-    TRUE ~ CoCCode)) %>%
-  union(ProjectCoC %>%
-          filter(ProjectID == 1647))
+# ProjectCoC <- ProjectCoC %>%
+#   mutate(CoCCode = case_when(
+#     ProjectID %in% c(340, 780, 1647) ~ "XX-500",
+#     ProjectID == 1615 ~ "XX-502",
+#     # ProjectID %in% c(340, 780, 1647) ~ "XX-501",
+#     TRUE ~ CoCCode)) %>%
+#   union(ProjectCoC %>%
+#           filter(ProjectID == 1647))
 
 
 multi_CoC_projects <- ProjectCoC %>%
@@ -130,7 +130,8 @@ enrollment_data <- Enrollment %>%
 
 enrollment_recent_assessment <- enrollment_data %>%
   inner_join(most_recent_assessment %>%
-               select(HouseholdID, AssessmentDate) %>%
+               select(HouseholdID, AssessmentDate, AssessmentType,
+                      PrioritizationStatus) %>%
                group_by(HouseholdID) %>%
                arrange(desc(AssessmentDate)) %>%
                slice(1L) %>%
@@ -236,18 +237,7 @@ enrollment_recent_assessment <- enrollment_recent_assessment %>%
 # Q9
 # Q9a
 {
-  clients_at_recent_assessment <- client_plus %>%
-    select(-intersect(colnames(client_plus),
-                      colnames(enrollment_recent_assessment)[colnames(enrollment_recent_assessment) != "PersonalID"])) %>%
-    filter(PersonalID %in% enrollment_recent_assessment$PersonalID)
-  
-  hh_info_at_recent_assessment <- enrollment_recent_assessment %>%
-    select(-colnames(household_info)[colnames(household_info) != "PersonalID"]) %>%
-    left_join(get_household_info(enrollment_recent_assessment,
-                                 clients_at_recent_assessment), 
-              by = "PersonalID")
-  
-  Q9a_detail <- hh_info_at_recent_assessment %>%
+  Q9a_detail <- enrollment_recent_assessment %>%
     select(all_of(ce_detail_columns), AssessmentType) %>%
     mutate(assessment_type = case_when(AssessmentType == 1 ~ "Phone",
                                        AssessmentType == 2 ~ "Virtual",
@@ -262,7 +252,7 @@ enrollment_recent_assessment <- enrollment_recent_assessment %>%
 
 # Q9b
 {
-  Q9b_detail <- hh_info_at_recent_assessment %>%
+  Q9b_detail <- enrollment_recent_assessment %>%
     select(all_of(ce_detail_columns), PrioritizationStatus) %>%
     mutate(prioritization_status = case_when(PrioritizationStatus == 1 ~ "Placed on Prioritization List (Prioritized)",
                                        PrioritizationStatus == 2 ~ "Not Placed on Prioritization List")) 
@@ -281,9 +271,10 @@ enrollment_recent_assessment <- enrollment_recent_assessment %>%
 
 # Q9c
 {
-  Q9c_detail <- get_relevant_events(hh_info_at_recent_assessment, 1:4) 
+  Q9c_detail <- get_relevant_events(enrollment_recent_assessment, 1:4) 
   
   Q9c_data <- Q9c_detail %>%
+    filter(RelationshipToHoH == 1) %>%
     group_by(PersonalID) %>%
     slice(1L) %>%
     ungroup() 
@@ -307,6 +298,7 @@ enrollment_recent_assessment <- enrollment_recent_assessment %>%
   Q9d_detail <- get_relevant_events(hh_info_at_recent_assessment, 5:18) 
   
   Q9d_data <- Q9d_detail %>%
+    filter(RelationshipToHoH == 1) %>%
     group_by(PersonalID) %>%
     slice(1L) %>%
     ungroup()
