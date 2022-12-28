@@ -5,6 +5,8 @@ library(lubridate)
 library(tidyverse)
 library(archive)
 
+set.seed(2022)
+
 # install.packages("remotes")
 # remotes::install_github("COHHIO/HMIS")
 library(HMIS)
@@ -1466,4 +1468,18 @@ get_relevant_events <- function(filtered_enrollments) {
     mutate(same_enrollment = Event_EnrollmentID == EnrollmentID,
            test = is.na(ExitDate)) %>%
     arrange(desc(same_enrollment), desc(Event_EventDate)) 
+}
+
+money_format <- function(value) {
+  if(is.data.frame(value)) {
+    for (relevant_column in 
+         colnames(value)[sapply(value, class) %in% c("integer", "numeric")]) {
+      value[[relevant_column]] <- money_format(value[[relevant_column]])
+    }
+  } else {
+    if(length(value) > 0) {
+      value <- trimws(format(round(ifnull(value, 0), 2), nsmall=2))
+    } 
+  }
+  value
 }

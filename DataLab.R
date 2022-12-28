@@ -91,6 +91,8 @@ for (file in names(hmis_csvs)){
   if (file == "Exit") {
     data <- data %>%
       rename(exit_DateCreated = DateCreated) %>%
+      mutate(days_to_shift = sample(0:21, nrow(Exit), replace = TRUE),
+             exit_DateCreated = ExitDate + days_to_shift) %>%
       filter(ExitDate >= report_start_date &
                ExitDate <= report_end_date)
   }

@@ -1115,6 +1115,8 @@ if (compare_to_last) {
             get_income_type_changes(., row, "annual") %>%
             cbind(titles, .)
           
+          data[2, ] <- money_format(data[2, ])
+          
           if(row == "earned") {
             Q19a1 <- data
           } else {
@@ -1182,6 +1184,8 @@ if (compare_to_last) {
           data <- entry_income_for_changes %>%
             get_income_type_changes(., row, "exit") %>%
             cbind(titles, .)
+          
+          data[2, ] <- money_format(data[2, ])
           
           if(row == "earned") {
             Q19a2 <- data

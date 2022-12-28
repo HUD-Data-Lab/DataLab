@@ -12,8 +12,6 @@ source("local_functions.R")
 source("datalab_functions.R")
 source("DataLab_Lists.R")
 
-set.seed(2022)
-
 unhashed_data <- file.choose()
 # save_to <- choose.dir()
 
@@ -46,6 +44,10 @@ for (file in names(hmis_csvs)){
 # start_date <- min(Exit$ExitDate)
 start_date <- ymd("2021-10-1")
 end_date <- ymd("2022-9-30")
+
+Export$ExportDate <- Sys.Date()
+Export$ExportStartDate <- start_date
+Export$ExportEndDate <- end_date
 
 {
   funding_sources <- data.frame(matrix(
