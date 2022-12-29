@@ -10,9 +10,6 @@
 # <https://www.gnu.org/licenses/>. 
 
 generate_new_kits <- TRUE
-compare_to_last <- FALSE
-if (compare_to_last) {
-  compare_to_dir <- choose.dir()}
 
 # this bracket will run everything; use with care!
 {
@@ -2207,96 +2204,8 @@ if (compare_to_last) {
       }
     }
     
-    
-    #-------------------------------------------------------------
-    #-------------------------------------------------------------
-    #-------------------------------------------------------------
-    
-    if (compare_to_last) {
-      if ("differences" %nin% items_to_keep) {
-        items_to_keep <- c(items_to_keep, "differences")
-      }
-      
-      if(APR_relevant) {
-        
-        zip <- paste0(compare_to_dir, "/APR - ", projects_included, " (A).zip")
-        zip_contents <- unzip(zip, list = TRUE)
-        
-        for (question in intersect(APR_files, ls())) {
-          if (paste0("ICF - ", question, ".csv") %in% zip_contents$Name) {
-            
-            new <- get(question) %>%
-              select_if(., is.numeric)
-            
-            old <- read_csv(unzip(zip, paste0("ICF - ", question, ".csv")),
-                            show_col_types = FALSE) %>%
-              as.data.frame() %>%
-              select_if(., is.numeric) 
-            
-            new_differences <- data.frame(report = paste0("APR - ", projects_included),
-                                          question = question, 
-                                          differences = all.equal(new, old))
-            
-            if (new_differences$differences[1] != TRUE) {
-              if (exists("differences")) {
-                differences <- differences %>%
-                  union(new_differences)
-              } else {
-                differences <- new_differences
-              }
-            }
-            
-            unlink(paste0(getwd(), "/ICF - ", question, ".csv"))
-          }
-        }
-      }
-      
-      if(CAPER_relevant) {
-        zip <- paste0(compare_to_dir, "/CAPER - ", projects_included, " (A).zip")
-        zip_contents <- unzip(zip, list = TRUE)
-        
-        for (question in intersect(CAPER_files, ls())) {
-          if (paste0("ICF - ", question, ".csv") %in% zip_contents$Name) {
-            
-            new <- get(question) %>%
-              select_if(., is.numeric)
-            
-            old <- read_csv(unzip(zip, paste0("ICF - ", question, ".csv")),
-                            show_col_types = FALSE) %>%
-              as.data.frame() %>%
-              select_if(., is.numeric) 
-            
-            new_differences <- data.frame(report = paste0("CAPER - ", projects_included),
-                                          question = question, 
-                                          differences = all.equal(new, old))
-            
-            if (new_differences$differences[1] != TRUE) {
-              if (exists("differences")) {
-                differences <- differences %>%
-                  union(new_differences)
-              } else {
-                differences <- new_differences
-              }
-            }
-            unlink(paste0(getwd(), "/ICF - ", question, ".csv"))
-          }
-        }
-      }
-    }
-    
     rm(list = ls()[ls() %nin% items_to_keep])
     
   }
-  
-  
-  if (compare_to_last) {
-    differences <- differences %>%
-      filter(str_detect(differences, "Mean") &
-               question != "Q4a")
-
-    write_csv(differences,
-              paste0("Change Tracker ", Sys.Date(), ".csv"))
-  }
-  
 }
 

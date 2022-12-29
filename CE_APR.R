@@ -10,9 +10,6 @@
 # <https://www.gnu.org/licenses/>. 
 
 generate_new_kits <- TRUE
-# compare_to_last <- FALSE
-# if (compare_to_last) {
-#   compare_to_dir <- choose.dir()}
 
 source("DataLab.R")
 
