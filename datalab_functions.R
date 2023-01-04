@@ -26,10 +26,11 @@ ifnull <- function(value, replace_with) {
     }
   } else {
     if(length(value) > 0) {
-      value[is.na(value) | is.nan(value) | is.infinite(value)] <- replace_with
+      value[is.na(value) | is.nan(value) | 
+              is.infinite(value) | value == "NaN"] <- replace_with
     } 
   }
-  value
+  as.numeric(value)
 }
 
 trunc_userid <- function(df) {
@@ -1470,7 +1471,7 @@ get_relevant_events <- function(filtered_enrollments) {
     arrange(desc(same_enrollment), desc(Event_EventDate)) 
 }
 
-money_format <- function(value) {
+decimal_format <- function(value, decimal_places = 2) {
   if(is.data.frame(value)) {
     for (relevant_column in 
          colnames(value)[sapply(value, class) %in% c("integer", "numeric")]) {
@@ -1478,8 +1479,11 @@ money_format <- function(value) {
     }
   } else {
     if(length(value) > 0) {
-      value <- trimws(format(round(ifnull(value, 0), 2), nsmall=2))
+      value <- ifnull(value, 0)
+      value <- trimws(format(round(value, decimal_places), 
+                             nsmall = decimal_places))
     } 
   }
   value
 }
+

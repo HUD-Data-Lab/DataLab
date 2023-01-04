@@ -1102,7 +1102,7 @@ generate_new_kits <- TRUE
           filter(PersonalID %in% intersect(
             entry_income$PersonalID[entry_income$IncomeFromAnySource %in% c(0, 1)],
             annual_income$PersonalID[annual_income$IncomeFromAnySource %in% c(0, 1)])) %>%
-          left_join(entry_income_for_changes, by = "PersonalID")%>%
+          left_join(entry_income_for_changes, by = "PersonalID") #%>%
           left_join(annual_income_for_changes, by = "PersonalID")
         
         for(row in c("earned", "other", "total")) {
@@ -1112,7 +1112,8 @@ generate_new_kits <- TRUE
             get_income_type_changes(., row, "annual") %>%
             cbind(titles, .)
           
-          data[2, ] <- money_format(data[2, ])
+          data[2, ] <- decimal_format(data[2, ])
+          data[1, 10] <- decimal_format(data[1, 10], 4)
           
           if(row == "earned") {
             Q19a1 <- data
@@ -1182,7 +1183,7 @@ generate_new_kits <- TRUE
             get_income_type_changes(., row, "exit") %>%
             cbind(titles, .)
           
-          data[2, ] <- money_format(data[2, ])
+          data[2, ] <- decimal_format(data[2, ])
           
           if(row == "earned") {
             Q19a2 <- data
