@@ -27,10 +27,13 @@ ifnull <- function(value, replace_with) {
   } else {
     if(length(value) > 0) {
       value[is.na(value) | is.nan(value) | 
-              is.infinite(value) | value == "NaN"] <- replace_with
+              is.infinite(value) 
+            # | value == "NaN"
+            ] <- replace_with
     } 
   }
-  as.numeric(value)
+  # as.numeric(value)
+  value
 }
 
 trunc_userid <- function(df) {
@@ -1051,7 +1054,7 @@ create_lot_table <- function(filtered_enrollments) {
 
 # make table for 'time to house' questions
 create_time_to_move_in <- function(filtered_enrollments) {
-  filtered_enrollments %>%
+  test <- filtered_enrollments %>%
     select(c("ProjectType", "ProjectID", 
              all_of(housing_program_detail_columns), "household_type")) %>%
     filter(ProjectType %in% c(3, 13) & 
@@ -1060,8 +1063,8 @@ create_time_to_move_in <- function(filtered_enrollments) {
                 (is.na(HoH_HMID) &
                    ExitDate <= report_end_date))) %>%
     mutate(move_in_date = case_when(
-      EntryDate > HoH_HMID ~ EntryDate,
-      TRUE ~ HoH_HMID)) %>%
+      ymd(EntryDate) > ymd(HoH_HMID) ~ EntryDate,
+      TRUE ~ HoH_HMID)) #%>%
     add_length_of_time_groups(., EntryDate, move_in_date, "days_prior_to_housing") %>%
     rename(days_to_house = number_of_days,
            housing_length_group = number_of_days_group)
@@ -1475,7 +1478,7 @@ decimal_format <- function(value, decimal_places = 2) {
   if(is.data.frame(value)) {
     for (relevant_column in 
          colnames(value)[sapply(value, class) %in% c("integer", "numeric")]) {
-      value[[relevant_column]] <- money_format(value[[relevant_column]])
+      value[[relevant_column]] <- decimal_format(value[[relevant_column]])
     }
   } else {
     if(length(value) > 0) {
