@@ -1064,7 +1064,7 @@ create_time_to_move_in <- function(filtered_enrollments) {
                    ExitDate <= report_end_date))) %>%
     mutate(move_in_date = case_when(
       ymd(EntryDate) > ymd(HoH_HMID) ~ EntryDate,
-      TRUE ~ HoH_HMID)) #%>%
+      TRUE ~ HoH_HMID)) %>%
     add_length_of_time_groups(., EntryDate, move_in_date, "days_prior_to_housing") %>%
     rename(days_to_house = number_of_days,
            housing_length_group = number_of_days_group)
@@ -1478,7 +1478,8 @@ decimal_format <- function(value, decimal_places = 2) {
   if(is.data.frame(value)) {
     for (relevant_column in 
          colnames(value)[sapply(value, class) %in% c("integer", "numeric")]) {
-      value[[relevant_column]] <- decimal_format(value[[relevant_column]])
+      value[[relevant_column]] <- decimal_format(value[[relevant_column]],
+                                                 decimal_places)
     }
   } else {
     if(length(value) > 0) {
