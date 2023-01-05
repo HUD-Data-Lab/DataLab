@@ -1102,7 +1102,7 @@ generate_new_kits <- TRUE
           filter(PersonalID %in% intersect(
             entry_income$PersonalID[entry_income$IncomeFromAnySource %in% c(0, 1)],
             annual_income$PersonalID[annual_income$IncomeFromAnySource %in% c(0, 1)])) %>%
-          left_join(entry_income_for_changes, by = "PersonalID")%>%
+          left_join(entry_income_for_changes, by = "PersonalID") %>%
           left_join(annual_income_for_changes, by = "PersonalID")
         
         for(row in c("earned", "other", "total")) {
@@ -1112,7 +1112,8 @@ generate_new_kits <- TRUE
             get_income_type_changes(., row, "annual") %>%
             cbind(titles, .)
           
-          data[2, ] <- money_format(data[2, ])
+          data[2, 1:9] <- decimal_format(data[2, 1:9])
+          data[1, 10] <- decimal_format(data[1, 10], 4)
           
           if(row == "earned") {
             Q19a1 <- data
@@ -1182,7 +1183,8 @@ generate_new_kits <- TRUE
             get_income_type_changes(., row, "exit") %>%
             cbind(titles, .)
           
-          data[2, ] <- money_format(data[2, ])
+          data[2, 1:9] <- decimal_format(data[2, 1:9])
+          data[1, 10] <- decimal_format(data[1, 10], 4)
           
           if(row == "earned") {
             Q19a2 <- data
@@ -1223,6 +1225,8 @@ generate_new_kits <- TRUE
         
         Q19b <- exit_income %>%
           income_hh_type_disabling_condition_table(.)
+        
+        Q19b[, c(5, 9, 13)] <- decimal_format(Q19b[, c(5, 9, 13)], 4)
       }
       
       # Q20a
@@ -1548,6 +1552,10 @@ generate_new_kits <- TRUE
                  new_veteran_status, youth)
         
         Q23c <- create_destination_groups(Q23c_detail)
+        test <- Q23c %>%
+          mutate(across(as.character()))
+          
+        test[45, 2:6] <- decimal_format(as.numerictest[45, 2:6], 4)
       }
       
       # Q24

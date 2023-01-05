@@ -26,9 +26,13 @@ ifnull <- function(value, replace_with) {
     }
   } else {
     if(length(value) > 0) {
-      value[is.na(value) | is.nan(value) | is.infinite(value)] <- replace_with
+      value[is.na(value) | is.nan(value) | 
+              is.infinite(value) 
+            # | value == "NaN"
+            ] <- replace_with
     } 
   }
+  # as.numeric(value)
   value
 }
 
@@ -1050,7 +1054,7 @@ create_lot_table <- function(filtered_enrollments) {
 
 # make table for 'time to house' questions
 create_time_to_move_in <- function(filtered_enrollments) {
-  filtered_enrollments %>%
+  test <- filtered_enrollments %>%
     select(c("ProjectType", "ProjectID", 
              all_of(housing_program_detail_columns), "household_type")) %>%
     filter(ProjectType %in% c(3, 13) & 
@@ -1059,7 +1063,7 @@ create_time_to_move_in <- function(filtered_enrollments) {
                 (is.na(HoH_HMID) &
                    ExitDate <= report_end_date))) %>%
     mutate(move_in_date = case_when(
-      EntryDate > HoH_HMID ~ EntryDate,
+      ymd(EntryDate) > ymd(HoH_HMID) ~ EntryDate,
       TRUE ~ HoH_HMID)) %>%
     add_length_of_time_groups(., EntryDate, move_in_date, "days_prior_to_housing") %>%
     rename(days_to_house = number_of_days,
@@ -1470,16 +1474,20 @@ get_relevant_events <- function(filtered_enrollments) {
     arrange(desc(same_enrollment), desc(Event_EventDate)) 
 }
 
-money_format <- function(value) {
+decimal_format <- function(value, decimal_places = 2) {
   if(is.data.frame(value)) {
     for (relevant_column in 
          colnames(value)[sapply(value, class) %in% c("integer", "numeric")]) {
-      value[[relevant_column]] <- money_format(value[[relevant_column]])
+      value[[relevant_column]] <- decimal_format(value[[relevant_column]],
+                                                 decimal_places)
     }
   } else {
     if(length(value) > 0) {
-      value <- trimws(format(round(ifnull(value, 0), 2), nsmall=2))
+      value <- ifnull(value, 0)
+      value <- trimws(format(round(value, decimal_places), 
+                             nsmall = decimal_places))
     } 
   }
   value
 }
+
