@@ -374,23 +374,26 @@ generate_new_kits <- TRUE
         Q6e_detail <- recent_program_enrollment_dq %>%
           select(c(all_of(standard_detail_columns)), "enroll_DateCreated",
                  "exit_DateCreated") %>%
-          mutate(days_for_entry = case_when(EntryDate >= report_start_date &
-                                              EntryDate <= report_end_date ~ trunc((EntryDate %--% enroll_DateCreated) / days(1))),
-                 TimeForEnrollmentEntry = case_when(
-                   # days_for_entry < 0 ~ "Error",
-                   days_for_entry == 0 ~ "0 days",
-                   days_for_entry <= 3 ~ "1-3 days",
-                   days_for_entry <= 6 ~ "4-6 days",
-                   days_for_entry <= 10 ~ "7-10 days",
-                   !is.na(days_for_entry) ~ "11+ days"),
-                 days_for_exit = case_when(!is.na(ExitDate) ~ trunc((ExitDate %--% exit_DateCreated) / days(1))),
-                 TimeForExitEntry = case_when(
-                   # days_for_exit < 0 ~ "Error",
-                   days_for_exit == 0 ~ "0 days",
-                   days_for_exit <= 3 ~ "1-3 days",
-                   days_for_exit <= 6 ~ "4-6 days",
-                   days_for_exit <= 10 ~ "7-10 days",
-                   !is.na(days_for_exit) ~ "11+ days"))
+          mutate(days_for_entry = case_when(
+            EntryDate >= report_start_date &
+              EntryDate <= report_end_date ~ floor(
+                interval(EntryDate, floor_date(enroll_DateCreated, "day")) / days(1))),
+            TimeForEnrollmentEntry = case_when(
+              # days_for_entry < 0 ~ "Error",
+              days_for_entry == 0 ~ "0 days",
+              days_for_entry <= 3 ~ "1-3 days",
+              days_for_entry <= 6 ~ "4-6 days",
+              days_for_entry <= 10 ~ "7-10 days",
+              !is.na(days_for_entry) ~ "11+ days"),
+            days_for_exit = case_when(!is.na(ExitDate) ~ floor(
+              interval(ExitDate, floor_date(exit_DateCreated, "day")) / days(1))),
+            TimeForExitEntry = case_when(
+              # days_for_exit < 0 ~ "Error",
+              days_for_exit == 0 ~ "0 days",
+              days_for_exit <= 3 ~ "1-3 days",
+              days_for_exit <= 6 ~ "4-6 days",
+              days_for_exit <= 10 ~ "7-10 days",
+              !is.na(days_for_exit) ~ "11+ days"))
         
         Q6e <- data.frame(TimeForEntry = c("0 days", "1-3 days", "4-6 days",
                                            "7-10 days", "11+ days")) %>%
