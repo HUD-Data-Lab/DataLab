@@ -20,12 +20,12 @@ hold_ProjectCoC <- ProjectCoC
 # commented out for QA
 # ProjectCoC <- ProjectCoC %>%
 #   mutate(CoCCode = case_when(
-#     ProjectID %in% c(340, 780, 1647) ~ "XX-500",
+#     ProjectID %in% c(340, 780, 1428) ~ "XX-500",
 #     ProjectID == 1615 ~ "XX-502",
 #     # ProjectID %in% c(340, 780, 1647) ~ "XX-501",
 #     TRUE ~ CoCCode)) %>%
 #   union(ProjectCoC %>%
-#           filter(ProjectID == 1647))
+#           filter(ProjectID == 1428))
 
 
 multi_CoC_projects <- ProjectCoC %>%

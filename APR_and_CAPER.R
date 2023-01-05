@@ -1240,7 +1240,7 @@ generate_new_kits <- TRUE
         
         for(period in entry_annual_exit) {
           data <- get(paste0(period, "_income")) %>%
-            select(EnrollmentID, all_of(benefit_list))
+            select(EnrollmentID, all_of(benefit_list), BenefitsFromAnySource)
           
           Q20a_detail <- Q20a_detail %>%
             left_join(data %>%
