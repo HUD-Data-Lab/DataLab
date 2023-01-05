@@ -1551,11 +1551,10 @@ generate_new_kits <- TRUE
           select(ProjectType, all_of(standard_detail_columns), Destination,
                  new_veteran_status, youth)
         
-        Q23c <- create_destination_groups(Q23c_detail)
-        test <- Q23c %>%
-          mutate(across(as.character()))
-          
-        test[45, 2:6] <- decimal_format(as.numerictest[45, 2:6], 4)
+        Q23c <- create_destination_groups(Q23c_detail) %>%
+          mutate(across(everything(), as.character))
+        
+        Q23c[45, 2:6] <- as.list(decimal_format(as.numeric(Q23c[45, 2:6]), 4))
       }
       
       # Q24
@@ -1744,7 +1743,10 @@ generate_new_kits <- TRUE
         Q25i_detail <- Q23c_detail %>%
           filter(new_veteran_status == 1)
         
-        Q25i <- create_destination_groups(recent_veteran_enrollment)
+        Q25i <- create_destination_groups(recent_veteran_enrollment) %>%
+          mutate(across(everything(), as.character))
+        
+        Q25i[45, 2:6] <- as.list(decimal_format(as.numeric(Q25i[45, 2:6]), 4))
       }
       
       #-------------------------------------------------------------
@@ -1958,7 +1960,10 @@ generate_new_kits <- TRUE
         Q27f_detail <- Q23c_detail %>%
           filter(youth == 1)
         
-        Q27f <- create_destination_groups(recent_youth_enrollment)
+        Q27f <- create_destination_groups(recent_youth_enrollment)  %>%
+          mutate(across(everything(), as.character))
+        
+        Q27f[45, 2:6] <- as.list(decimal_format(as.numeric(Q27f[45, 2:6]), 4))
       }
       
       # Q27g
