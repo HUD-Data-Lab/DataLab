@@ -66,11 +66,13 @@ for (file in names(hmis_csvs)){
     distinct()
   
   new_ExportID <- data$ExportID[1]
+  col_order <- colnames(data)
   
   data <- data %>%
     select(-ExportID) %>%
     distinct() %>%
-    mutate(ExportID = new_ExportID)
+    mutate(ExportID = new_ExportID) %>%
+    select(all_of(col_order))
   
   if ("DateDeleted" %in% colnames(get(file))) {
     data <- data %>%
