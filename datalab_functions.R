@@ -884,6 +884,16 @@ create_contact_table <- function(filtered_enrollments, first_CLS_group,
 
 # generate table with general summary information about the project
 create_summary_table <- function(filtered_enrollments, column_name) {
+  
+  long_stayers <- filtered_enrollments %>%
+    add_length_of_time_groups(., EntryDate,
+                              ifnull(ExitDate, ymd(report_end_date) + days(1)),
+                              "APR") %>%
+    filter(number_of_days >= 365 &
+             is.na(ExitDate) &
+             (age_group == "Adults" |
+                RelationshipToHoH == 1))
+  
   filtered_enrollments %>%
     # left_join(client_plus, by = "PersonalID") %>%
     # left_join(chronicity_data, by = "EnrollmentID") %>%
@@ -908,11 +918,11 @@ create_summary_table <- function(filtered_enrollments, column_name) {
                                                                         RelationshipToHoH == 1])),
               Number.of.child.and.unknown.age.heads.of.household = uniqueN(na.omit(PersonalID[age_group != "Adults" &
                                                                                         RelationshipToHoH == 1])),
-              Heads.of.households.and.adult.stayers.in.the.project.365.days.or.more = uniqueN(na.omit(PersonalID[is.na(ExitDate) &
-                                                                                                           trunc((EntryDate %--% report_end_date) / days(1)) >= 365 &
-                                                                                                           (age_group == "Adults" |
-                                                                                                              RelationshipToHoH == 1)]))
-    ) %>% 
+              Heads.of.households.and.adult.stayers.in.the.project.365.days.or.more = uniqueN(
+                na.omit(PersonalID[PersonalID %in% long_stayers$PersonalID |
+                                     (age_group == "Adults" &
+                                        HouseholdID %in% long_stayers$HouseholdID[long_stayers$RelationshipToHoH == 1])]))
+              ) %>% 
     mutate(rowname = column_name) %>% 
     pivot_longer(!rowname, names_to = "Group", values_to = "values") %>% 
     pivot_wider(names_from = "rowname", values_from = "values")

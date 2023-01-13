@@ -22,12 +22,12 @@ generate_new_kits <- TRUE
       # 93#,	#"DataLab - ES-NbN ESG",
       # 1409#,	"DataLab - HP ESG",
       # 780#,	#"DataLab - PSH CoC I",
-      1428,	#"DataLab - RRH CoC I",
-      1495#,	#"DataLab - RRH CoC II",
+      # 1428,	#"DataLab - RRH CoC I",
+      # 1495#,	#"DataLab - RRH CoC II",
       # 1060#,	#"DataLab - RRH ESG I",
       # 1647#,	#"DataLab - SO CoC",
       # 1419,	#"DataLab - SO ESG",
-      # 1615#,	#"DataLab - SSO CoC",
+      1615#,	#"DataLab - SSO CoC",
       # 388#,	#"DataLab - TH CoC",
       # 340,	#"DataLab - TH ESG"
     )
@@ -101,9 +101,13 @@ generate_new_kits <- TRUE
                       DateOfEngagement <= report_end_date))
         
         Q5a_detail <- recent_program_enrollment %>%
+          add_length_of_time_groups(., EntryDate,
+                                    ifnull(ExitDate, ymd(report_end_date) + days(1)),
+                                    "APR") %>%
           select(c(all_of(standard_detail_columns),
-                   all_of(demographic_detail_columns))) %>%
-          mutate(IncludedInDQ = EnrollmentID %in% recent_program_enrollment_dq$EnrollmentID)
+                   all_of(demographic_detail_columns),
+                          number_of_days)) %>%
+          mutate(IncludedInDQ = EnrollmentID %in% recent_program_enrollment_dq$EnrollmentID) 
         
         Q5a <- create_summary_table(recent_program_enrollment_dq, "Count.of.Clients.for.DQ") %>%
           left_join(create_summary_table(recent_program_enrollment, "Count.of.Clients"), 
