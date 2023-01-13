@@ -374,7 +374,8 @@ YouthEducationStatus <- trunc_userid(YouthEducationStatus) %>%
         substr(possible_ssn, 6, 9) != "0000" &
         possible_ssn %nin% c("111111111", "222222222", "333333333",
                              "444444444", "555555555", "666666666",
-                             "777777777", "888888888", "999999999")) {
+                             "777777777", "888888888", "999999999",
+                             valid_ssns)) {
       valid_ssns <- c(possible_ssn, valid_ssns)
     }
   }
