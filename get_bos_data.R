@@ -310,7 +310,12 @@ Services <- trunc_userid(Services) %>%
   full_join(NbN_services, by = colnames(NbN_services))
 
 Assessment <- trunc_userid(Assessment) %>%
-  filter(EnrollmentID %in% Enrollment$EnrollmentID) 
+  filter(EnrollmentID %in% Enrollment$EnrollmentID) %>%
+  left_join(Enrollment %>% 
+              select(EnrollmentID, ProjectID),
+            by = "EnrollmentID") %>%
+  mutate(AssessmentLocation = ProjectID) %>%
+  select(-ProjectID)
 
 Exit <- trunc_userid(Exit) %>%
   filter(EnrollmentID %in% Enrollment$EnrollmentID) 
