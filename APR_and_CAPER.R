@@ -695,7 +695,7 @@ generate_new_kits <- TRUE
             rate <- as.numeric(Q9b[[which(Q9b$ContactGroup == "Total"), column]]) / 
               Q9a[[which(Q9a$ContactGroup == "Total"), column]]
           }
-          rate_of_engagement <- c(rate_of_engagement, rate)
+          rate_of_engagement <- c(rate_of_engagement, decimal_format(rate, 4))
         }
         
         Q9b <- rbind(Q9b, rate_of_engagement)
