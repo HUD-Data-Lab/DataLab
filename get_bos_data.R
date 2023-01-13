@@ -300,6 +300,8 @@ User$UserEmail <- r_email_addresses(nrow(User))
   NbN_services$UserID <- sample(User$UserID, nrow(NbN_services),
                                 replace = TRUE)
   NbN_services$ExportID <- Export$ExportID
+  NbN_services$DateCreated <- as.POSIXct(paste(NbN_services$DateCreated, "2pm"), format = "%Y-%m-%d %I%p")
+  NbN_services$DateUpdated <- as.POSIXct(paste(NbN_services$DateUpdated, "2pm"), format = "%Y-%m-%d %I%p")
 }
 
 Services$ServicesID <- as.integer(Services$ServicesID) 
