@@ -1469,11 +1469,19 @@ generate_new_kits <- TRUE
         
         average_time_to_house <- Q22c_detail %>%
           summarise(housing_length_group = "Average length of time to housing",
-                    Total = mean(days_to_house),
-                    Without.Children = mean(days_to_house[household_type == "AdultsOnly"]),
-                    With.Children.And.Adults = mean(days_to_house[household_type == "AdultsAndChildren"]),
-                    With.Only.Children = mean(days_to_house[household_type == "ChildrenOnly"]),
-                    Unknown.Household.Type = mean(days_to_house[household_type == "Unknown"]))
+                    Total = round(mean(days_to_house, na.rm = TRUE), 0),
+                    Without.Children = round(mean(
+                      days_to_house[household_type == "AdultsOnly"],
+                      na.rm = TRUE), 0),
+                    With.Children.And.Adults = round(mean(
+                      days_to_house[household_type == "AdultsAndChildren"],
+                      na.rm = TRUE), 0),
+                    With.Only.Children = round(mean(
+                      days_to_house[household_type == "ChildrenOnly"],
+                      na.rm = TRUE), 0),
+                    Unknown.Household.Type = round(mean(
+                      days_to_house[household_type == "Unknown"],
+                      na.rm = TRUE), 0))
         
         exited_without_move_in_data <- recent_program_enrollment %>%
           filter(ProjectType %in% c(3, 13) &
@@ -2042,11 +2050,19 @@ generate_new_kits <- TRUE
         
         average_time_to_house <- Q27k_detail %>%
           summarise(housing_length_group = "Average length of time to housing",
-                    Total = mean(days_to_house),
-                    Without.Children = mean(days_to_house[household_type == "AdultsOnly"]),
-                    With.Children.And.Adults = mean(days_to_house[household_type == "AdultsAndChildren"]),
-                    With.Only.Children = mean(days_to_house[household_type == "ChildrenOnly"]),
-                    Unknown.Household.Type = mean(days_to_house[household_type == "Unknown"]))
+                    Total = round(mean(days_to_house, na.rm = TRUE), 0),
+                  Without.Children = round(mean(
+                    days_to_house[household_type == "AdultsOnly"],
+                    na.rm = TRUE), 0),
+                  With.Children.And.Adults = round(mean(
+                    days_to_house[household_type == "AdultsAndChildren"],
+                    na.rm = TRUE), 0),
+                  With.Only.Children = round(mean(
+                    days_to_house[household_type == "ChildrenOnly"],
+                    na.rm = TRUE), 0),
+                  Unknown.Household.Type = round(mean(
+                    days_to_house[household_type == "Unknown"],
+                    na.rm = TRUE), 0))
         
         exited_without_move_in_data <- recent_youth_enrollment %>%
           filter(ProjectType %in% c(3, 13) &
