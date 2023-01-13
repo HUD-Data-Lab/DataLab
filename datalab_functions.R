@@ -1401,7 +1401,7 @@ create_dq_Q1 <- function(filtered_enrollments) {
     add_row(DataElement = "Overall Score", 
             `Client.Does.Not.Know.or.Refused` = 0, Information.Missing = 0, Data.Issues = 0, 
             Total = nrow(unique(error_clients))) %>%
-    mutate(ErrorRate = Total / Q5a$Count.of.Clients.for.DQ[1])
+    mutate(ErrorRate = decimal_format(Total / Q5a$Count.of.Clients.for.DQ[1], 4))
   
   DQ1[DQ1$DataElement == "Overall Score", c("Client.Does.Not.Know.or.Refused",
                                             "Information.Missing")] <- NA

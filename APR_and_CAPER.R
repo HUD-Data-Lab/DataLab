@@ -177,10 +177,11 @@ generate_new_kits <- TRUE
           mutate(rowname = "Error.Count") %>% 
           pivot_longer(!rowname, names_to = "Group", values_to = "values") %>% 
           pivot_wider(names_from = "rowname", values_from = "values") %>%
-          mutate(Percent.of.Error.Count = case_when(
-            Group == "Veteran.Status.3.07" ~ Error.Count / Q5a$Count.of.Clients.for.DQ[2],
-            Group == "Client.Location.3.16" ~ Error.Count / (Q5a$Count.of.Clients.for.DQ[14] + Q5a$Count.of.Clients.for.DQ[15]),
-            TRUE ~ Error.Count / Q5a$Count.of.Clients.for.DQ[1])
+          mutate(Percent.of.Error.Count = decimal_format(
+            case_when(
+              Group == "Veteran.Status.3.07" ~ Error.Count / Q5a$Count.of.Clients.for.DQ[2],
+              Group == "Client.Location.3.16" ~ Error.Count / (Q5a$Count.of.Clients.for.DQ[14] + Q5a$Count.of.Clients.for.DQ[15]),
+              TRUE ~ Error.Count / Q5a$Count.of.Clients.for.DQ[1]), 4)
           )
         
       }
@@ -274,11 +275,12 @@ generate_new_kits <- TRUE
           mutate(rowname = "Error.Count") %>% 
           pivot_longer(!rowname, names_to = "Group", values_to = "values") %>% 
           pivot_wider(names_from = "rowname", values_from = "values") %>%
-          mutate(Percent.of.Error.Count = case_when(
-            Group == "Destination.3.12" ~ Error.Count / Q5a$Count.of.Clients.for.DQ[5],
-            Group == "Income.and.Sources.4.02.at.Start" ~ Error.Count / (Q5a$Count.of.Clients.for.DQ[2] + Q5a$Count.of.Clients.for.DQ[15]),
-            Group == "Income.and.Sources.4.02.at.Annual.Assessment" ~ Error.Count / Q5a$Count.of.Clients.for.DQ[16],
-            Group == "Income.and.Sources.4.02.at.Exit" ~ Error.Count / Q5a$Count.of.Clients.for.DQ[7])
+          mutate(Percent.of.Error.Count = decimal_format(
+            case_when(
+              Group == "Destination.3.12" ~ Error.Count / Q5a$Count.of.Clients.for.DQ[5],
+              Group == "Income.and.Sources.4.02.at.Start" ~ Error.Count / (Q5a$Count.of.Clients.for.DQ[2] + Q5a$Count.of.Clients.for.DQ[15]),
+              Group == "Income.and.Sources.4.02.at.Annual.Assessment" ~ Error.Count / Q5a$Count.of.Clients.for.DQ[16],
+              Group == "Income.and.Sources.4.02.at.Exit" ~ Error.Count / Q5a$Count.of.Clients.for.DQ[7]), 4)
           ) %>%
           ifnull(., 0)
       }
@@ -361,7 +363,9 @@ generate_new_kits <- TRUE
           full_join(Q6d_data_summary,
                     by = c("Entering.into.project.type",
                            "Count.of.total.records",
-                           "Percent.of.records.unable.to.calculate"))
+                           "Percent.of.records.unable.to.calculate")) %>%
+          mutate(Percent.of.records.unable.to.calculate = decimal_format(
+            Percent.of.records.unable.to.calculate, 4))
         
         
         Q6d[Q6d$Entering.into.project.type == "ES.SH.Street.Outreach", 
@@ -1024,7 +1028,7 @@ generate_new_kits <- TRUE
           rename(Income.at.Start = entryIncome,
                  Income.at.Latest.Annual.Assessment.for.Stayers = annualIncome,
                  Income.at.Exit.for.Leavers = exitIncome) %>%
-          adorn_totals("row") 
+          adorn_totals("row")
       }
       
       # Q17
@@ -2011,6 +2015,8 @@ generate_new_kits <- TRUE
         
         Q27i <- exit_income %>%
           income_hh_type_disabling_condition_table(., youth = TRUE)
+        
+        Q27i[, c(5, 9, 13, 17)] <- decimal_format(Q27i[, c(5, 9, 13, 17)], 4)
       }
       
       # Q27j
