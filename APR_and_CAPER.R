@@ -193,7 +193,12 @@ generate_new_kits <- TRUE
       # Q6c
       {
         income_sources <- IncomeBenefits %>%
-          mutate(number_of_sources = 
+          mutate(across(c(Earned, Unemployment, SSI, SSDI,
+                          VADisabilityService, VADisabilityNonService,
+                          PrivateDisability, WorkersComp, TANF, GA,
+                          SocSecRetirement, Pension, ChildSupport,
+                          Alimony, OtherIncomeSource), ~ ifnull(., 0)),
+                 number_of_sources = 
                    (Earned == 1) + (Unemployment == 1) +
                    (SSI == 1) + (SSDI == 1) +
                    (VADisabilityService == 1) + (VADisabilityNonService == 1) +
