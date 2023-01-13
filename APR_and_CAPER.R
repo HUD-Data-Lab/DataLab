@@ -1653,7 +1653,8 @@ generate_new_kits <- TRUE
       {
         Q25b_detail <- recent_program_enrollment %>%
           select(all_of(standard_detail_columns)) %>%
-          filter(RelationshipToHoH == 1) %>%
+          filter(RelationshipToHoH == 1 & 
+                   household_type != "ChildrenOnly") %>%
           mutate(category = case_when(
             HouseholdID %in%
               Q25a_detail$HouseholdID[Q25a_detail$category == vet_chronic_categories[1]] ~
