@@ -1188,7 +1188,7 @@ generate_new_kits <- TRUE
           keep_adults_only() %>%
           filter(PersonalID %in% intersect(
             entry_income$PersonalID[entry_income$IncomeFromAnySource %in% c(0, 1)],
-            annual_income$PersonalID[exit_income$IncomeFromAnySource %in% c(0, 1)])) %>%
+            exit_income$PersonalID[exit_income$IncomeFromAnySource %in% c(0, 1)])) %>%
           left_join(entry_income_for_changes, by = "PersonalID")%>%
           left_join(exit_income_for_changes, by = "PersonalID")
         

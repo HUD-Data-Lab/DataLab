@@ -160,8 +160,10 @@ determine_total_income <- function(enrollments_and_income, annual = FALSE) {
   }
   
   total_income <- enrollments_and_income %>%
-    mutate(earned_income = if_else(Earned == 1 & EarnedAmount > 0, EarnedAmount, 0),
-           amounts_combined = if_else(Earned == 1 & EarnedAmount > 0, EarnedAmount, 0) +
+    mutate(earned_income = ifnull(
+      if_else(Earned == 1 & EarnedAmount > 0, EarnedAmount, 0), 0),
+           amounts_combined = ifnull(
+             if_else(Earned == 1 & EarnedAmount > 0, EarnedAmount, 0) +
              if_else(Unemployment == 1 & UnemploymentAmount > 0, UnemploymentAmount, 0) +
              if_else(SSI == 1 & SSIAmount > 0, SSIAmount, 0) +
              if_else(SSDI == 1 & SSDIAmount > 0, SSDIAmount, 0) +
@@ -175,7 +177,7 @@ determine_total_income <- function(enrollments_and_income, annual = FALSE) {
              if_else(Pension == 1 & PensionAmount > 0, PensionAmount, 0) +
              if_else(ChildSupport == 1 & ChildSupportAmount > 0, ChildSupportAmount, 0) +
              if_else(Alimony == 1 & AlimonyAmount > 0, AlimonyAmount, 0) +
-             if_else(OtherIncomeSource == 1 & OtherIncomeAmount > 0, OtherIncomeAmount, 0),
+             if_else(OtherIncomeSource == 1 & OtherIncomeAmount > 0, OtherIncomeAmount, 0), 0),
            #  use this line for systems that auto-calculate total monthly income
            calculated_total_income = case_when(!is.na(TotalMonthlyIncome) &
                                                  TotalMonthlyIncome > 0 ~ TotalMonthlyIncome,
