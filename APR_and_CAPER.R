@@ -2009,6 +2009,7 @@ generate_new_kits <- TRUE
           filter(youth == 1)
         
         Q27h_data <- recent_youth_enrollment %>%
+          keep_adults_and_hoh_only() %>%
           create_income_categories(.) %>%
           adorn_totals("row")
         
