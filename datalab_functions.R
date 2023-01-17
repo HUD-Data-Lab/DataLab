@@ -1102,17 +1102,15 @@ create_time_prior_to_housing <- function(filtered_enrollments) {
 
 # get additional client info
 add_client_info <- function(filtered_enrollments) {
-  filtered_enrollments  %>%
-    group_by(PersonalID) %>%
-    arrange(desc(EntryDate)) %>%
-    slice(1L) %>%
-    ungroup() %>%
+  
+  all_program_enrollments %>%
+    filter(HouseholdID %in% filtered_enrollments$HouseholdID) %>%
     mutate(date_for_age = (if_else(
       EntryDate <= report_start_date,
       report_start_date,
       EntryDate))) %>%
-    select(PersonalID, date_for_age, HouseholdID, RelationshipToHoH) %>%
-    distinct() %>%
+    # select(PersonalID, date_for_age, HouseholdID, RelationshipToHoH) %>%
+    # distinct() %>%
     inner_join(Client, by = "PersonalID") %>%
     mutate(age = trunc((DOB %--% date_for_age) / years(1)),
            detailed_age_group = case_when(age < 5 ~ "Under 5",
@@ -1164,6 +1162,7 @@ add_client_info <- function(filtered_enrollments) {
                        RelationshipToHoH == 2,
                      1, 0))) %>%
     ungroup() %>%
+    filter(EnrollmentID %in% filtered_enrollments$EnrollmentID) %>%
     select(PersonalID, age, age_group, detailed_age_group, VeteranStatus, 
            youth_household, youth, has_children, new_veteran_status,
            gender_combined, race_combined)
