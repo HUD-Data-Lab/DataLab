@@ -392,7 +392,7 @@ generate_new_kits <- TRUE
               EntryDate <= report_end_date ~ floor(
                 interval(EntryDate, floor_date(enroll_DateCreated, "day")) / days(1))),
             TimeForEnrollmentEntry = case_when(
-              # days_for_entry < 0 ~ "Error",
+              days_for_entry < 0 ~ "Error",
               days_for_entry == 0 ~ "0 days",
               days_for_entry <= 3 ~ "1-3 days",
               days_for_entry <= 6 ~ "4-6 days",
@@ -401,7 +401,7 @@ generate_new_kits <- TRUE
             days_for_exit = case_when(!is.na(ExitDate) ~ floor(
               interval(ExitDate, floor_date(exit_DateCreated, "day")) / days(1))),
             TimeForExitEntry = case_when(
-              # days_for_exit < 0 ~ "Error",
+              days_for_exit < 0 ~ "Error",
               days_for_exit == 0 ~ "0 days",
               days_for_exit <= 3 ~ "1-3 days",
               days_for_exit <= 6 ~ "4-6 days",
@@ -410,13 +410,13 @@ generate_new_kits <- TRUE
         
         Q6e <- data.frame(TimeForEntry = c("0 days", "1-3 days", "4-6 days",
                                            "7-10 days", "11+ days")) %>%
-          full_join(Q6e_detail %>%
+          left_join(Q6e_detail %>%
                       filter(!is.na(TimeForEnrollmentEntry)) %>%
                       group_by(TimeForEnrollmentEntry) %>%
                       summarise(Number.of.Project.Start.Records = n_distinct(PersonalID)) %>%
                       rename(TimeForEntry = TimeForEnrollmentEntry),
                     by = "TimeForEntry")%>%
-          full_join(Q6e_detail %>%
+          left_join(Q6e_detail %>%
                       filter(!is.na(TimeForExitEntry)) %>%
                       group_by(TimeForExitEntry) %>%
                       summarise(Number.of.Project.Exit.Records = n_distinct(PersonalID)) %>%
