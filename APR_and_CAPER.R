@@ -136,11 +136,7 @@ generate_new_kits <- TRUE
           filter(EntryDate > EarlierEntryDate &
                    EntryDate < EarlierExitDate)
         
-        # want to talk through this one--if the HoH has two enrollments and one with
-        # their partner is older but their partner doesn't have a more recent one, their
-        # partner will get flagged here. Technically correct from the specs, I think,
-        # but seems wrong
-        Q6b_hoh_count <- recent_program_enrollment_dq %>%
+        Q6b_hoh_count <- all_program_enrollments %>%
           group_by(HouseholdID) %>%
           summarise(hohs = uniqueN(PersonalID[RelationshipToHoH == 1])) %>%
           filter(hohs != 1)
