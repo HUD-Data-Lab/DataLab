@@ -144,6 +144,21 @@ generate_new_kits <- TRUE
         # accounts for test kit CoC codes, remove XX- values for real data
         valid_cocs <- c(valid_cocs, "XX-500", "XX-501")
         
+        recent_disability_date <- Disabilities %>%
+          group_by(EnrollmentID) %>%
+          summarise(InformationDate = max(InformationDate)) %>%
+          ungroup()
+          
+        recent_disability_check <- Disabilities %>%
+          inner_join(recent_disability_date, 
+                     by = colnames(recent_disability_date)) %>%
+          filter((DisabilityResponse == 1 |
+                    (DisabilityType == 10 &
+                       DisabilityResponse %in% c(2, 3))) &
+                   (DisabilityType %in% c(6, 8) |
+                      (DisabilityType %in% c(5, 7, 9, 10) &
+                         IndefiniteAndImpairs == 1)))
+        
         Q6b_detail <- recent_program_enrollment_dq %>%
           left_join(EnrollmentCoC %>%
                       filter(DataCollectionStage == 1) %>%
@@ -153,7 +168,7 @@ generate_new_kits <- TRUE
                    all_of(demographic_detail_columns),
                    "CoCCode")) %>%
           mutate(CoC_Valid = CoCCode %in% valid_cocs,
-                 Disability_Check = EnrollmentID %in% additional_disability_check$EnrollmentID)
+                 Disability_Check = EnrollmentID %in% recent_disability_check$EnrollmentID)
         
         Q6b <- Q6b_detail %>%
           mutate(Veteran.Status.3.07 = (VeteranStatus %in% c(8, 9, 99) &
