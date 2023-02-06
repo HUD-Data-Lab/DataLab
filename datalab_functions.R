@@ -1464,6 +1464,10 @@ get_relevant_events <- function(filtered_enrollments) {
                          AssessmentDate <= report_end_date + days(90)) %>%
                 select(PersonalID, AssessmentDate),
               by = "PersonalID") %>%
+    group_by(PersonalID) %>%
+    arrange(desc(AssessmentDate)) %>%
+    slice(1L) %>%
+    ungroup() %>%
     rename(cutoff_date = AssessmentDate)
   
   filtered_enrollments %>%

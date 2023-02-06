@@ -80,6 +80,7 @@ relevant_events <- Event %>%
 
 
 CE_element_projects <- Project %>%
+  filter(ContinuumProject == 1) %>%
   inner_join(Enrollment %>%
                filter(EnrollmentID %in%
                         # okay to filter projects based on whether
@@ -89,8 +90,7 @@ CE_element_projects <- Project %>%
                               relevant_events$EnrollmentID)) %>%
                select(ProjectID) %>%
                distinct(),
-             by = "ProjectID") %>%
-  filter(ContinuumProject == 1)
+             by = "ProjectID") 
 
 
 # enrollment_CoC_over_time <- Enrollment %>%
