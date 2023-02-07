@@ -389,7 +389,7 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type,
   end_date <- enquo(end_date) 
   
   if(in_project) {
-    nbn_data <- recent_program_enrollment %>%
+    nbn_data <- data %>%
       filter(ProjectID %in% Project$ProjectID[Project$ProjectType == 1 &
                                                 Project$TrackingMethod == 3]) %>%
       left_join(all_bed_nights, 
@@ -1105,7 +1105,13 @@ create_time_prior_to_housing <- function(filtered_enrollments) {
 # get additional client info
 add_client_info <- function(filtered_enrollments) {
   
-  all_program_enrollments %>%
+  if(exists("all_program_enrollments")) {
+    enrollments_to_use <- all_program_enrollments
+  } else {
+    enrollments_to_use <- filtered_enrollments
+  }
+  
+  enrollments_to_use %>%
     filter(HouseholdID %in% filtered_enrollments$HouseholdID) %>%
     mutate(date_for_age = (if_else(
       EntryDate <= report_start_date,
