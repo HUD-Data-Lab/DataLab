@@ -350,6 +350,7 @@ YouthEducationStatus <- trunc_userid(YouthEducationStatus) %>%
 {
   ssns <- Client %>%
     select(SSN) %>%
+    filter(!is.na(SSN)) %>%
     distinct() %>%
     mutate(sequential = lapply(SSN, sequential_ssn),
            valid = 
