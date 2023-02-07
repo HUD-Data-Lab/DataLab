@@ -1730,18 +1730,23 @@ generate_new_kits <- TRUE
                        filter(DataCollectionStage %in% c(1, 3)), by ="EnrollmentID") %>%
           group_by(disability_name) %>%
           summarise(Conditions.At.Start = n_distinct(PersonalID[DataCollectionStage == 1]),
-                    Conditions.At.Latest.Assessment.for.Stayers = n_distinct(
+                    Conditions.At.Exit.for.Leavers = n_distinct(
                       PersonalID[DataCollectionStage == 3 & !is.na(ExitDate)]))
         
         Q25e.3 <- Q13c1_detail %>%
           filter(EnrollmentID %in% recent_veteran_enrollment$EnrollmentID) %>%
           group_by(disability_name) %>%
-          summarise(Conditions.At.Exit.for.Leavers = n_distinct(PersonalID))
+          summarise(Conditions.At.Latest.Assessment.for.Stayers = n_distinct(PersonalID))
         
         Q25e <- as.data.frame(disability_list)  %>%
           `colnames<-`(c("disability_name")) %>%
-          full_join(Q25e.1.and.2, by = "disability_name") %>%
+          full_join(Q25e.1.and.2 %>%
+                      select(disability_name, Conditions.At.Start), 
+                    by = "disability_name") %>%
           full_join(Q25e.3, by = "disability_name") %>%
+          full_join(Q25e.1.and.2 %>%
+                      select(disability_name, Conditions.At.Exit.for.Leavers), 
+                    by = "disability_name") %>%
           ifnull(0)
       }
       
@@ -1848,18 +1853,23 @@ generate_new_kits <- TRUE
                        filter(DataCollectionStage %in% c(1, 3)), by ="EnrollmentID") %>%
           group_by(disability_name) %>%
           summarise(Conditions.At.Start = n_distinct(PersonalID[DataCollectionStage == 1]),
-                    Conditions.At.Latest.Assessment.for.Stayers = n_distinct(
+                    Conditions.At.Exit.for.Leavers = n_distinct(
                       PersonalID[DataCollectionStage == 3 & !is.na(ExitDate)]))
         
         Q26e.3 <- Q13c1_detail %>%
           filter(EnrollmentID %in% recent_chronic_enrollment$EnrollmentID) %>%
           group_by(disability_name) %>%
-          summarise(Conditions.At.Exit.for.Leavers = n_distinct(PersonalID))
+          summarise(Conditions.At.Latest.Assessment.for.Stayers = n_distinct(PersonalID))
         
         Q26e <- as.data.frame(disability_list)  %>%
           `colnames<-`(c("disability_name")) %>%
-          full_join(Q26e.1.and.2, by = "disability_name") %>%
+          full_join(Q26e.1.and.2 %>%
+                      select(disability_name, Conditions.At.Start), 
+                    by = "disability_name") %>%
           full_join(Q26e.3, by = "disability_name") %>%
+          full_join(Q26e.1.and.2 %>%
+                      select(disability_name, Conditions.At.Exit.for.Leavers), 
+                    by = "disability_name") %>%
           ifnull(0)
       }
       
