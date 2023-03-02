@@ -133,7 +133,8 @@ picking_projects <- Project %>%
                        Funder != 34) %>%
               select(ProjectID, Funder) %>%
               distinct(), 
-            by = "ProjectID") %>%
+            by = "ProjectID",
+            multiple = "all") %>%
   left_join(funding_sources, by = "Funder") %>%
   arrange(ProjectType) %>%
   select(ProjectType, ProjectID, ProjectName, TrackingMethod, enrollments, 
@@ -386,7 +387,7 @@ YouthEducationStatus <- trunc_userid(YouthEducationStatus) %>%
     }
   }
   
-  invalid_ssns <- c(NA, "xxx021232", 9123, 92415182, 000342842, 
+  invalid_ssns <- c(NA, "xxx021232", "xxxxx9123", "92415x182", 000342842, 
                     666284132, 912358284, 382004382,
                     729440000, 888888888, 890123456)
   

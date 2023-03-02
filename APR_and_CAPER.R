@@ -129,7 +129,8 @@ generate_new_kits <- TRUE
           left_join(Enrollment %>%
                       left_join(Exit %>%
                                   select(EnrollmentID, ExitDate),
-                                by = "EnrollmentID") %>%
+                                by = "EnrollmentID",
+                                multiple = "all") %>%
                       `colnames<-`(paste0("Earlier", c(colnames(Enrollment), "ExitDate"))), 
                     by = c("PersonalID" = "EarlierPersonalID", 
                            "ProjectID" = "EarlierProjectID")) %>%
@@ -848,7 +849,8 @@ generate_new_kits <- TRUE
           select(all_of(standard_detail_columns), "age_group", 
                  "new_veteran_status", "chronic") %>%
           inner_join(disability_table %>%
-                       filter(DataCollectionStage == 1), by ="EnrollmentID")
+                       filter(DataCollectionStage == 1), by ="EnrollmentID",
+                     multiple = "all")
         
         Q13a1 <- Q13a1_detail %>%
           return_household_groups(., disability_name, disability_list,
@@ -862,7 +864,8 @@ generate_new_kits <- TRUE
                  "new_veteran_status", "chronic") %>%
           filter(!is.na(ExitDate)) %>%
           inner_join(disability_table %>%
-                       filter(DataCollectionStage == 3), by ="EnrollmentID")
+                       filter(DataCollectionStage == 3), by ="EnrollmentID",
+                     multiple = "all")
         
         Q13b1 <- Q13b1_detail %>%
           return_household_groups(., disability_name, disability_list,
@@ -884,8 +887,10 @@ generate_new_kits <- TRUE
                        select(EnrollmentID, last_date) %>%
                        distinct() %>%
                        left_join(disability_table, 
-                                 by = c("EnrollmentID", "last_date" = "InformationDate")), 
-                     by ="EnrollmentID")
+                                 by = c("EnrollmentID", "last_date" = "InformationDate"),
+                                 multiple = "all"), 
+                     by ="EnrollmentID",
+                     multiple = "all")
         
         Q13c1 <- Q13c1_detail %>%
           return_household_groups(., disability_name, disability_list,
@@ -1093,6 +1098,7 @@ generate_new_kits <- TRUE
           colSums()
         
         Q18 <- Q18_data %>%
+          mutate(income_category = as.character(income_category)) %>%
           rbind(., c("1 or more source of income", has_income)) %>%
           rbind(., income_information_present(recent_program_enrollment %>%
                                                 keep_adults_only()))
@@ -1727,7 +1733,8 @@ generate_new_kits <- TRUE
         Q25e_detail <- "See Q13a1.csv, Q13b1.csv, and Q13c1.csv respectively"
         Q25e.1.and.2 <- recent_veteran_enrollment %>%
           inner_join(disability_table %>%
-                       filter(DataCollectionStage %in% c(1, 3)), by ="EnrollmentID") %>%
+                       filter(DataCollectionStage %in% c(1, 3)), by ="EnrollmentID",
+                     multiple = "all") %>%
           group_by(disability_name) %>%
           summarise(Conditions.At.Start = n_distinct(PersonalID[DataCollectionStage == 1]),
                     Conditions.At.Exit.for.Leavers = n_distinct(
@@ -1850,7 +1857,8 @@ generate_new_kits <- TRUE
         Q26e_detail <- "See Q13a1.csv, Q13b1.csv, and Q13c1.csv respectively"
         Q26e.1.and.2 <- recent_chronic_enrollment %>%
           inner_join(disability_table %>%
-                       filter(DataCollectionStage %in% c(1, 3)), by ="EnrollmentID") %>%
+                       filter(DataCollectionStage %in% c(1, 3)), by ="EnrollmentID",
+                     multiple = "all") %>%
           group_by(disability_name) %>%
           summarise(Conditions.At.Start = n_distinct(PersonalID[DataCollectionStage == 1]),
                     Conditions.At.Exit.for.Leavers = n_distinct(
@@ -2043,6 +2051,7 @@ generate_new_kits <- TRUE
           colSums()
         
         Q27h <- Q27h_data %>%
+          mutate(income_category = as.character(income_category)) %>%
           rbind(., c("1 or more source of income", has_income)) %>%
           rbind(., c("Youth with Income Information at Start and Annual Assessment/Exit",
                      income_information_present(recent_youth_enrollment)[2:4]))

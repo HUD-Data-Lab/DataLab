@@ -393,7 +393,8 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type,
       filter(ProjectID %in% Project$ProjectID[Project$ProjectType == 1 &
                                                 Project$TrackingMethod == 3]) %>%
       left_join(all_bed_nights, 
-                by = "EnrollmentID") %>%
+                by = "EnrollmentID",
+                multiple = "all") %>%
       group_by(EnrollmentID) %>%
       summarise(nbn_number_of_days = n_distinct(na.omit(ymd(DateProvided)))) %>%
       ungroup() %>%
