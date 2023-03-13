@@ -79,11 +79,12 @@ generate_new_kits <- TRUE
         select(HouseholdID, annual_due) %>%
         distinct()
       
-      household_info <- get_household_info(recent_program_enrollment)
+      household_info <- get_household_info(all_program_enrollments,
+                                           return_type = "household")
       
       recent_program_enrollment <- recent_program_enrollment %>%
         left_join(client_plus, by = "PersonalID") %>%
-        left_join(household_info, by = "PersonalID") %>%
+        left_join(household_info, by = "HouseholdID") %>%
         left_join(chronicity_data, by = "EnrollmentID")
       
       # Q4a
@@ -129,11 +130,11 @@ generate_new_kits <- TRUE
           left_join(Enrollment %>%
                       left_join(Exit %>%
                                   select(EnrollmentID, ExitDate),
-                                by = "EnrollmentID",
-                                multiple = "all") %>%
+                                by = "EnrollmentID") %>%
                       `colnames<-`(paste0("Earlier", c(colnames(Enrollment), "ExitDate"))), 
                     by = c("PersonalID" = "EarlierPersonalID", 
-                           "ProjectID" = "EarlierProjectID")) %>%
+                           "ProjectID" = "EarlierProjectID"),
+                    multiple = "all") %>%
           filter(EntryDate > EarlierEntryDate &
                    EntryDate < EarlierExitDate)
         
@@ -543,8 +544,8 @@ generate_new_kits <- TRUE
                               (ProjectType %in% c(4, 6, 11) &
                                  ExitDate >= pit_date))))) %>%
             left_join(household_info %>%
-                        select(PersonalID, household_type),
-                      by = "PersonalID") %>%
+                        select(HouseholdID, household_type),
+                      by = "HouseholdID") %>%
             mutate(Month = pit_month) 
           
           pit_enrollments <- pit_enrollment_detail %>%
@@ -602,8 +603,8 @@ generate_new_kits <- TRUE
                                RelationshipToHoH, EntryDate, ExitDate),
                       by = "HouseholdID") %>%
             left_join(household_info %>%
-                        select(PersonalID, HoH_HMID, household_type),
-                      by = "PersonalID") %>%
+                        select(HouseholdID, HoH_HMID, household_type),
+                      by = "HouseholdID") %>%
             mutate(Month = pit_month) 
           
           pit_hh_enrollments <- pit_hh_enrollment_detail %>%
