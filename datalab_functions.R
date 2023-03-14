@@ -785,25 +785,29 @@ create_prior_residence_groups <- function(included_enrollments) {
             GA == 1 |
             Alimony == 1 |
             OtherIncomeSource == 1, 1, 0)) %>%
-        select(c(PersonalID, household_type, all_of(income_rows_to_show))) %>%
-        pivot_longer(!c(PersonalID, household_type)) %>%
+        select(c(PersonalID, household_type, IncomeFromAnySource, all_of(income_rows_to_show))) 
+      
+      long_income_information <- filtered_income_information %>%
+        pivot_longer(!c(PersonalID, household_type, IncomeFromAnySource)) %>%
         mutate(row_name = "row")
       
       unduplicated_total <- cbind(name = "Unduplicated.Total.Adults", 
-                                  filtered_income_information %>%
+                                  long_income_information %>%
                                     mutate(row_name = "total") %>%
                                     return_household_groups(., row_name, "total") %>%
                                     select(-row_name))
       
-      filtered_has_income <- filtered_income_information %>%
+      filtered_has_income <- long_income_information %>%
         filter(value == 1)
       
       unduplicated_with_income <- filtered_has_income %>%
         mutate(row_name = "has income") %>%
         return_household_groups(., row_name, "has income")
       
-      unduplicated_without_income <- as.data.frame(
-        cbind(name = "No.Sources", unduplicated_total[2:6] - unduplicated_with_income[2:6]))
+      unduplicated_without_income <- filtered_income_information %>%
+        filter(IncomeFromAnySource == 0) %>%
+        mutate(name = "No.Sources") %>%
+        return_household_groups(., name, "No.Sources")
       
       income_hh_type_disabling_condition_data <- as.data.frame(income_rows_to_show) %>%
         rename(name = income_rows_to_show) %>%
