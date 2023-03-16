@@ -89,6 +89,8 @@ generate_new_kits <- TRUE
       
       # Q4a
       {
+        Q4a_detail <- "See Q5a_detail.csv"
+        
         Q4a <- program_information_table(project_list,
                                          recent_program_enrollment)
         }
@@ -1446,7 +1448,7 @@ generate_new_kits <- TRUE
       
       # Q22a2
       {
-        Q22a2_detail <- "See Q22a1_detail.csv"
+        Q22a2_detail <- Q22a1_detail
         
         Q22a2_total <- Q22a1_detail %>%
           group_by(CAPER_enrollment_length_group) %>%
@@ -1549,7 +1551,7 @@ generate_new_kits <- TRUE
       
       # Q22d
       {
-        Q22d_detail <- "See Q22a1_detail.csv"
+        Q22d_detail <- "See Q22a2_detail.csv"
         
         Q22d <- Q22a1_detail %>%
           return_household_groups(., CAPER_enrollment_length_group, 
@@ -2215,11 +2217,11 @@ generate_new_kits <- TRUE
             if(question != "Q4a") {
               to_write <- to_write %>%
                 set_hud_format()
-              
-              write.csv(get(paste0(question, "_detail")),
-                        file.path(paste0("created_files_2/", question, ".csv")),
-                        row.names = FALSE)
             }
+            
+            write.csv(get(paste0(question, "_detail")),
+                      file.path(paste0("created_files_2/", question, ".csv")),
+                      row.names = FALSE)
             
             to_write <- to_write %>% 
               ifnull(., 0) 
@@ -2254,11 +2256,11 @@ generate_new_kits <- TRUE
             if(question != "Q4a") {
               to_write <- to_write %>% 
                 set_hud_format()
-              
-              write.csv(get(paste0(question, "_detail")),
-                        file.path(paste0("created_files_2/", question, ".csv")),
-                        row.names = FALSE)
             }
+            
+            write.csv(get(paste0(question, "_detail")),
+                      file.path(paste0("created_files_2/", question, ".csv")),
+                      row.names = FALSE)
             
             to_write <- to_write %>% 
               ifnull(., 0) 
