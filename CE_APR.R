@@ -37,17 +37,24 @@ multi_CoC_projects <- ProjectCoC %>%
 
 
 enrollment_coc_plus <- EnrollmentCoC %>%
+  # include folks without location records, they can be included if
+  # that project only serves one CoC
+  full_join(Enrollment %>%
+              select(EnrollmentID, EntryDate, ProjectID, HouseholdID) %>%
+              rename(InformationDate = EntryDate),
+            by = c("EnrollmentID", "InformationDate", "ProjectID", 
+                   "HouseholdID")) %>%
   left_join(multi_CoC_projects, by = "ProjectID") %>%
   # confirmed by Fran 12.21.22, issue #2
   mutate(filter_CoC_code = case_when(
     relevant_to_CoC & num_of_CoCs == 1 ~ relevant_CoC,
-    num_of_CoCs > 1 ~ CoCCode))
+    num_of_CoCs > 1 ~ CoCCode)) %>%
+  select(EnrollmentID, InformationDate, filter_CoC_code,
+         HouseholdID)
 
 
 relevant_assessments <- Assessment %>%
-  inner_join(enrollment_coc_plus %>%
-              select(EnrollmentID, InformationDate, filter_CoC_code,
-                     HouseholdID), 
+  inner_join(enrollment_coc_plus, 
             by = "EnrollmentID") %>%
   filter(AssessmentDate >= report_start_date &
            AssessmentDate <= report_end_date & 
@@ -64,9 +71,7 @@ relevant_assessments <- Assessment %>%
 
 
 relevant_events <- Event %>%
-  inner_join(enrollment_coc_plus %>%
-              select(EnrollmentID, InformationDate, filter_CoC_code,
-                     HouseholdID), 
+  inner_join(enrollment_coc_plus, 
             by = "EnrollmentID") %>%
   filter(EventDate >= report_start_date &
            EventDate <= report_end_date + days(90) &
