@@ -45,7 +45,7 @@ for (file in names(hmis_csvs)){
 start_date <- ymd("2021-10-1")
 end_date <- ymd("2022-9-30")
 
-Export$ExportDate <- Sys.Date()
+Export$ExportDate <- Sys.time()
 Export$ExportStartDate <- start_date
 Export$ExportEndDate <- end_date
 
