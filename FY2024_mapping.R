@@ -14,14 +14,22 @@ source("DataLab.R")
 new_client_columns <- c("PersonalID", "FirstName", "MiddleName", "LastName",
                         "NameSuffix", "NameDataQuality", "SSN", "SSNDataQuality",
                         "DOB", "DOBDataQuality", "AmIndAKNative", "Asian",
-                        "BlackAfAmerican"    "NativeHIPacific"    "White",
-                        
-                        "RaceNone", "Ethnicity", "Female", "Male", "NoSingleGender",
-                        "Transgender", "Questioning", "GenderNone", "VeteranStatus",
+                        "BlackAfAmerican", "HispanicLatinaeo", "NativeHIPacific", 
+                        "White", "RaceNone", "Woman", "Man", "NonBinary", 
+                        "CulturallySpecific", "Transgender", "Questioning", 
+                        "DifferentIdentity", "GenderNone", "VeteranStatus",
                         "YearEnteredService", "YearSeparated", "WorldWarII",
                         "KoreanWar", "VietnamWar", "DesertStorm", "AfghanistanOEF",
                         "IraqOIF", "IraqOND", "OtherTheater", "MilitaryBranch",
-                        "DischargeStatus"    "DateCreated"        "DateUpdated"        "UserID"             "DateDeleted"       
-                        [41] "ExportID")
-test <- Client
+                        "DischargeStatus", "DateCreated", "DateUpdated",
+                        "UserID", "DateDeleted", "ExportID")
+Client <- Client %>%
+  mutate(HispanicLatinaeo = case_when(
+    Ethnicity %in% c(1, 0) ~ Ethnicity
+  )) %>%
+  rename(Woman = Female,
+         Man = Male,
+         NonBinary = NoSingleGender)
+  select(all_of(new_client_columns))
+  
 
