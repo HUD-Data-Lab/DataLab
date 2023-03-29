@@ -262,7 +262,7 @@ keep_adults_and_hoh_only <- function(enrollment_data) {
     inner_join(client_plus %>%
                  filter(age_group == "Adults") %>%
                  select(PersonalID) %>%
-                 union(recent_program_enrollment %>%
+                 union(enrollment_data %>%
                          filter(RelationshipToHoH == 1) %>%
                          select(PersonalID)),
                by = "PersonalID")
@@ -1036,6 +1036,15 @@ write_csvs_for <- function(project_ids, zip_title, write_to) {
     if ("exit_DateCreated" %in% colnames(data)) {
       data <- data %>%
         rename(DateCreated = exit_DateCreated)
+      
+    }
+    
+    if (file == "IncomeBenefits") {
+      data <- data %>%
+        mutate(across(
+          c("TotalMonthlyIncome", 
+            colnames(data)[str_detect(colnames(data), "Amount")]),
+          ~ if_else(!is.na(.), decimal_format(.), NA)))
     }
     
     write.csv(data, file.path(paste0("created_files/", file, ".csv")), 
