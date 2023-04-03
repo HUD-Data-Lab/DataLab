@@ -148,7 +148,7 @@ ResidenceUses <- read_excel("SupplementalTables.xlsx",
                             sheet = "ResidenceUses",
                             col_types = c("numeric", "text", "text", "text",
                                           "logical", "logical", "logical",
-                                          "numeric", "numeric", "text"))
+                                          "numeric", "numeric", "text", "text"))
 
 
 # ------------------------------------------------------------------------------
