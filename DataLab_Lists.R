@@ -518,3 +518,20 @@ referral_results <- c("Successful referral: client accepted",
                       "Unsuccessful referral: client rejected",
                       "Unsuccessful referral: provider rejected",
                       "No result recorded")
+
+# ------------------------------------------------------------------------------
+# ------------------------------- CSV Columns ----------------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   APR/CAPER - 
+
+CSV_columns <- read_excel("SupplementalTables.xlsx",
+                            sheet = "CSV_Columns") %>%
+  mutate(RDataType = case_when(
+    str_detect(DataType, "S") ~ "c",
+    DataType == "I" ~ "i",
+    DataType %in% c("T", "D") ~ DataType,
+    str_detect(DataType, "M") ~ "d"
+  )) %>%
+  select(File, ColumnName, RDataType) 
+

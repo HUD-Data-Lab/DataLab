@@ -11,50 +11,105 @@
 
 source("DataLab.R")
 
-new_client_columns <- c("PersonalID", "FirstName", "MiddleName", "LastName",
-                        "NameSuffix", "NameDataQuality", "SSN", "SSNDataQuality",
-                        "DOB", "DOBDataQuality", "AmIndAKNative", "Asian",
-                        "BlackAfAmerican", "HispanicLatinaeo", "NativeHIPacific", 
-                        "White", "RaceNone", "Woman", "Man", "NonBinary", 
-                        "CulturallySpecific", "Transgender", "Questioning", 
-                        "DifferentIdentity", "GenderNone", "VeteranStatus",
-                        "YearEnteredService", "YearSeparated", "WorldWarII",
-                        "KoreanWar", "VietnamWar", "DesertStorm", "AfghanistanOEF",
-                        "IraqOIF", "IraqOND", "OtherTheater", "MilitaryBranch",
-                        "DischargeStatus", "DateCreated", "DateUpdated",
-                        "UserID", "DateDeleted", "ExportID")
-Client <- Client %>%
+for (filename in unique(CSV_columns$File)) {
+  
+  assign(paste0(tolower(filename), "_columns"), 
+         CSV_columns$ColumnName[CSV_columns$File == filename])
+  
+  assign(paste0(tolower(filename), "_column_types"), 
+         CSV_columns$RDataType[CSV_columns$File == filename])
+  
+} 
+
+new_Client <- Client %>%
   mutate(HispanicLatinaeo = case_when(
     Ethnicity %in% c(1, 0) ~ Ethnicity
-  )) %>%
+  ),
+  MidEastNAfrican = 0, 
+  AdditionalRaceEthnicity = NA, 
+  CulturallySpecific = 0, 
+  DifferentIdentity = 0, 
+  DifferentIdentityText = NA) %>%
   rename(Woman = Female,
          Man = Male,
-         NonBinary = NoSingleGender)
-  select(all_of(new_client_columns))
+         NonBinary = NoSingleGender) %>%
+  select(all_of(client_columns))
   
-# If FY22 2.02.06C = 0, then set FY24 2.02.06 to 15 
-# If FY22 2.02.06C = 3, then set FY24 2.02.06 to 1
-Project <- mutate(Project,ProjectType= case_when(
-  ProjectType == 0 ~ 15, 
-  ProjectType == 3 ~ 1,
-  TRUE ~ ProjectType
-  ),
-  # If FY22 2.02.07 = 0, then FY24 2.08.01= 0
-  # If FY22 2.02.07 = 1, then FY24 2.08.01= 1
-  TargetPopulation= case_when(
-    TargetPopulation == 0 ~ 0,
-    TargetPopulation == 1 ~1,
-    TRUE ~ TargetPopulation
-  ),
-  #If FY22 2.02.06 = 13, then require FY24 2.02.06A
-    RRHSubtype = case_when(
-      ProjectType == 13 ~ 2
-  ),
-  #If 2.02.06 = 1,2,3,8,9,10,15 or 13 and Dependent A, = 2, then require 2.02.06D
- ifelse(
-    ProjectType ==13 & RRHSubtype == 1,NA,HousingType)
- )  
 
+# If FY22 2.02.07 = 0, then FY24 2.08.01= 0
+# If FY22 2.02.07 = 1, then FY24 2.08.01= 1
+new_HMISParticipation <- Project %>%
+  mutate(HMISParticipationID = row_number(),
+         HMISParticipationType = if_else(HMISParticipatingProject == 1, 1, 0)) %>%
+  rename(HMISParticipationStatusStartDate = OperatingStartDate,
+         HMISParticipationStatusEndDate = OperatingEndDate) %>%
+  select(all_of(hmisparticipation_columns))
+  
+referral_projects <- Project %>%
+  select(ProjectID, ProjectType) %>%
+  filter(ProjectType %in% c(1, 2, 3, 9, 10, 13)) %>%
+  mutate(ProjectType = case_when(
+    ProjectID %in% Funder$ProjectID[Funder$Funder == 44] ~ 12,
+    ProjectType == 1 ~ 10,
+    ProjectType == 2 ~ 11,
+    ProjectType == 3 ~ 14,
+    ProjectType %in% c(9, 10) ~ 15,
+    TRUE ~ ProjectType
+  )) 
+
+
+referral_locations <- Event %>%
+  left_join(Enrollment %>%
+              select(PersonalID, ProjectID, EntryDate) %>%
+              inner_join(referral_projects, by = "ProjectID"), 
+            by = "PersonalID",
+            multiple = "all") %>%
+  filter(Event == ProjectType & 
+           EntryDate >= EventDate) %>%
+  group_by(EventID) %>%
+  arrange(EntryDate) %>%
+  slice(1L) %>%
+  ungroup()
+
+# If FY22 2.02.07 = 0, then FY24 2.08.01= 0
+# If FY22 2.02.07 = 1, then FY24 2.08.01= 1
+new_CEParticipation <- Project %>%
+  mutate(CEParticipationID = row_number(),
+         PreventionAssessment = 0,    
+         CrisisAssessment = if_else(
+           ProjectID %in% Enrollment$ProjectID[Enrollment$EnrollmentID 
+                                               %in% Assessment$EnrollmentID[Assessment$AssessmentLevel == 1]],
+           1, 0),
+         HousingAssessment = if_else(
+           ProjectID %in% Enrollment$ProjectID[Enrollment$EnrollmentID 
+                                               %in% Assessment$EnrollmentID[Assessment$AssessmentLevel == 2]],
+           1, 0),
+         DirectServices = 0,
+         AccessPoint = pmax(PreventionAssessment, CrisisAssessment,
+                            HousingAssessment, DirectServices),
+         ReceivesReferrals = if_else(
+           ProjectID %in% referral_locations$ProjectID,
+           1, 0)) %>%
+  rename(CEParticipationStatusStartDate = OperatingStartDate,
+         CEParticipationStatusEndDate = OperatingEndDate) %>%
+  select(all_of(ceparticipation_columns))
+
+
+new_Project <- Project %>% 
+  mutate(
+    # If FY22 2.02.06C = 3, then set FY24 2.02.06 to 15
+    ProjectType = if_else(
+      TrackingMethod == 3, 15, ProjectType
+    ),
+    #If FY22 2.02.06 = 13, then require FY24 2.02.06A
+    RRHSubType = case_when(
+      ProjectType == 13 ~ 2
+    ),
+    #If 2.02.06 = 1,2,3,8,9,10,15 or 13 and Dependent A, = 2, then require 2.02.06D
+    HousingType = ifelse(
+      !(ProjectType == 13 & RRHSubType == 1), NA, HousingType)
+  ) %>%
+  select(all_of(project_columns))
 
 #If 2.02.06 = 1 or 15, then require FY24 2.07.06; Null unless Project.csv ProjectType = 1 or 15
 ####issue getting this to run without an error####
