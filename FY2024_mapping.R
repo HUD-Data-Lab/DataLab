@@ -71,8 +71,8 @@ referral_locations <- Event %>%
   slice(1L) %>%
   ungroup()
 
-# If FY22 2.02.07 = 0, then FY24 2.08.01= 0
-# If FY22 2.02.07 = 1, then FY24 2.08.01= 1
+##  No mapping required (for vendors, at least)
+##  All HMIS Project Types depending on design of Coordinated Entry System
 new_CEParticipation <- Project %>%
   mutate(CEParticipationID = row_number(),
          PreventionAssessment = 0,    
@@ -99,51 +99,185 @@ new_Project <- Project %>%
   mutate(
     # If FY22 2.02.06C = 3, then set FY24 2.02.06 to 15
     ProjectType = if_else(
-      TrackingMethod == 3, 15, ProjectType
-    ),
-    #If FY22 2.02.06 = 13, then require FY24 2.02.06A
+      TrackingMethod == 3, 15, ProjectType),
+    # If FY22 2.02.06 = 13, then require FY24 2.02.06A
     RRHSubType = case_when(
-      ProjectType == 13 ~ 2
-    ),
-    #If 2.02.06 = 1,2,3,8,9,10,15 or 13 and Dependent A, = 2, then require 2.02.06D
+      ProjectType == 13 ~ 2),
+    # If 2.02.06 = 1,2,3,8,9,10,15 or 13 and Dependent A, = 2, then require 2.02.06D
     HousingType = ifelse(
-      !(ProjectType == 13 & RRHSubType == 1), NA, HousingType)
+      !(ProjectType == 13 & RRHSubType == 1), HousingType, NA)
   ) %>%
   select(all_of(project_columns))
 
-#If 2.02.06 = 1 or 15, then require FY24 2.07.06; Null unless Project.csv ProjectType = 1 or 15
-####issue getting this to run without an error####
-Inventory <- Inventory %>%
-      mutate(
-        ifelse(
-        Project$ProjectType %in% c(1,15),Availability,NA)
-      )
 
+psh_residence <- 403
 
-  
+subsidized_residences <- c(419, 428, 431, 433, 434, 420, 
+                           436, 437, 438, 439, 440,
+                           psh_residence)
 
-#If 3.12.01 = 435, then "Rental Subsidy Type" option list
-Exit <- Exit %>% 
+FY24_residence_types <- ResidenceUses %>%
+  mutate(FY24_type_numeric = case_when(
+    FY24_type == "Homeless" ~ 100,
+    FY24_type == "Institutional" ~ 200,
+    FY24_type == "Temporary" ~ 300,
+    FY24_type %in% c("Permanent", "Subsidized") ~ 400,
+    FY24_type == "Other" ~ 0)) %>%
+  select(Location, FY24_type_numeric)
+
+# Responses in Appendix A--Living Situation Option List reconfigured
+# If 3.12.01 = 435, then "Rental Subsidy Type" option list
+new_Exit <- Exit %>% 
+  left_join(FY24_residence_types,
+            by = c("Destination" = "Location")) %>%
   mutate(
-    SubsidyType= case_when(
-      Destination %in% c(428,419,431,433,434,420,436,437,438,439,440) ~ Destination
-               ),
-      Destination = if_else(!is.na(SubsidyType),435,Destination)
-             )
+    Destination = Destination + FY24_type_numeric,
+    # need to confirm mapping of "Permanent housing for formerly homeless persons"
+    DestinationSubsidyType = case_when(
+      Destination == psh_residence ~ 440,
+      Destination %in% subsidized_residences ~ Destination),
+    Destination = if_else(!is.na(DestinationSubsidyType),
+                            435, Destination)) %>%
+  # only required if loading in from DataLab.R
+  rename(DateCreated = exit_DateCreated,
+         #  only required when source database has different capitalization
+         WorkplaceViolenceThreats = WorkPlaceViolenceThreats,
+         WorkplacePromiseDifference = WorkPlacePromiseDifference) %>%
+  select(all_of(exit_columns))
 
 #If 3.917A.01 = 435, then "Rental Subsidy Type" option list
-Enrollment <- mutate(Enrollment, SubsidyType = case_when(
-  LivingSituation %in% c(428,419,431,433,434,420,436,437,438,439,440) ~ LivingSituation),
-  LivingSituation = if_esle(!is.na(SubsidyType),435,LivingSituation)
-  )
+new_Enrollment <- Enrollment %>%
+  left_join(EnrollmentCoC %>%
+              filter(DataCollectionStage == 1) %>%
+              group_by(EnrollmentID) %>%
+              arrange(InformationDate) %>%
+              slice(1L) %>%
+              ungroup() %>%
+              select(EnrollmentID, CoCCode),
+            by = "EnrollmentID") %>%
+  left_join(FY24_residence_types,
+            by = c("LivingSituation" = "Location")) %>%
+  mutate(
+    LivingSituation = LivingSituation + FY24_type_numeric,
+    # need to confirm mapping of "Permanent housing for formerly homeless persons"
+    LivingSituationSubsidyType = case_when(
+      LivingSituation == psh_residence ~ 440,
+      LivingSituation %in% subsidized_residences ~ LivingSituation),
+    LivingSituation = if_else(!is.na(LivingSituationSubsidyType),
+                          435, LivingSituation),
+    TranslationNeeded = 0,
+    PreferredLanguage = 171,
+    PreferredLanguageDifferent = NA) %>%
+  rename(EnrollmentCoC = CoCCode,
+         # only required if loading in from DataLab.R
+         DateCreated = enroll_DateCreated) %>%
+  select(all_of(enrollment_columns))
+  
 
 #If 4.12.01 = 435, then "Rental Subsidy Type" option list
-CurrentLivingSituation <- CurrentLivingSituation %>%
+new_CurrentLivingSituation <- CurrentLivingSituation %>%
+  left_join(FY24_residence_types,
+            by = c("CurrentLivingSituation" = "Location")) %>%
   mutate(
-    SubsidyType = case_when(
-      CurrentLivingSituation %in% c(428,419,431,433,434,420,436,437,438,439,440) ~ CurrentLivingSituation
+    CurrentLivingSituation = CurrentLivingSituation + FY24_type_numeric,
+    # need to confirm mapping of "Permanent housing for formerly homeless persons"
+    CLSSubsidyType = case_when(
+      CurrentLivingSituation == psh_residence ~ 440,
+      CurrentLivingSituation %in% subsidized_residences ~ CurrentLivingSituation),
+    CurrentLivingSituation = if_else(!is.na(CLSSubsidyType),
+                              435, CurrentLivingSituation)) %>%
+  select(all_of(currentlivingsituation_columns))
+
+
+
+new_CEActivity_AB <- Assessment %>%
+  mutate(PreventionScreening = 0,
+         PreventionOutcome = NA,
+         PreventionLocation = NA,
+         ShelterScreening = if_else(
+           # If FY22 4.19.04 = 1, then FY24 4.21.04 = 1
+           AssessmentLevel == 1, 1, 0),
+         ShelterOutcome = case_when(
+           # If FY22 4.19.04 = 1 AND 4.19.07 = 1, then FY24 4.21.04C = 7
+           AssessmentLevel == 1 &
+             PrioritizationStatus == 1 ~ 7),
+         ShelterLocation = if_else(
+           ShelterOutcome %in% c(1, 3), 99, NA),
+         HousingScreening = if_else(
+           # If FY22 4.19.04 = 2, then FY24 4.21.05 = 1
+           AssessmentLevel == 2, 1, 0),
+         HousingOutcome = case_when(
+           # If FY22 4.19.04 = 2 AND 4.19.07 = 1, then FY24 4.21.05E = 10
+           AssessmentLevel == 2 &
+             PrioritizationStatus == 1 ~ 10),
+         HousingLocation = if_else(
+           HousingOutcome %in% 1:7, 99, NA),
+         ServiceProvided = 0,
+         ServiceOutcome = NA,
+         ReferralResult = NA,
+         ReferralResultDate = NA
+         ) %>%
+  rename(ActivityID = AssessmentID,
+         ActivityDate = AssessmentDate,
+         # If FY22 4.19.03 = 1, then FY24 4.21.02 = 1
+         # If FY22 4.19.03 = 2, then FY24 4.21.02 = 2
+         # If FY22 4.19.03 = 3, then FY24 4.21.02 = 3
+         ContactType = AssessmentType) %>%
+  # filter(!is.na(ContactType)) %>%
+  select(all_of(ceactivity_columns))
+
+
+new_CEActivity_EB <- Event %>%
+  left_join(referral_locations %>%
+              select(EventID, ProjectID),
+            by = "EventID") %>%
+  mutate(
+    LocationCrisisOrPHHousing = if_else(
+      is.na(LocationCrisisOrPHHousing), ProjectID, LocationCrisisOrPHHousing),
+    ContactType = NA,
+    PreventionScreening = if_else(Event %in% c(1, 16), 
+                                  1, 0),
+    PreventionOutcome = case_when(
+      Event == 1 ~ 1,
+      Event == 16 ~ 4
     ),
-    CurrentLivingSituation = if_esle(!is.na(SubsidyType),435,CurrentLivingSituation)
-  )
-
-
+    PreventionLocation = case_when(
+      Event == 1 ~ LocationCrisisOrPHHousing),
+    ShelterScreening = if_else(Event %in% c(2, 10), 
+                               1, 0),
+    ShelterOutcome = case_when(
+      Event == 2 ~ 1,
+      Event == 10 ~ 3
+    ),
+    ShelterLocation = case_when(
+      Event %in% c(2, 10) ~ LocationCrisisOrPHHousing),
+    HousingScreening = if_else(Event %in% c(8, 9, 11:15, 17, 18), 
+                               1, 0),
+    HousingOutcome = case_when(
+      Event == 8 ~ 12,
+      Event == 9 ~ 11,
+      Event == 11 ~ 2,
+      Event == 12 ~ 3,
+      Event == 13 ~ 4,
+      Event == 14 ~ 5,
+      Event == 15 ~ 6,
+      Event == 17 ~ 7,
+      Event == 18 ~ 8
+    ),
+    HousingLocation = case_when(
+      Event %in% c(11, 12, 13, 14, 15, 17) ~ LocationCrisisOrPHHousing),
+    ServiceProvided = if_else(Event %in% c(3, 4), 
+                              1, 0),
+    ServiceOutcome = case_when(
+      Event %in% c(3, 4) ~ Event
+    ),
+    ReferralResult = case_when(
+      Event %in% c(1, 2, 10:15, 17) ~ ReferralResult
+    ),
+    ReferralResultDate = case_when(
+      Event %in% c(1, 2, 10:15, 17) ~ ResultDate
+    )
+  ) %>%
+  rename(ActivityID = EventID,
+         ActivityDate = EventDate) %>%
+  select(all_of(ceactivity_columns))
