@@ -188,9 +188,25 @@ new_CurrentLivingSituation <- CurrentLivingSituation %>%
                               435, CurrentLivingSituation)) %>%
   select(all_of(currentlivingsituation_columns))
 
+new_Export <- Export %>%
+  mutate(ImplementationID = "0001") %>%
+  select(all_of(export_columns))
 
+new_Organization <- Organization %>%
+  select(all_of(organization_columns))
+
+new_Organization <- Organization %>%
+  select(all_of(organization_columns))
+
+new_Organization <- Organization %>%
+  select(all_of(organization_columns))
+
+##################
+## CE Activity  ##
+##################
 
 new_CEActivity_AB <- Assessment %>%
+  filter(year(AssessmentDate) == 2022) %>%
   mutate(PreventionScreening = 0,
          PreventionOutcome = NA,
          PreventionLocation = NA,
@@ -198,18 +214,18 @@ new_CEActivity_AB <- Assessment %>%
            # If FY22 4.19.04 = 1, then FY24 4.21.04 = 1
            AssessmentLevel == 1, 1, 0),
          ShelterOutcome = case_when(
-           # If FY22 4.19.04 = 1 AND 4.19.07 = 1, then FY24 4.21.04C = 7
+           # If FY22 4.19.04 = 1 AND 4.19.07 = 1, then FY24 4.21.04C = 6
            AssessmentLevel == 1 &
-             PrioritizationStatus == 1 ~ 7),
+             PrioritizationStatus == 1 ~ 6),
          ShelterLocation = if_else(
            ShelterOutcome %in% c(1, 3), 99, NA),
          HousingScreening = if_else(
            # If FY22 4.19.04 = 2, then FY24 4.21.05 = 1
            AssessmentLevel == 2, 1, 0),
          HousingOutcome = case_when(
-           # If FY22 4.19.04 = 2 AND 4.19.07 = 1, then FY24 4.21.05E = 10
+           # If FY22 4.19.04 = 2 AND 4.19.07 = 1, then FY24 4.21.05E = 9
            AssessmentLevel == 2 &
-             PrioritizationStatus == 1 ~ 10),
+             PrioritizationStatus == 1 ~ 9),
          HousingLocation = if_else(
            HousingOutcome %in% 1:7, 99, NA),
          ServiceProvided = 0,
@@ -228,6 +244,7 @@ new_CEActivity_AB <- Assessment %>%
 
 
 new_CEActivity_EB <- Event %>%
+  filter(year(EventDate) == 2022) %>%
   left_join(referral_locations %>%
               select(EventID, ProjectID),
             by = "EventID") %>%
@@ -281,3 +298,43 @@ new_CEActivity_EB <- Event %>%
   rename(ActivityID = EventID,
          ActivityDate = EventDate) %>%
   select(all_of(ceactivity_columns))
+
+combined_CEActivity <- new_CEActivity_AB %>%
+  select(-ActivityID) %>%
+  full_join(new_CEActivity_EB %>%
+              `colnames<-`(c(paste0("EB_", colnames(new_CEActivity_EB)))) %>%
+              select(-EB_ActivityID),
+            by = c("EnrollmentID" = "EB_EnrollmentID", 
+                   "PersonalID" = "EB_PersonalID",
+                   "ActivityDate" = "EB_ActivityDate"),
+            multiple = "all") %>%
+  mutate(c_PreventionScreening = if_else(PreventionScreening == 1 |
+                                           EB_PreventionScreening == 1, 
+                                         1, 0),
+         c_PreventionOutcome = EB_PreventionOutcome,
+         c_PreventionLocation = EB_PreventionLocation,
+         c_ShelterScreening = if_else(ShelterScreening == 1 |
+                                        EB_ShelterScreening == 1, 
+                                      1, 0),
+         c_ShelterOutcome = if_else(is.na(EB_ShelterOutcome), ShelterOutcome, EB_ShelterOutcome),
+         c_ShelterLocation = if_else(is.na(EB_ShelterLocation), ShelterLocation, as.numeric(EB_ShelterLocation)),
+         c_HousingScreening = if_else(HousingScreening == 1 |
+                                        EB_HousingScreening == 1, 
+                                      1, 0),
+         c_HousingOutcome = if_else(is.na(EB_HousingOutcome), HousingOutcome, EB_HousingOutcome),
+         c_HousingLocation = if_else(is.na(EB_HousingLocation), HousingLocation, as.numeric(EB_HousingLocation)),
+         c_ServiceProvided = EB_ServiceProvided,
+         c_ServiceOutcome = EB_ServiceOutcome,
+         c_ReferralResult = EB_ReferralResult,
+         c_ReferralResultDate = EB_ReferralResultDate
+  )
+
+ceactivity_columns
+
+possible_outcomes <- combined_CEActivity %>%
+  select(c(all_of(ceactivity_columns[6:18]),
+           all_of(paste0("EB_", ceactivity_columns[6:18])),
+           all_of(paste0("c_", ceactivity_columns[6:18])))) %>%
+  distinct()
+
+write_csv(possible_outcomes, "current_mapping.csv")
