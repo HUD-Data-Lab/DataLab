@@ -1039,6 +1039,12 @@ write_csvs_for <- function(project_ids, zip_title, write_to) {
       
     }
     
+    if ("ExportDate" %in% colnames(data)) {
+      data <- data %>%
+        mutate(ExportDate = format(ExportDate, "%m-%d-%Y 12:00:00"))
+      
+    }
+    
     if (file == "IncomeBenefits") {
       data <- data %>%
         mutate(across(
