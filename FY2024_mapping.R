@@ -58,10 +58,10 @@ FY24_residence_types <- ResidenceUses %>%
 {
   referral_projects <- Project %>%
     select(ProjectID, ProjectType) %>%
-    filter(ProjectType %in% c(1, 2, 3, 9, 10, 13)) %>%
+    filter(ProjectType %in% c(0, 1, 2, 3, 9, 10, 13)) %>%
     mutate(ProjectType = case_when(
       ProjectID %in% Funder$ProjectID[Funder$Funder == 44] ~ 12,
-      ProjectType == 1 ~ 10,
+      ProjectType %in% c(0, 1) ~ 10,
       ProjectType == 2 ~ 11,
       ProjectType == 3 ~ 14,
       ProjectType %in% c(9, 10) ~ 15,
@@ -351,8 +351,10 @@ FY24_residence_types <- ResidenceUses %>%
   Project <- Project %>% 
     mutate(
       # If FY22 2.02.06C = 3, then set FY24 2.02.06 to 15
-      ProjectType = if_else(
-        TrackingMethod == 3, 15, ProjectType),
+      ProjectType = case_when(
+        ProjectType == 1 ~ 0,
+        TrackingMethod == 3 ~ 1, 
+        TRUE ~ ProjectType),
       # If FY22 2.02.06 = 13, then require FY24 2.02.06A
       RRHSubType = case_when(
         ProjectType == 13 ~ 2),

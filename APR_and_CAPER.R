@@ -315,12 +315,12 @@ generate_new_kits <- TRUE
         
         Q6d_detail <- recent_program_enrollment_dq %>%
           filter(EntryDate >= mdy("10/1/2016") &
-                   ProjectType %in% c(1, 2, 3, 4, 8, 9, 10, 13)) %>%
+                   ProjectType %in% c(0, 1, 2, 3, 4, 8, 9, 10, 13)) %>%
           keep_adults_and_hoh_only() %>%
           select(c("ProjectType", all_of(standard_detail_columns), 
                    all_of(lot_homeless_detail_columns))) %>%
           mutate(Entering.into.project.type = case_when(
-            ProjectType %in% c(1, 4, 8) ~ "ES.SH.Street.Outreach",
+            ProjectType %in% c(0, 1, 4, 8) ~ "ES.SH.Street.Outreach",
             ProjectType == 2 ~ "TH",
             ProjectType %in% c(3, 9, 10, 13) ~ "PH.all"),
             missing_institution = Entering.into.project.type != "ES.SH.Street.Outreach" &
@@ -462,8 +462,7 @@ generate_new_kits <- TRUE
           filter(is.na(ExitDate) &
                    trunc((EntryDate %--% report_end_date) / days(1)) >= 90 &
                    (ProjectType == 4 |
-                      (ProjectType == 1 &
-                         TrackingMethod == 3))) %>%
+                      (ProjectType == 1))) %>%
           select(all_of(standard_detail_columns)) %>%
           left_join(most_recent_CLS %>%
                       select(EnrollmentID, InformationDate),
@@ -538,10 +537,9 @@ generate_new_kits <- TRUE
                         (ProjectType %in% c(3, 13) &
                            HoH_HMID <= pit_date)) &
                      (EnrollmentID %in% pit_nbn_people$EnrollmentID |
-                        (ProjectID %nin% Project$ProjectID[Project$ProjectType == 1 &
-                                                             Project$TrackingMethod == 3] &
+                        (ProjectID %nin% Project$ProjectID[Project$ProjectType == 1] &
                            (is.na(ExitDate) |
-                              (ProjectType %in% c(1, 2, 3, 8, 9, 10, 13) &
+                              (ProjectType %in% c(0, 1, 2, 3, 8, 9, 10, 13) &
                                  ExitDate > pit_date) |
                               (ProjectType %in% c(4, 6, 11) &
                                  ExitDate >= pit_date))))) %>%
@@ -590,10 +588,9 @@ generate_new_kits <- TRUE
                         (ProjectType %in% c(3, 13) &
                            HoH_HMID <= pit_date)) &
                      (EnrollmentID %in% pit_nbn_people$EnrollmentID |
-                        (ProjectID %nin% Project$ProjectID[Project$ProjectType == 1 &
-                                                             Project$TrackingMethod == 3] &
+                        (ProjectID %nin% Project$ProjectID[Project$ProjectType == 1] &
                            (is.na(ExitDate) |
-                              (ProjectType %in% c(1, 2, 3, 8, 9, 10, 13) &
+                              (ProjectType %in% c(0, 1, 2, 3, 8, 9, 10, 13) &
                                  ExitDate > pit_date) |
                               (ProjectType %in% c(4, 6, 11) &
                                  ExitDate >= pit_date))))) %>%
@@ -680,8 +677,7 @@ generate_new_kits <- TRUE
         
         Q9a_detail <- recent_program_enrollment %>%
           filter((ProjectType == 4 |
-                    (ProjectType == 1 &
-                       TrackingMethod == 3))) %>%
+                    (ProjectType == 1))) %>%
           select(c(all_of(standard_detail_columns), "DateOfEngagement")) %>%
           left_join(all_CLS_for_Q9, 
                     by = "EnrollmentID") %>%
@@ -693,8 +689,7 @@ generate_new_kits <- TRUE
         
         Q9a <- recent_program_enrollment %>%
           filter((ProjectType == 4 |
-                    (ProjectType == 1 &
-                       TrackingMethod == 3)) &
+                    (ProjectType == 1)) &
                    (EnrollmentID %in% recent_CLS_for_Q9$EnrollmentID |
                       (DateOfEngagement >= report_start_date &
                          DateOfEngagement <= report_end_date))) %>%
@@ -708,8 +703,7 @@ generate_new_kits <- TRUE
         
         Q9b <- recent_program_enrollment %>%
           filter((ProjectType == 4 |
-                    (ProjectType == 1 &
-                       TrackingMethod == 3)) &
+                    (ProjectType == 1)) &
                    (DateOfEngagement >= report_start_date &
                       DateOfEngagement <= report_end_date)) %>%
           keep_adults_and_hoh_only() %>%

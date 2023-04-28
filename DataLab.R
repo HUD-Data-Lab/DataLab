@@ -117,8 +117,7 @@ for (file in names(hmis_csvs)){
 
 all_bed_nights <- Services %>%
   left_join(Enrollment %>%
-              filter(ProjectID %in% Project$ProjectID[Project$ProjectType == 1 &
-                                                        Project$TrackingMethod == 3]) %>%
+              filter(ProjectID %in% Project$ProjectID[Project$ProjectType == 1]) %>%
               select(EnrollmentID, EntryDate) ,
             by = "EnrollmentID") %>%
   filter(RecordType == 200 & 
@@ -131,8 +130,7 @@ bed_nights_in_report <- all_bed_nights %>%
 
 # apply NbN active logic to the enrollment table, since everything is based on that
 Enrollment <- Enrollment %>%
-  filter(ProjectID %nin% Project$ProjectID[Project$ProjectType == 1 &
-                                             Project$TrackingMethod == 3] |
+  filter(ProjectID %nin% Project$ProjectID[Project$ProjectType == 1] |
            EnrollmentID %in% Exit$EnrollmentID[Exit$ExitDate >= report_start_date &
                                                  Exit$ExitDate <= report_end_date] |
            EnrollmentID %in% bed_nights_in_report$EnrollmentID)
@@ -197,7 +195,7 @@ chronic_individual <- Enrollment %>%
     ),
     chronic = case_when(
       disabling_condition_for_chronic != "Y" ~ disabling_condition_for_chronic,
-      ProjectType %in% c(1, 4, 8) |
+      ProjectType %in% c(0, 1, 4, 8) |
         LivingSituation %in% na.omit(ResidenceUses$Location[ResidenceUses$PriorResidenceType_Chronicity == "homeless"]) ~
         case_when(
           homeless_year_prior ~ "Y",
