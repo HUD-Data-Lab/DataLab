@@ -9,115 +9,12 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
-kit_type <- "new_kit"
-combining_files <- kit_type == "old_kit"
-
-source("datalab_functions.R")
-source("DataLab_Lists.R")
-
-if (combining_files) {
-  file_source_dir <- choose.dir()
-  
-  datalab_zips <- list.files(file_source_dir, full.names = TRUE)
-  
-  for (zip in datalab_zips) {
-    for (file in names(hmis_csvs)){
-      
-      data <- read_csv(unzip(zip, paste0(file, ".csv")),
-                       col_types = get(file, hmis_csvs))
-      
-      if (exists(file)) {
-        data <- get(file) %>%
-          full_join(data, by = intersect(colnames(get(file)),
-                                         colnames(data)))
-      } 
-      
-      assign(file, data)
-      
-      file.remove(paste0(file, ".csv"))
-    }
-  }
-} else {
-  file_source <- file.choose()
-  
-  for (file in names(hmis_csvs)){
-    
-    data <- read_csv(unzip(file_source, paste0(file, ".csv")),
-                     col_types = get(file, hmis_csvs))
-    
-    if (exists(file)) {
-      data <- get(file) %>%
-        full_join(data, by = intersect(colnames(get(file)),
-                                       colnames(data)))
-    } 
-    
-    assign(file, data)
-    
-    file.remove(paste0(file, ".csv"))
-  }
-}
-
-source("DataLab_hc_variables.R")
-
-# remove deleted records exportID colummns before proceeding with processing
-for (file in names(hmis_csvs)){
-  
-  data <- get(file) %>%
-    distinct()
-  
-  new_ExportID <- data$ExportID[1]
-  col_order <- colnames(data)
-  
-  data <- data %>%
-    select(-ExportID) %>%
-    distinct() %>%
-    mutate(ExportID = new_ExportID) %>%
-    select(all_of(col_order))
-  
-  if ("DateDeleted" %in% colnames(get(file))) {
-    data <- data %>%
-      filter(is.na(DateDeleted) |
-               DateDeleted > report_end_date)
-  }
-  
-  if (file == "Enrollment") {
-    data <- data %>%
-      rename(enroll_DateCreated = DateCreated) %>%
-      mutate(MoveInDate = case_when(
-        MoveInDate <= report_end_date &
-          MoveInDate >= EntryDate ~ MoveInDate)) %>%
-      filter(EntryDate <= report_end_date &
-               EnrollmentID %nin% Exit$EnrollmentID[Exit$ExitDate < report_start_date])
-  }
-  
-  if (file == "Exit") {
-    data <- data %>%
-      rename(exit_DateCreated = DateCreated) %>%
-      mutate(days_to_shift = sample(1:21, nrow(Exit), replace = TRUE),
-             exit_DateCreated = as.POSIXct(ExitDate + days_to_shift)) %>%
-      filter(ExitDate >= report_start_date &
-               ExitDate <= report_end_date) %>%
-      select(-days_to_shift)
-  }
-  
-  if (file == "Funder") {
-    data$Funder[data$ProjectID == 1552] <- 2
-    data$Funder[data$ProjectID == 1554] <- 3
-    data$Funder[data$ProjectID == 1565] <- 4
-  }
-  
-  if (file == "Export") {
-    data$SoftwareName <- "DataLab"
-    data$SoftwareVersion <- "1.0"
-  }
-  
-  assign(file, data)
-  
-}
+source("00_read_2022_csv.R")
 
 all_bed_nights <- Services %>%
   left_join(Enrollment %>%
-              filter(ProjectID %in% Project$ProjectID[Project$ProjectType == 1]) %>%
+              filter(ProjectID %in% Project$ProjectID[Project$ProjectType == 1 &
+                                                        Project$TrackingMethod == 3]) %>%
               select(EnrollmentID, EntryDate) ,
             by = "EnrollmentID") %>%
   filter(RecordType == 200 & 
@@ -130,7 +27,8 @@ bed_nights_in_report <- all_bed_nights %>%
 
 # apply NbN active logic to the enrollment table, since everything is based on that
 Enrollment <- Enrollment %>%
-  filter(ProjectID %nin% Project$ProjectID[Project$ProjectType == 1] |
+  filter(ProjectID %nin% Project$ProjectID[Project$ProjectType == 1 &
+                                             Project$TrackingMethod == 3] |
            EnrollmentID %in% Exit$EnrollmentID[Exit$ExitDate >= report_start_date &
                                                  Exit$ExitDate <= report_end_date] |
            EnrollmentID %in% bed_nights_in_report$EnrollmentID)
@@ -195,7 +93,7 @@ chronic_individual <- Enrollment %>%
     ),
     chronic = case_when(
       disabling_condition_for_chronic != "Y" ~ disabling_condition_for_chronic,
-      ProjectType %in% c(0, 1, 4, 8) |
+      ProjectType %in% c(1, 4, 8) |
         LivingSituation %in% na.omit(ResidenceUses$Location[ResidenceUses$PriorResidenceType_Chronicity == "homeless"]) ~
         case_when(
           homeless_year_prior ~ "Y",

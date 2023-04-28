@@ -9,7 +9,7 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
-source("DataLab.R")
+source("00_read_2022_csv.R")
 
 for (filename in unique(CSV_columns$File)) {
   
@@ -35,6 +35,34 @@ FY24_residence_types <- ResidenceUses %>%
     FY24_type %in% c("Permanent", "Subsidized") ~ 400,
     FY24_type == "Other" ~ 0)) %>%
   select(Location, FY24_type_numeric)
+
+{
+  # If FY22 2.02.07 = 0, then FY24 2.08.01= 0
+  # If FY22 2.02.07 = 1, then FY24 2.08.01= 1
+  HMISParticipation <- Project %>%
+    mutate(HMISParticipationID = row_number(),
+           HMISParticipationType = if_else(HMISParticipatingProject == 1, 1, 0)) %>%
+    rename(HMISParticipationStatusStartDate = OperatingStartDate,
+           HMISParticipationStatusEndDate = OperatingEndDate) %>%
+    select(all_of(hmisparticipation_columns))
+  }
+{
+  Project <- Project %>% 
+    mutate(
+      # If FY22 2.02.06C = 3, then set FY24 2.02.06 to 15
+      ProjectType = case_when(
+        ProjectType == 1 ~ 0,
+        TrackingMethod == 3 ~ 1, 
+        TRUE ~ ProjectType),
+      # If FY22 2.02.06 = 13, then require FY24 2.02.06A
+      RRHSubType = case_when(
+        ProjectType == 13 ~ 2),
+      # If 2.02.06 = 0,1,2,3,8,9,10,15 or 13 and Dependent A, = 2, then require 2.02.06D
+      HousingType = ifelse(
+        !(ProjectType == 13 & RRHSubType == 1), HousingType, NA)
+    ) %>%
+    select(all_of(project_columns))
+  }
 
 {
   Affiliation <- Affiliation %>%
@@ -319,16 +347,6 @@ FY24_residence_types <- ResidenceUses %>%
     select(all_of(funder_columns))
 }
 {
-  # If FY22 2.02.07 = 0, then FY24 2.08.01= 0
-  # If FY22 2.02.07 = 1, then FY24 2.08.01= 1
-  HMISParticipation <- Project %>%
-    mutate(HMISParticipationID = row_number(),
-           HMISParticipationType = if_else(HMISParticipatingProject == 1, 1, 0)) %>%
-    rename(HMISParticipationStatusStartDate = OperatingStartDate,
-           HMISParticipationStatusEndDate = OperatingEndDate) %>%
-    select(all_of(hmisparticipation_columns))
-}
-{
   HealthAndDV <- HealthAndDV %>%
     rename(DomesticViolenceSurvivor = DomesticViolenceVictim) %>%
     select(all_of(healthanddv_columns))
@@ -346,23 +364,6 @@ FY24_residence_types <- ResidenceUses %>%
 {
   Organization <- Organization %>%
     select(all_of(organization_columns))
-}
-{
-  Project <- Project %>% 
-    mutate(
-      # If FY22 2.02.06C = 3, then set FY24 2.02.06 to 15
-      ProjectType = case_when(
-        ProjectType == 1 ~ 0,
-        TrackingMethod == 3 ~ 1, 
-        TRUE ~ ProjectType),
-      # If FY22 2.02.06 = 13, then require FY24 2.02.06A
-      RRHSubType = case_when(
-        ProjectType == 13 ~ 2),
-      # If 2.02.06 = 1,2,3,8,9,10,15 or 13 and Dependent A, = 2, then require 2.02.06D
-      HousingType = ifelse(
-        !(ProjectType == 13 & RRHSubType == 1), HousingType, NA)
-    ) %>%
-    select(all_of(project_columns))
 }
 {
   ProjectCoC <- ProjectCoC %>%
