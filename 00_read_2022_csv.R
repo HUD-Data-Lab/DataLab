@@ -82,7 +82,7 @@ for (file in names(hmis_csvs)){
   
   if (file == "Enrollment") {
     data <- data %>%
-      rename(enroll_DateCreated = DateCreated) %>%
+      # rename(enroll_DateCreated = DateCreated) %>%
       mutate(MoveInDate = case_when(
         MoveInDate <= report_end_date &
           MoveInDate >= EntryDate ~ MoveInDate)) %>%
@@ -92,7 +92,7 @@ for (file in names(hmis_csvs)){
   
   if (file == "Exit") {
     data <- data %>%
-      rename(exit_DateCreated = DateCreated) %>%
+      # rename(exit_DateCreated = DateCreated) %>%
       mutate(days_to_shift = sample(1:21, nrow(Exit), replace = TRUE),
              exit_DateCreated = as.POSIXct(ExitDate + days_to_shift)) %>%
       filter(ExitDate >= report_start_date &

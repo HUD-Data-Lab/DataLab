@@ -22,12 +22,12 @@ generate_new_kits <- TRUE
       # 93#,	#"DataLab - ES-NbN ESG",
       # 1409#,	"DataLab - HP ESG",
       # 780#,	#"DataLab - PSH CoC I",
-      # 1428,	#"DataLab - RRH CoC I",
-      # 1495#,	#"DataLab - RRH CoC II",
+      1428,	#"DataLab - RRH CoC I",
+      1495#,	#"DataLab - RRH CoC II",
       # 1060#,	#"DataLab - RRH ESG I",
       # 1647#,	#"DataLab - SO CoC",
       # 1419,	#"DataLab - SO ESG",
-      1615#,	#"DataLab - SSO CoC",
+      # 1615#,	#"DataLab - SSO CoC",
       # 388#,	#"DataLab - TH CoC",
       # 340,	#"DataLab - TH ESG"
     )
@@ -50,12 +50,16 @@ generate_new_kits <- TRUE
       # removes exits for prevention projects for Q23c of the APR/CAPER,
       # remove upon finalization of guidance
       Exit <- Exit %>%
-        filter(EnrollmentID %nin% Enrollment$EnrollmentID[Enrollment$ProjectID %in% Project$ProjectID[Project$ProjectType ==12]])
+        filter(EnrollmentID %nin% Enrollment$EnrollmentID[Enrollment$ProjectID %in% Project$ProjectID[Project$ProjectType == 12]]) %>%
+        rename(exit_DateCreated = DateCreated)
+      
+      Enrollment <- Enrollment %>%
+        rename(enroll_DateCreated = DateCreated)
       
       all_program_enrollments <- Enrollment %>%
         filter(ProjectID %in% project_list) %>%
         left_join(Project %>%
-                    select(ProjectID, ProjectType, TrackingMethod, ProjectName),
+                    select(ProjectID, ProjectType, ProjectName),
                   by = "ProjectID") %>%
         left_join(Exit %>%
                     select(-PersonalID),
@@ -116,6 +120,7 @@ generate_new_kits <- TRUE
           left_join(create_summary_table(recent_program_enrollment, "Count.of.Clients"), 
                     by = "Group")
       }
+      
       
       # Q6
       # Q6a
@@ -324,23 +329,20 @@ generate_new_kits <- TRUE
             ProjectType == 2 ~ "TH",
             ProjectType %in% c(3, 9, 10, 13) ~ "PH.all"),
             missing_institution = Entering.into.project.type != "ES.SH.Street.Outreach" &
-              LivingSituation %in% c(15, 6, 7, 25, 4, 5) &
+              LivingSituation %in% 200:299 &
               (LengthOfStay %in% c(8, 9, 99) |
                  is.na(LengthOfStay)),
             missing_housing = Entering.into.project.type != "ES.SH.Street.Outreach" &
-              (LivingSituation %in% c(29, 14, 2, 32, 36, 35, 
-                                      28, 19, 3, 31, 33, 34, 10, 
-                                      20, 21, 11, 8, 9, 99) |
+              (LivingSituation %in% c(0:99, 300:499) |
                  is.na(LivingSituation)) &
               (LengthOfStay %in% c(8, 9, 99) |
                  is.na(LengthOfStay)),
             include_for_EFG = Entering.into.project.type == "ES.SH.Street.Outreach" |
-              LivingSituation %in% c(16, 1, 18) |
+              LivingSituation %in% 100:199 |
               (PreviousStreetESSH == 1 & 
-                 ((LivingSituation %in% c(15, 6, 7, 25, 4, 5) &
+                 ((LivingSituation %in% 200:299 &
                      LengthOfStay %in% c(10, 11, 2, 3)) |
-                    ((LivingSituation %in% c(29, 14, 2, 32, 36, 35, 28, 19, 3, 31, 
-                                             33, 34, 10, 20, 21, 11, 8, 9, 99) |
+                    ((LivingSituation %in% c(0:99, 300:499) |
                         is.na(LivingSituation)) &
                        LengthOfStay %in% c(10, 11)))),
             missing_date = include_for_EFG &
@@ -461,8 +463,7 @@ generate_new_kits <- TRUE
         Q6f_detail <- recent_program_enrollment_dq %>%
           filter(is.na(ExitDate) &
                    trunc((EntryDate %--% report_end_date) / days(1)) >= 90 &
-                   (ProjectType == 4 |
-                      (ProjectType == 1))) %>%
+                   (ProjectType %in% c(1, 4))) %>%
           select(all_of(standard_detail_columns)) %>%
           left_join(most_recent_CLS %>%
                       select(EnrollmentID, InformationDate),
@@ -670,14 +671,13 @@ generate_new_kits <- TRUE
           slice(1L) %>%
           ungroup %>%
           mutate(CLS_group = case_when(
-            CLS %in% c(16, 1, 18) ~ "LH",
+            CLS %in% 100:199 ~ "LH",
             CLS %in% c(37, 8, 9, 99, 999) ~ "Unknown",
             TRUE ~ "Not LH"
           ))
         
         Q9a_detail <- recent_program_enrollment %>%
-          filter((ProjectType == 4 |
-                    (ProjectType == 1))) %>%
+          filter((ProjectType %in% c(1, 4))) %>%
           select(c(all_of(standard_detail_columns), "DateOfEngagement")) %>%
           left_join(all_CLS_for_Q9, 
                     by = "EnrollmentID") %>%
@@ -688,8 +688,7 @@ generate_new_kits <- TRUE
                                               DateOfEngagement <= report_end_date))
         
         Q9a <- recent_program_enrollment %>%
-          filter((ProjectType == 4 |
-                    (ProjectType == 1)) &
+          filter((ProjectType %in% c(1, 4)) &
                    (EnrollmentID %in% recent_CLS_for_Q9$EnrollmentID |
                       (DateOfEngagement >= report_start_date &
                          DateOfEngagement <= report_end_date))) %>%
@@ -702,8 +701,7 @@ generate_new_kits <- TRUE
         Q9b_detail <- "See Q9a_detail.csv"
         
         Q9b <- recent_program_enrollment %>%
-          filter((ProjectType == 4 |
-                    (ProjectType == 1)) &
+          filter((ProjectType %in% c(1, 4)) &
                    (DateOfEngagement >= report_start_date &
                       DateOfEngagement <= report_end_date)) %>%
           keep_adults_and_hoh_only() %>%
@@ -725,15 +723,17 @@ generate_new_kits <- TRUE
       }
       
       # Q10a
+      ############################
+      ### PENDING FINALIZATION ###
+      ############################
       {
         Q10a_detail <- recent_program_enrollment %>%
           keep_adults_only() %>%
-          select(c(all_of(standard_detail_columns), "gender_combined")) %>%
+          select(all_of(standard_detail_columns)) %>%
           left_join(Client %>%
-                      select(PersonalID, Female, Male, NoSingleGender, 
-                             Transgender, Questioning, GenderNone),
+                      select(PersonalID, all_of(names(gender_columns)), GenderNone),
                     by = "PersonalID")
-        
+
         Q10a <- Q10a_detail %>%
           create_gender_groups(.) %>%
           select(-With.Only.Children)

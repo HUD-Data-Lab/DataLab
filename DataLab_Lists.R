@@ -146,9 +146,14 @@ valid_cocs <- c(
 
 ResidenceUses <- read_excel("SupplementalTables.xlsx",
                             sheet = "ResidenceUses",
-                            col_types = c("numeric", "text", "text", "text",
-                                          "logical", "logical", "logical",
-                                          "numeric", "numeric", "text", "text"))
+                            col_types = c("numeric", "numeric", "text", "text", 
+                                          "text", "logical", "logical", "logical",
+                                          "numeric", "numeric", "text")) %>%
+  mutate(PriorResidenceType_Chronicity = case_when(
+    floor(Location/100) == 1 ~ "homeless",
+    floor(Location/100) == 2 ~ "institution",
+    TRUE ~ "other"
+  ))
 
 
 # ------------------------------------------------------------------------------
@@ -157,10 +162,10 @@ ResidenceUses <- read_excel("SupplementalTables.xlsx",
 # used in:
 #   APR/CAPER - 
 
-DestinationClassification <- read_excel("SupplementalTables.xlsx",
-                                        sheet = "DestinationClassificationRead",
-                                        col_types = c("numeric", "text",
-                                                      "numeric", "text"))
+# DestinationClassification <- read_excel("SupplementalTables.xlsx",
+#                                         sheet = "DestinationClassificationRead",
+#                                         col_types = c("numeric", "text",
+#                                                       "numeric", "text"))
 
 
 # ------------------------------------------------------------------------------
@@ -388,6 +393,17 @@ income_type_categories <- c("Adults with Only Earned Income (i.e., Employment In
 annual_income_type_categories <- c(income_type_categories, 
                                    "No Annual Required", "Required Annual Missing")
 
+# ------------------------------------------------------------------------------
+# ------------------------------ Gender Columns --------------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   APR/CAPER
+
+gender_columns <- c(Woman = "Woman", Man = "Man", 
+                    CulturallySpecific = "Culturally Specific Identity",
+                    Transgender = "Transgender", NonBinary = "Non-Binary",
+                    Questioning = "Questioning", 
+                    DifferentIdentity = "Different Identity")
 
 # ------------------------------------------------------------------------------
 # ----------------------------- Gender List ------------------------------------
@@ -395,9 +411,49 @@ annual_income_type_categories <- c(income_type_categories,
 # used in:
 #   APR/CAPER - Q10
 
-gender_list <- c("Male", "Female", "No Single Gender", "Questioning", 
-                 "Transgender", "Client.Does.Not.Know.or.Refused", "Data.Not.Collected")
+# gender_list <- c()
+# 
+# for (gender in names(gender_columns)) {
+#   gender_list <- c(gender_list, gender = gender_columns[[gender]])
+# }
+# 
+# for (gender in names(gender_columns)) {
+#   for (second_gender in names(gender_columns)) {
+#     difference <- which(names(gender_columns) == second_gender) - 
+#       which(names(gender_columns) == gender)
+#     if (difference > 0) {
+#       test <- paste0(gender, "/", second_gender)
+#       gender_list <- c(gender_list, 
+#                         get(test) =
+#                          paste0(
+#                            gender_columns[[gender]], "/", 
+#                            gender_columns[[second_gender]]))
+#     }
+#   }
+# }
 
+gender_list <- names(gender_columns)
+gender_name_list <- unname(gender_columns)
+
+possible_gender_combos <- outer(gender_list, gender_list, paste, sep = '/')
+possible_gender_name_combos <- outer(gender_name_list, gender_name_list, paste, sep = '/')
+
+for (combo in 1:6) {
+  gender_list <- c(gender_list, possible_gender_combos[combo, (combo + 1):7])
+  gender_name_list <- c(gender_name_list, possible_gender_name_combos[combo, (combo + 1):7])
+}
+
+report_list_gender <- setNames(gender_name_list, gender_list)
+
+gender_info <- as.data.frame(gender_list) 
+gender_info$gender_name_list <- gender_name_list
+gender_info[ , names(gender_columns)] <- NA
+
+for (col in names(gender_columns)) {
+  gender_info <- gender_info %>%
+    mutate(!!col := if_else(str_detect(gender_list, col),
+                            1, 0))
+}
 
 # ------------------------------------------------------------------------------
 # ------------------------ CSV Benefit Categories -----------------------------
@@ -534,4 +590,3 @@ CSV_columns <- read_excel("SupplementalTables.xlsx",
     str_detect(DataType, "M") ~ "d"
   )) %>%
   select(File, ColumnName, RDataType) 
-

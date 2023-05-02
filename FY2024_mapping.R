@@ -9,8 +9,6 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
-source("00_read_2022_csv.R")
-
 for (filename in unique(CSV_columns$File)) {
   
   assign(paste0(tolower(filename), "_columns"), 
@@ -29,12 +27,10 @@ subsidized_residences <- c(419, 428, 431, 433, 434, 420,
 
 FY24_residence_types <- ResidenceUses %>%
   mutate(FY24_type_numeric = case_when(
-    FY24_type == "Homeless" ~ 100,
-    FY24_type == "Institutional" ~ 200,
-    FY24_type == "Temporary" ~ 300,
-    FY24_type %in% c("Permanent", "Subsidized") ~ 400,
-    FY24_type == "Other" ~ 0)) %>%
-  select(Location, FY24_type_numeric)
+    str_length(as.character(Location)) == 3 ~ floor(Location/100) * 100,
+    !is.na(Location) ~ 0,
+    TRUE ~ 400)) %>%
+  select(Location, FY24_type_numeric, Location_FY22)
 
 {
   # If FY22 2.02.07 = 0, then FY24 2.08.01= 0
@@ -266,7 +262,7 @@ FY24_residence_types <- ResidenceUses %>%
   #If 4.12.01 = 435, then "Rental Subsidy Type" option list
   CurrentLivingSituation <- CurrentLivingSituation %>%
     left_join(FY24_residence_types,
-              by = c("CurrentLivingSituation" = "Location")) %>%
+              by = c("CurrentLivingSituation" = "Location_FY22")) %>%
     mutate(
       CurrentLivingSituation = CurrentLivingSituation + FY24_type_numeric,
       # need to confirm mapping of "Permanent housing for formerly homeless persons"
@@ -299,7 +295,7 @@ FY24_residence_types <- ResidenceUses %>%
                 select(EnrollmentID, CoCCode),
               by = "EnrollmentID") %>%
     left_join(FY24_residence_types,
-              by = c("LivingSituation" = "Location")) %>%
+              by = c("LivingSituation" = "Location_FY22")) %>%
     mutate(
       LivingSituation = LivingSituation + FY24_type_numeric,
       # need to confirm mapping of "Permanent housing for formerly homeless persons"
@@ -311,9 +307,10 @@ FY24_residence_types <- ResidenceUses %>%
       TranslationNeeded = 0,
       PreferredLanguage = 171,
       PreferredLanguageDifferent = NA) %>%
-    rename(EnrollmentCoC = CoCCode,
+    rename(EnrollmentCoC = CoCCode
            # only required if loading in from DataLab.R
-           DateCreated = enroll_DateCreated) %>%
+           # , DateCreated = enroll_DateCreated
+           ) %>%
     select(all_of(enrollment_columns))
 }
 {
@@ -321,7 +318,7 @@ FY24_residence_types <- ResidenceUses %>%
   # If 3.12.01 = 435, then "Rental Subsidy Type" option list
   Exit <- Exit %>% 
     left_join(FY24_residence_types,
-              by = c("Destination" = "Location")) %>%
+              by = c("Destination" = "Location_FY22")) %>%
     mutate(
       Destination = Destination + FY24_type_numeric,
       # need to confirm mapping of "Permanent housing for formerly homeless persons"
@@ -331,7 +328,8 @@ FY24_residence_types <- ResidenceUses %>%
       Destination = if_else(!is.na(DestinationSubsidyType),
                             435, Destination)) %>%
     # only required if loading in from DataLab.R
-    rename(DateCreated = exit_DateCreated,
+    rename(
+          # DateCreated = exit_DateCreated,
            #  only required when source database has different capitalization
            WorkplaceViolenceThreats = WorkPlaceViolenceThreats,
            WorkplacePromiseDifference = WorkPlacePromiseDifference) %>%

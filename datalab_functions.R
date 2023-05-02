@@ -390,8 +390,7 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type,
   
   if(in_project) {
     nbn_data <- data %>%
-      filter(ProjectID %in% Project$ProjectID[Project$ProjectType == 1 &
-                                                Project$TrackingMethod == 3]) %>%
+      filter(ProjectID %in% Project$ProjectID[Project$ProjectType == 1]) %>%
       left_join(all_bed_nights, 
                 by = "EnrollmentID",
                 multiple = "all") %>%
@@ -404,8 +403,7 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type,
       left_join(nbn_data, by = "EnrollmentID") %>%
       mutate(number_of_days = 
                if_else(
-                 ProjectID %in% Project$ProjectID[Project$ProjectType == 1 &
-                                                    Project$TrackingMethod == 3],
+                 ProjectID %in% Project$ProjectID[Project$ProjectType == 1],
                  nbn_number_of_days,
                  as.integer(trunc((!!start_date %--% !!end_date) / days(1)))))
   } else {
@@ -584,8 +582,27 @@ create_age_groups <- function(filtered_recent_program_enrollment,
 
 # create gender group table
 create_gender_groups <- function(filtered_recent_program_enrollment) {
-  filtered_recent_program_enrollment %>%
-    return_household_groups(., gender_combined, gender_list) %>%
+  
+ filtered_recent_program_enrollment %>%
+    left_join(gender_info,
+              by = all_of(names(gender_columns))) %>%
+    mutate(across(
+      all_of(names(gender_columns)),
+      ~ as.numeric(.)),
+      gender_count = rowSums(across(all_of(names(gender_columns))),
+                              na.rm = TRUE),
+      gender_tabulation = case_when(
+        gender_count %in% 1:2 ~ gender_name_list,
+        gender_count > 2 ~ "More than 2 Gender Identities Selected",
+        GenderNone %in% c(8, 9) ~ "Client Doesn’t Know/Prefers Not to Answer",
+        TRUE ~ "Data Not Collected"
+      )
+    ) %>%
+    return_household_groups(., gender_tabulation, 
+                            c(gender_info$gender_name_list, 
+                              "More than 2 Gender Identities Selected",
+                              "Client Doesn’t Know/Prefers Not to Answer",
+                              "Data Not Collected")) %>%
     adorn_totals("row")
 }
 
@@ -956,8 +973,7 @@ create_inactive_table <- function(dq_enrollments,
   dq_enrollments %>%
     filter(is.na(ExitDate) &
              trunc((EntryDate %--% report_end_date) / days(1)) >= 90 &
-             ((ProjectType == 1 &
-                 TrackingMethod == 3) |
+             ((ProjectType == 1) |
                 (activity_type == "contact" &
                    ProjectType == 4))) %>%
     left_join(activity_events %>%
@@ -1105,7 +1121,7 @@ create_time_to_move_in <- function(filtered_enrollments) {
 # make table for 'time homeless before housing' questions
 create_time_prior_to_housing <- function(filtered_enrollments) {
   filtered_enrollments %>%
-    filter(ProjectType %in% c(1, 2, 3, 8, 9, 13)) %>%
+    filter(ProjectType %in% c(0, 1, 2, 3, 8, 9, 13)) %>%
     mutate(housing_date = case_when(
       ProjectType %nin% c(3, 9, 13) |
         EntryDate > HoH_HMID ~ EntryDate,
@@ -1157,27 +1173,7 @@ add_client_info <- function(filtered_enrollments) {
                                  age < 18 ~ "Children",
                                  TRUE ~ detailed_age_group),
            new_veteran_status = if_else(
-             age_group == "Children", as.integer(0), VeteranStatus),
-           gender_combined = case_when(
-             Questioning == 1 ~ "Questioning",
-             NoSingleGender == 1 |
-               (Female == 1 &
-                  Male == 1) ~ "No Single Gender",
-             Transgender == 1 ~ "Transgender",
-             Female == 1 ~ "Female",
-             Male == 1 ~ "Male",
-             GenderNone %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
-             TRUE ~ "Data.Not.Collected"),
-           race_combined = case_when(
-             AmIndAKNative + Asian + BlackAfAmerican +
-               NativeHIPacific + White > 1 ~ "Multiple Races",
-             White == 1 ~ "White",
-             BlackAfAmerican == 1 ~ "Black, African American, or African",
-             Asian == 1 ~ "Asian or Asian American",
-             AmIndAKNative == 1 ~ "American Indian, Alaska Native, or Indigenous",
-             NativeHIPacific == 1 ~ "Native Hawaiian or Pacific Islander",
-             RaceNone %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
-             TRUE ~ "Data.Not.Collected")) %>%
+             age_group == "Children", as.integer(0), VeteranStatus)) %>%
     # get a second opinion on when to apply the household type calcs
     group_by(HouseholdID) %>%
     mutate(oldest_age = max(age, na.rm = TRUE),
@@ -1192,8 +1188,13 @@ add_client_info <- function(filtered_enrollments) {
     ungroup() %>%
     filter(EnrollmentID %in% filtered_enrollments$EnrollmentID) %>%
     select(PersonalID, age, age_group, detailed_age_group, VeteranStatus, 
-           youth_household, youth, has_children, new_veteran_status,
-           gender_combined, race_combined)
+           youth_household, youth, has_children, new_veteran_status
+           # ,
+           # Woman, Man, NonBinary, CulturallySpecific, Transgender, 
+           # Questioning, DifferentIdentity, GenderNone, AmIndAKNative,
+           # Asian, BlackAfAmerican, HispanicLatinaeo, MidEastNAfrican,
+           # NativeHIPacific, White, RaceNone
+           )
 }
 
 # returns program information table for CoC APR, CAPER, and CE APR
@@ -1202,7 +1203,7 @@ program_information_table <- function(project_list, filtered_enrollments) {
   Project %>%
     filter(ProjectID %in% project_list) %>%
     select(OrganizationID, ProjectName, ProjectID, ProjectType,
-           TrackingMethod, ResidentialAffiliation) %>%
+           ResidentialAffiliation) %>%
     left_join(Organization %>%
                 select(OrganizationID, OrganizationName,
                        VictimServiceProvider), 
@@ -1229,16 +1230,16 @@ program_information_table <- function(project_list, filtered_enrollments) {
            report_start_date = report_start_date,
            report_end_date = report_end_date) %>%
     select(OrganizationName, OrganizationID, ProjectName, ProjectID,
-           ProjectType, TrackingMethod, ResidentialAffiliation,
-           affiliated_with, coc_codes, geocodes, VictimServiceProvider,
+           ProjectType, ResidentialAffiliation, affiliated_with, 
+           coc_codes, geocodes, VictimServiceProvider,
            software_name, report_start_date, report_end_date,
            active_clients, active_households) %>%
     `colnames<-`(c("Organization Name", "Organization ID",
                    "Project Name", "Project ID",
-                   "HMIS Project Type", "Method for Tracking ES",
+                   "HMIS Project Type",
                    "Affiliated with a residential project",
-                   "Project IDs of affiliations",
-                   "CoC Number", "Geocode", "Victim Service Provider",
+                   "Project IDs of affiliations", "CoC Number", 
+                   "Geocode", "Victim Service Provider",
                    "HMIS Software Name", "Report Start Date",
                    "Report End Date", "Total Active Clients",
                    "Total Active Households"))
@@ -1353,31 +1354,31 @@ create_dq_Q1 <- function(filtered_enrollments) {
         (AmIndAKNative == 0 &
            Asian == 0 &
            BlackAfAmerican == 0 &
+           HispanicLatinaeo == 0 &
+           MidEastNAfrican == 0 &
            NativeHIPacific == 0 &
            White == 0) ~ "Information.Missing",
       TRUE ~ "OK")) %>%
     select(PersonalID, AmIndAKNative, Asian, BlackAfAmerican,
+           HispanicLatinaeo, MidEastNAfrican,
            NativeHIPacific, White, RaceNone, dq_flag)
-  
-  DQ1_ethnicity <- DQ1_data %>%
-    mutate(dq_flag = case_when(
-      Ethnicity %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
-      Ethnicity == 99 ~ "Information.Missing",
-      TRUE ~ "OK")) %>%
-    select(PersonalID, Ethnicity, dq_flag)
   
   DQ1_gender <- DQ1_data %>%
     mutate(dq_flag = case_when(
       GenderNone %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
       GenderNone == 99 |
-        (Female == 0 &
-           Male == 0 &
-           NoSingleGender == 0 &
+        (Woman == 0 &
+           Man == 0 &
+           NonBinary == 0 &
+           CulturallySpecific == 0 &
            Transgender == 0 &
-           Questioning == 0) ~ "Information.Missing",
+           Questioning == 0 &
+           !(DifferentIdentity == 1 &
+               !is.na(DifferentIdentityText))) ~ "Information.Missing",
       TRUE ~ "OK")) %>%
-    select(PersonalID, Female, Male, NoSingleGender, Transgender,
-           Questioning, GenderNone, dq_flag)
+    select(PersonalID, Woman, Man, NonBinary, CulturallySpecific, Transgender, 
+           Questioning, DifferentIdentity, DifferentIdentityText, GenderNone, 
+           dq_flag)
   
   columns <- c("DataElement", "Client.Does.Not.Know.or.Refused", 
                "Information.Missing", "Data.Issues", "OK")
@@ -1388,7 +1389,7 @@ create_dq_Q1 <- function(filtered_enrollments) {
   DQ1_detail <- filtered_enrollments %>%
     select(all_of(standard_detail_columns))
   
-  elements <- list("Name", "SSN", "DOB", "Race", "Ethnicity", "Gender")
+  elements <- list("Name", "SSN", "DOB", "Race", "Gender")
   
   for (element in elements) {
     table <- get(paste0("DQ1_", tolower(element))) 
@@ -1442,7 +1443,7 @@ create_dq_Q1 <- function(filtered_enrollments) {
   
   DQ1[DQ1$DataElement == "Overall Score", c("Client.Does.Not.Know.or.Refused",
                                             "Information.Missing")] <- NA
-  DQ1$Data.Issues[4:7] <- NA
+  DQ1$Data.Issues[4:6] <- NA
   
   DQ1_results <- list()
   DQ1_results[[1]] <- DQ1
