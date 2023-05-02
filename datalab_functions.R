@@ -81,22 +81,31 @@ return_household_groups <- function(APR_dataframe, grouped_by = grouped_by,
     household_group_list <- split_household_group_list
     
     potential_table <- potential_table %>%
-      summarise(Total = n_distinct(PersonalID),
-                Without.Children = n_distinct(PersonalID[household_type == "AdultsOnly"]),
+      summarise(Total = n_distinct(PersonalID, na.rm = TRUE),
+                Without.Children = n_distinct(PersonalID[household_type == "AdultsOnly"], 
+                                              na.rm = TRUE),
                 Adults.in.HH.with.Children.and.Adults = n_distinct(PersonalID[household_type == "AdultsAndChildren" &
-                                                                                age_group == "Adults"]),
+                                                                                age_group == "Adults"], 
+                                                                   na.rm = TRUE),
                 Children.in.HH.with.Children.and.Adults = n_distinct(PersonalID[household_type == "AdultsAndChildren" &
-                                                                                  age_group == "Children"]),
-                With.Only.Children = n_distinct(PersonalID[household_type == "ChildrenOnly"]),
-                Unknown.Household.Type = n_distinct(PersonalID[household_type == "Unknown"])) 
+                                                                                  age_group == "Children"], 
+                                                                     na.rm = TRUE),
+                With.Only.Children = n_distinct(PersonalID[household_type == "ChildrenOnly"], 
+                                                na.rm = TRUE),
+                Unknown.Household.Type = n_distinct(PersonalID[household_type == "Unknown"], 
+                                                    na.rm = TRUE)) 
   } else {
     potential_table <- potential_table %>%
       group_by({{grouped_by}}) %>%
-      summarise(Total = n_distinct(PersonalID),
-                Without.Children = n_distinct(PersonalID[household_type == "AdultsOnly"]),
-                With.Children.And.Adults = n_distinct(PersonalID[household_type == "AdultsAndChildren"]),
-                With.Only.Children = n_distinct(PersonalID[household_type == "ChildrenOnly"]),
-                Unknown.Household.Type = n_distinct(PersonalID[household_type == "Unknown"])) 
+      summarise(Total = n_distinct(PersonalID, na.rm = TRUE),
+                Without.Children = n_distinct(PersonalID[household_type == "AdultsOnly"], 
+                                              na.rm = TRUE),
+                With.Children.And.Adults = n_distinct(PersonalID[household_type == "AdultsAndChildren"], 
+                                                      na.rm = TRUE),
+                With.Only.Children = n_distinct(PersonalID[household_type == "ChildrenOnly"], 
+                                                na.rm = TRUE),
+                Unknown.Household.Type = n_distinct(PersonalID[household_type == "Unknown"], 
+                                                    na.rm = TRUE)) 
   }
   
   potential_table <- potential_table %>%
@@ -217,7 +226,7 @@ create_income_groups <- function(enrollments_total_income, annual = FALSE) {
   
   income_groups <- enrollments_total_income %>%
     group_by(total_income_group) %>%
-    summarise(Income = n_distinct(PersonalID)) %>%
+    summarise(Income = n_distinct(PersonalID, na.rm = TRUE)) %>%
     full_join(as.data.frame(income_amount_categories) %>%
                 `colnames<-`(c("total_income_group")),
               by = "total_income_group") %>%
@@ -311,18 +320,24 @@ get_income_type_changes <- function(income_categories, income_type, compare_to) 
   people <- income_categories %>%
     left_join(get(paste0(compare_to, "_income_for_changes")), by = "PersonalID") %>%
     summarise(lost_source = n_distinct(PersonalID[get(paste0("entry_", income_type, "_amount")) > 0 &
-                                                    get(paste0(compare_to, "_", income_type, "_amount")) == 0]),
+                                                    get(paste0(compare_to, "_", income_type, "_amount")) == 0],
+                                       na.rm = TRUE),
               retained_decreased = n_distinct(PersonalID[get(paste0("entry_", income_type, "_amount")) > get(paste0(compare_to, "_", income_type, "_amount")) &
-                                                           get(paste0(compare_to, "_", income_type, "_amount")) > 0]),
+                                                           get(paste0(compare_to, "_", income_type, "_amount")) > 0], 
+                                              na.rm = TRUE),
               retained_same = n_distinct(PersonalID[get(paste0("entry_", income_type, "_amount")) == get(paste0(compare_to, "_", income_type, "_amount")) &
-                                                      get(paste0(compare_to, "_", income_type, "_amount")) > 0]),
+                                                      get(paste0(compare_to, "_", income_type, "_amount")) > 0], 
+                                         na.rm = TRUE),
               retained_increased = n_distinct(PersonalID[get(paste0("entry_", income_type, "_amount")) < get(paste0(compare_to, "_", income_type, "_amount")) &
-                                                           get(paste0("entry_", income_type, "_amount")) > 0]),
+                                                           get(paste0("entry_", income_type, "_amount")) > 0], 
+                                              na.rm = TRUE),
               gained_source = n_distinct(PersonalID[get(paste0("entry_", income_type, "_amount")) == 0 &
-                                                      get(paste0(compare_to, "_", income_type, "_amount")) > 0]),
+                                                      get(paste0(compare_to, "_", income_type, "_amount")) > 0], 
+                                         na.rm = TRUE),
               did_not_have_source = n_distinct(PersonalID[get(paste0("entry_", income_type, "_amount")) == 0 &
-                                                            get(paste0(compare_to, "_", income_type, "_amount")) == 0]),
-              total_adults = n_distinct(PersonalID)
+                                                            get(paste0(compare_to, "_", income_type, "_amount")) == 0], 
+                                               na.rm = TRUE),
+              total_adults = n_distinct(PersonalID, na.rm = TRUE)
     ) %>%
     mutate(gained_or_increased = retained_increased + gained_source,
            percent_accomplished = gained_or_increased / total_adults)
@@ -395,7 +410,8 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type,
                 by = "EnrollmentID",
                 multiple = "all") %>%
       group_by(EnrollmentID) %>%
-      summarise(nbn_number_of_days = n_distinct(na.omit(ymd(DateProvided)))) %>%
+      summarise(nbn_number_of_days = n_distinct(na.omit(ymd(DateProvided)), 
+                                                na.rm = TRUE)) %>%
       ungroup() %>%
       select(EnrollmentID, nbn_number_of_days)
     
@@ -894,10 +910,13 @@ create_contact_table <- function(filtered_enrollments, first_CLS_group,
                   TRUE ~ "10+ times")),
               by = "EnrollmentID") %>% 
     group_by(ContactGroup) %>%
-    summarise(All.Persons.Contacted = n_distinct(PersonalID),
-              First.contact.NOT.staying.on.the.Streets.ES.or.SH = n_distinct(PersonalID[CLS_group == "Not LH"]),
-              First.contact.WAS.staying.on.the.Streets.ES.or.SH = n_distinct(PersonalID[CLS_group == "LH"]),
-              First.contact.Worker.unable.to.determine = n_distinct(PersonalID[CLS_group == "Unknown"])) %>%
+    summarise(All.Persons.Contacted = n_distinct(PersonalID, na.rm = TRUE),
+              First.contact.NOT.staying.on.the.Streets.ES.or.SH = n_distinct(PersonalID[CLS_group == "Not LH"], 
+                                                                             na.rm = TRUE),
+              First.contact.WAS.staying.on.the.Streets.ES.or.SH = n_distinct(PersonalID[CLS_group == "LH"], 
+                                                                             na.rm = TRUE),
+              First.contact.Worker.unable.to.determine = n_distinct(PersonalID[CLS_group == "Unknown"], 
+                                                                    na.rm = TRUE)) %>%
     adorn_totals("row")
   
   as.data.frame(contact_groups) %>%
@@ -921,7 +940,7 @@ create_summary_table <- function(filtered_enrollments, column_name) {
   filtered_enrollments %>%
     # left_join(client_plus, by = "PersonalID") %>%
     # left_join(chronicity_data, by = "EnrollmentID") %>%
-    summarise(Total.number.of.persons.served = n_distinct(PersonalID),
+    summarise(Total.number.of.persons.served = n_distinct(PersonalID, na.rm = TRUE),
               Number.of.adults.age.18.or.over = uniqueN(na.omit(PersonalID[age_group == "Adults"])),
               Number.of.children.under.age.18 = uniqueN(na.omit(PersonalID[age_group == "Children"])),
               Number.of.persons.with.unknown.age = uniqueN(na.omit(PersonalID[age_group %in% c("Client.Does.Not.Know.or.Refused", "Data.Not.Collected")])),
@@ -981,8 +1000,9 @@ create_inactive_table <- function(dq_enrollments,
                 `colnames<-`(c("EnrollmentID", "included_activity_type")),
               by = "EnrollmentID") %>%
     summarise(Data.Element = activity_type_header,
-              Number.of.Records = n_distinct(PersonalID),
-              Number.of.Inactive.Records = n_distinct(PersonalID[is.na(included_activity_type)])) %>%
+              Number.of.Records = n_distinct(PersonalID, na.rm = TRUE),
+              Number.of.Inactive.Records = n_distinct(PersonalID[is.na(included_activity_type)], 
+                                                      na.rm = TRUE)) %>%
     ifnull(., 0) %>%
     mutate(Percent.of.Inactive.Records = Number.of.Inactive.Records / Number.of.Records)
 }
@@ -1223,8 +1243,9 @@ program_information_table <- function(project_list, filtered_enrollments) {
               by = "ProjectID") %>%
     left_join(filtered_enrollments %>%
                 group_by(ProjectID) %>%
-                summarise(active_clients = n_distinct(PersonalID),
-                          active_households = n_distinct(HouseholdID)),
+                summarise(active_clients = n_distinct(PersonalID, na.rm = TRUE),
+                          active_households = n_distinct(HouseholdID, 
+                                                         na.rm = TRUE)),
               by = "ProjectID") %>%
     mutate(software_name = "generated by Data Lab",
            report_start_date = report_start_date,

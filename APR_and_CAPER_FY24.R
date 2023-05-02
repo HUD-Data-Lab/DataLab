@@ -192,11 +192,16 @@ generate_new_kits <- TRUE
                  Disabling.Condition.3.08 = DisablingCondition %in% c(8, 9, 99) |
                    is.na(DisablingCondition) |
                    (DisablingCondition == 0 & Disability_Check)) %>%
-          summarise(Veteran.Status.3.07 = n_distinct(PersonalID[Veteran.Status.3.07]),
-                    Project.Start.Date.3.10 = n_distinct(PersonalID[Project.Start.Date.3.10]),
-                    Relationship.to.Head.of.Household.3.15 = n_distinct(PersonalID[Relationship.to.Head.of.Household.3.15]),
-                    Client.Location.3.16 = n_distinct(PersonalID[Client.Location.3.16]),
-                    Disabling.Condition.3.08 = n_distinct(PersonalID[Disabling.Condition.3.08]),
+          summarise(Veteran.Status.3.07 = n_distinct(PersonalID[Veteran.Status.3.07], 
+                                                     na.rm = TRUE),
+                    Project.Start.Date.3.10 = n_distinct(PersonalID[Project.Start.Date.3.10], 
+                                                         na.rm = TRUE),
+                    Relationship.to.Head.of.Household.3.15 = n_distinct(PersonalID[Relationship.to.Head.of.Household.3.15], 
+                                                                        na.rm = TRUE),
+                    Client.Location.3.16 = n_distinct(PersonalID[Client.Location.3.16], 
+                                                      na.rm = TRUE),
+                    Disabling.Condition.3.08 = n_distinct(PersonalID[Disabling.Condition.3.08], 
+                                                          na.rm = TRUE),
           ) %>% 
           mutate(rowname = "Error.Count") %>% 
           pivot_longer(!rowname, names_to = "Group", values_to = "values") %>% 
@@ -296,10 +301,14 @@ generate_new_kits <- TRUE
                          (is.na(exit_number_of_sources) |
                             exit_number_of_sources == 0)))) 
         Q6c <- Q6c_detail %>%
-          summarise(Destination.3.12 = n_distinct(PersonalID[Destination.3.12]),
-                    Income.and.Sources.4.02.at.Start = n_distinct(PersonalID[Income.and.Sources.4.02.at.Start]),
-                    Income.and.Sources.4.02.at.Annual.Assessment = n_distinct(PersonalID[Income.and.Sources.4.02.at.Annual.Assessment]),
-                    Income.and.Sources.4.02.at.Exit = n_distinct(PersonalID[Income.and.Sources.4.02.at.Exit])
+          summarise(Destination.3.12 = n_distinct(PersonalID[Destination.3.12], 
+                                                  na.rm = TRUE),
+                    Income.and.Sources.4.02.at.Start = n_distinct(PersonalID[Income.and.Sources.4.02.at.Start], 
+                                                                  na.rm = TRUE),
+                    Income.and.Sources.4.02.at.Annual.Assessment = n_distinct(PersonalID[Income.and.Sources.4.02.at.Annual.Assessment],
+                                                                              na.rm = TRUE),
+                    Income.and.Sources.4.02.at.Exit = n_distinct(PersonalID[Income.and.Sources.4.02.at.Exit],
+                                                                 na.rm = TRUE)
           ) %>% 
           mutate(rowname = "Error.Count") %>% 
           pivot_longer(!rowname, names_to = "Group", values_to = "values") %>% 
@@ -357,28 +366,35 @@ generate_new_kits <- TRUE
         
         Q6d_by_program <- Q6d_detail %>%
           group_by(Entering.into.project.type) %>%
-          summarise(Count.of.total.records = n_distinct(PersonalID),
-                    Missing.time.in.institution.3.917.2 = n_distinct(PersonalID[missing_institution]),
-                    Missing.time.in.housing.3.917.2 = n_distinct(PersonalID[missing_housing]),
-                    Approximate.Date.started.3.917.3.Missing = n_distinct(PersonalID[missing_date]),
-                    Number.of.times.3.917.4.DK.R.missing = n_distinct(PersonalID[missing_times]),
-                    Number.of.months.3.917.5.DK.R.missing = n_distinct(PersonalID[missing_months]),
+          summarise(Count.of.total.records = n_distinct(PersonalID, na.rm = TRUE),
+                    Missing.time.in.institution.3.917.2 = n_distinct(PersonalID[missing_institution], 
+                                                                     na.rm = TRUE),
+                    Missing.time.in.housing.3.917.2 = n_distinct(PersonalID[missing_housing], 
+                                                                 na.rm = TRUE),
+                    Approximate.Date.started.3.917.3.Missing = n_distinct(PersonalID[missing_date], 
+                                                                          na.rm = TRUE),
+                    Number.of.times.3.917.4.DK.R.missing = n_distinct(PersonalID[missing_times], 
+                                                                      na.rm = TRUE),
+                    Number.of.months.3.917.5.DK.R.missing = n_distinct(PersonalID[missing_months], 
+                                                                       na.rm = TRUE),
                     all_errors = n_distinct(PersonalID[missing_institution |
                                                          missing_housing |
                                                          missing_date |
                                                          missing_times |
-                                                         missing_months])) %>% 
+                                                         missing_months],
+                                            na.rm = TRUE)) %>% 
           mutate(Percent.of.records.unable.to.calculate = all_errors / Count.of.total.records) %>%
           select(-all_errors)
         
         Q6d_data_summary <- Q6d_detail %>%
           summarise(Entering.into.project.type = "Total",
-                    Count.of.total.records = n_distinct(PersonalID),
+                    Count.of.total.records = n_distinct(PersonalID, na.rm = TRUE),
                     all_errors = n_distinct(PersonalID[missing_institution |
                                                          missing_housing |
                                                          missing_date |
                                                          missing_times |
-                                                         missing_months])) %>%
+                                                         missing_months], 
+                                            na.rm = TRUE)) %>%
           mutate(Percent.of.records.unable.to.calculate = all_errors / Count.of.total.records) %>%
           select(-all_errors)
         
@@ -430,13 +446,13 @@ generate_new_kits <- TRUE
           left_join(Q6e_detail %>%
                       filter(!is.na(TimeForEnrollmentEntry)) %>%
                       group_by(TimeForEnrollmentEntry) %>%
-                      summarise(Number.of.Project.Start.Records = n_distinct(PersonalID)) %>%
+                      summarise(Number.of.Project.Start.Records = n_distinct(PersonalID, na.rm = TRUE)) %>%
                       rename(TimeForEntry = TimeForEnrollmentEntry),
                     by = "TimeForEntry")%>%
           left_join(Q6e_detail %>%
                       filter(!is.na(TimeForExitEntry)) %>%
                       group_by(TimeForExitEntry) %>%
-                      summarise(Number.of.Project.Exit.Records = n_distinct(PersonalID)) %>%
+                      summarise(Number.of.Project.Exit.Records = n_distinct(PersonalID, na.rm = TRUE)) %>%
                       rename(TimeForEntry = TimeForExitEntry),
                     by = "TimeForEntry") %>%
           ifnull(., 0)
@@ -743,10 +759,9 @@ generate_new_kits <- TRUE
       {
         Q10b_detail <- recent_program_enrollment %>%
           filter(age_group == "Children") %>%
-          select(c(all_of(standard_detail_columns), "gender_combined")) %>%
+          select(all_of(standard_detail_columns)) %>%
           left_join(Client %>%
-                      select(PersonalID, Female, Male, NoSingleGender, 
-                             Transgender, Questioning, GenderNone),
+                      select(PersonalID, all_of(names(gender_columns)), GenderNone),
                     by = "PersonalID")
         
         Q10b <- Q10b_detail %>%
@@ -758,10 +773,9 @@ generate_new_kits <- TRUE
       {
         Q10c_detail <- recent_program_enrollment %>%
           filter(age_group %in% c("Client.Does.Not.Know.or.Refused", "Data.Not.Collected")) %>%
-          select(c(all_of(standard_detail_columns), "gender_combined")) %>%
+          select(all_of(standard_detail_columns)) %>%
           left_join(Client %>%
-                      select(PersonalID, Female, Male, NoSingleGender, 
-                             Transgender, Questioning, GenderNone),
+                      select(PersonalID, all_of(names(gender_columns)), GenderNone),
                     by = "PersonalID") 
         
         Q10c <- Q10c_detail %>%
@@ -771,31 +785,43 @@ generate_new_kits <- TRUE
       # Q10d
       {
         Q10d_detail <- recent_program_enrollment %>%
-          select(all_of(standard_detail_columns), "age", "detailed_age_group",
-                 "gender_combined") %>%
+          select(all_of(standard_detail_columns), "age", "detailed_age_group") %>%
           left_join(Client %>%
-                      select(PersonalID, Female, Male, NoSingleGender, 
-                             Transgender, Questioning, GenderNone),
+                      select(PersonalID, all_of(names(gender_columns)), GenderNone),
                     by = "PersonalID") %>%
           mutate(Q10d_age_group = case_when(
             detailed_age_group %in% c("Under 5", "5-12", "13-17") ~ "Under18",
             detailed_age_group %in% c("25-34", "35-44", "45-54", "55-61") ~ "25-61",
             TRUE ~ detailed_age_group)) 
         
-        Q10d <- as.data.frame(gender_list) %>%
-          `colnames<-`(c("gender_combined")) %>%
-          full_join(Q10d_detail %>%
-                      group_by(gender_combined) %>%
-                      summarise(Total = n_distinct(PersonalID),
-                                Under.Age.18 = n_distinct(PersonalID[Q10d_age_group == "Under18"]),
-                                Age.18.to.24 = n_distinct(PersonalID[Q10d_age_group == "18-24"]),
-                                Age.25.to.61 = n_distinct(PersonalID[Q10d_age_group == "25-61"]),
-                                Age.62.and.over = n_distinct(PersonalID[Q10d_age_group == "62+"]),
-                                Client.Does.Not.Know.or.Refused = n_distinct(PersonalID[Q10d_age_group == "Client.Does.Not.Know.or.Refused"]),
-                                Data.Not.Collected = n_distinct(PersonalID[Q10d_age_group == "Data.Not.Collected"])),
-                    by = "gender_combined") %>%
+        Q10d <- gender_info %>%
+          mutate(order = row_number()) %>%
+          left_join(Q10d_detail,
+                    by = all_of(names(gender_columns)),
+                    multiple = "all") %>%
+          mutate(across(
+            all_of(names(gender_columns)),
+            ~ as.numeric(.)),
+            gender_count = rowSums(across(all_of(names(gender_columns))),
+                                   na.rm = TRUE),
+            gender_tabulation = case_when(
+              gender_count %in% 1:2 ~ gender_name_list,
+              gender_count > 2 ~ "More than 2 Gender Identities Selected",
+              GenderNone %in% c(8, 9) ~ "Client Doesn’t Know/Prefers Not to Answer",
+              TRUE ~ "Data Not Collected")) %>%
+          group_by(gender_tabulation, order) %>%
+          summarise(Total = n_distinct(PersonalID, na.rm = TRUE),
+                    Under.Age.18 = n_distinct(PersonalID[Q10d_age_group == "Under18"], na.rm = TRUE),
+                    Age.18.to.24 = n_distinct(PersonalID[Q10d_age_group == "18-24"], na.rm = TRUE),
+                    Age.25.to.61 = n_distinct(PersonalID[Q10d_age_group == "25-61"], na.rm = TRUE),
+                    Age.62.and.over = n_distinct(PersonalID[Q10d_age_group == "62+"], na.rm = TRUE),
+                    Client.Does.Not.Know.or.Refused = n_distinct(PersonalID[Q10d_age_group == "Client.Does.Not.Know.or.Declined"], na.rm = TRUE),
+                    Data.Not.Collected = n_distinct(PersonalID[Q10d_age_group == "Data.Not.Collected"], na.rm = TRUE)) %>%
           ifnull(., 0) %>%
+          arrange(order) %>%
+          select(-order) %>%
           adorn_totals("row")
+        
       }
       
       # Q11
@@ -1313,7 +1339,7 @@ generate_new_kits <- TRUE
           
           data <- data %>%
             group_by(benefit_count) %>%
-            summarise(!!paste0(period, "_people") := n_distinct(PersonalID))
+            summarise(!!paste0(period, "_people") := n_distinct(PersonalID, na.rm = TRUE))
           
           assign(paste0(period, "_benefit_counts"), data)
         }
@@ -1386,7 +1412,7 @@ generate_new_kits <- TRUE
               insurance_count == 1 ~ "One source of insurance",
               TRUE ~ "More than one source of insurance")) %>%
             group_by(InsuranceType) %>%
-            summarize(!!paste0(period, "Clients") := n_distinct(PersonalID))
+            summarize(!!paste0(period, "Clients") := n_distinct(PersonalID, na.rm = TRUE))
           
           assign(paste0(period, "_insurance_types"), insurance_types %>%
                    rbind(insurance_present))
@@ -1418,17 +1444,17 @@ generate_new_kits <- TRUE
         
         Q22a1_total <- Q22a1_detail %>%
           group_by(APR_enrollment_length_group) %>%
-          summarise(Total = n_distinct(PersonalID))
+          summarise(Total = n_distinct(PersonalID, na.rm = TRUE))
         
         Q22a1_leavers <- Q22a1_detail %>%
           filter(!is.na(ExitDate)) %>%
           group_by(APR_enrollment_length_group) %>%
-          summarise(Leavers = n_distinct(PersonalID))
+          summarise(Leavers = n_distinct(PersonalID, na.rm = TRUE))
         
         Q22a1_stayers <- Q22a1_detail %>%
           filter(is.na(ExitDate)) %>%
           group_by(APR_enrollment_length_group) %>%
-          summarise(Stayers = n_distinct(PersonalID))
+          summarise(Stayers = n_distinct(PersonalID, na.rm = TRUE))
         
         Q22a1 <- length_of_time_groups("APR", "APR_enrollment_length_group") %>%
           left_join(Q22a1_total, by = "APR_enrollment_length_group") %>%
@@ -1446,17 +1472,17 @@ generate_new_kits <- TRUE
         
         Q22a2_total <- Q22a1_detail %>%
           group_by(CAPER_enrollment_length_group) %>%
-          summarise(Total = n_distinct(PersonalID))
+          summarise(Total = n_distinct(PersonalID, na.rm = TRUE))
         
         Q22a2_leavers <- Q22a1_detail %>%
           filter(!is.na(ExitDate)) %>%
           group_by(CAPER_enrollment_length_group) %>%
-          summarise(Leavers = n_distinct(PersonalID))
+          summarise(Leavers = n_distinct(PersonalID, na.rm = TRUE))
         
         Q22a2_stayers <- Q22a1_detail %>%
           filter(is.na(ExitDate)) %>%
           group_by(CAPER_enrollment_length_group) %>%
-          summarise(Stayers = n_distinct(PersonalID))
+          summarise(Stayers = n_distinct(PersonalID, na.rm = TRUE))
         
         Q22a2 <- length_of_time_groups("CAPER", "CAPER_enrollment_length_group") %>%
           left_join(Q22a2_total, by = "CAPER_enrollment_length_group") %>%
@@ -1733,14 +1759,17 @@ generate_new_kits <- TRUE
                        filter(DataCollectionStage %in% c(1, 3)), by ="EnrollmentID",
                      multiple = "all") %>%
           group_by(disability_name) %>%
-          summarise(Conditions.At.Start = n_distinct(PersonalID[DataCollectionStage == 1]),
+          summarise(Conditions.At.Start = n_distinct(PersonalID[DataCollectionStage == 1], 
+                                                     na.rm = TRUE),
                     Conditions.At.Exit.for.Leavers = n_distinct(
-                      PersonalID[DataCollectionStage == 3 & !is.na(ExitDate)]))
+                      PersonalID[DataCollectionStage == 3 & !is.na(ExitDate)], 
+                      na.rm = TRUE))
         
         Q25e.3 <- Q13c1_detail %>%
           filter(EnrollmentID %in% recent_veteran_enrollment$EnrollmentID) %>%
           group_by(disability_name) %>%
-          summarise(Conditions.At.Latest.Assessment.for.Stayers = n_distinct(PersonalID))
+          summarise(Conditions.At.Latest.Assessment.for.Stayers = n_distinct(PersonalID, 
+                                                                             na.rm = TRUE))
         
         Q25e <- as.data.frame(disability_list)  %>%
           `colnames<-`(c("disability_name")) %>%
@@ -1857,14 +1886,17 @@ generate_new_kits <- TRUE
                        filter(DataCollectionStage %in% c(1, 3)), by ="EnrollmentID",
                      multiple = "all") %>%
           group_by(disability_name) %>%
-          summarise(Conditions.At.Start = n_distinct(PersonalID[DataCollectionStage == 1]),
+          summarise(Conditions.At.Start = n_distinct(PersonalID[DataCollectionStage == 1], 
+                                                     na.rm = TRUE),
                     Conditions.At.Exit.for.Leavers = n_distinct(
-                      PersonalID[DataCollectionStage == 3 & !is.na(ExitDate)]))
+                      PersonalID[DataCollectionStage == 3 & !is.na(ExitDate)], 
+                      na.rm = TRUE))
         
         Q26e.3 <- Q13c1_detail %>%
           filter(EnrollmentID %in% recent_chronic_enrollment$EnrollmentID) %>%
           group_by(disability_name) %>%
-          summarise(Conditions.At.Latest.Assessment.for.Stayers = n_distinct(PersonalID))
+          summarise(Conditions.At.Latest.Assessment.for.Stayers = n_distinct(PersonalID, 
+                                                                             na.rm = TRUE))
         
         Q26e <- as.data.frame(disability_list)  %>%
           `colnames<-`(c("disability_name")) %>%
@@ -1947,10 +1979,13 @@ generate_new_kits <- TRUE
         Q27b <- Q27b_headers %>%
           full_join(Q27b_detail %>%
                       group_by(household_type) %>%
-                      summarize(Total.Parenting.Youth = n_distinct(PersonalID[household_member_type == "parenting_youth"]),
-                                Total.Children.of.Parenting.Youth = n_distinct(PersonalID[household_member_type == "child_of_parenting_youth"]),
-                                Total.Persons = n_distinct(PersonalID),
-                                Total.Households = n_distinct(PersonalID[RelationshipToHoH == 1])),
+                      summarize(Total.Parenting.Youth = n_distinct(PersonalID[household_member_type == "parenting_youth"], 
+                                                                   na.rm = TRUE),
+                                Total.Children.of.Parenting.Youth = n_distinct(PersonalID[household_member_type == "child_of_parenting_youth"], 
+                                                                               na.rm = TRUE),
+                                Total.Persons = n_distinct(PersonalID, na.rm = TRUE),
+                                Total.Households = n_distinct(PersonalID[RelationshipToHoH == 1], 
+                                                              na.rm = TRUE)),
                     by = "household_type") %>%
           ifnull(., 0)
       }
@@ -1984,17 +2019,17 @@ generate_new_kits <- TRUE
         
         Q27e_total <- Q27e_detail %>%
           group_by(APR_enrollment_length_group) %>%
-          summarise(Total = n_distinct(PersonalID))
+          summarise(Total = n_distinct(PersonalID, na.rm = TRUE))
         
         Q27e_leavers <- Q27e_detail %>%
           filter(!is.na(ExitDate)) %>%
           group_by(APR_enrollment_length_group) %>%
-          summarise(Leavers = n_distinct(PersonalID))
+          summarise(Leavers = n_distinct(PersonalID, na.rm = TRUE))
         
         Q27e_stayers <- Q27e_detail %>%
           filter(is.na(ExitDate)) %>%
           group_by(APR_enrollment_length_group) %>%
-          summarise(Stayers = n_distinct(PersonalID))
+          summarise(Stayers = n_distinct(PersonalID, na.rm = TRUE))
         
         Q27e <- length_of_time_groups("APR", "APR_enrollment_length_group") %>%
           left_join(Q27e_total, by = "APR_enrollment_length_group") %>%
