@@ -650,10 +650,12 @@ create_benefit_groups <- function(included_enrollments) {
 
 # create destination table for APR/CAPER
 create_destination_groups <- function(included_enrollments) {
-  for(residence_type in c("permanent", "temporary", "institution", "other")) {
+  for(residence_type in c("Permanent", "Temporary", "Institutional", 
+                          "Homeless", "Other")) {
     residences_to_include <- ResidenceUses %>%
-      filter(APR_ExitLocationGroup == residence_type &
-               !is.na(LocationDescription)) %>%
+      filter(APR_LocationGroup == residence_type &
+               !is.na(LocationDescription) &
+               Destination) %>%
       mutate(LocationDescription = case_when(
         Location %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
         Location %in% c(30, 99) ~ "Data.Not.Collected",
@@ -665,7 +667,7 @@ create_destination_groups <- function(included_enrollments) {
       full_join(residences_to_include %>%
                   filter(Location %nin% c(9, 30)), 
                 by = "LocationDescription") %>%
-      arrange(APR_ExitOrder) %>%
+      arrange(APR_LocationOrder) %>%
       adorn_totals("row") %>%
       ifnull(., 0) %>%
       mutate(LocationDescription = case_when(
@@ -673,14 +675,11 @@ create_destination_groups <- function(included_enrollments) {
         TRUE ~ LocationDescription))
     
     group_title_row <- group_of_residences[0,]
-    group_title_row[1,1] <- if_else(
-      residence_type == "institution", 
-      "Institutional Settings",
-      paste(str_to_title(residence_type), "Destinations"))
+    group_title_row[1,1] <- paste(residence_type, "Situations")
     
     group_of_residences <- rbind(group_title_row, group_of_residences)
     
-    if (residence_type == "permanent") {
+    if (residence_type == "Permanent") {
       destination_group <- group_of_residences
     } else {
       destination_group <- destination_group %>%
@@ -725,13 +724,14 @@ create_destination_groups <- function(included_enrollments) {
 # create prior residence table, used for Q15 and Q27d
 
 create_prior_residence_groups <- function(included_enrollments) {
-  for(residence_type in c("homeless", "institution", "other")) {
+  for(residence_type in c("Homeless", "Institutional", "Temporary",
+                          "Permanent", "Other")) {
     residences_to_include <- ResidenceUses %>%
-      filter(APR_PriorLocationGroup == residence_type &
+      filter(APR_LocationGroup == residence_type &
                !is.na(LocationDescription) &
-               !is.na(APR_PriorOrder) &
+               PriorLivingSituation &
                Location != 9) %>%
-      arrange(APR_PriorOrder) %>%
+      arrange(APR_LocationOrder) %>%
       mutate(LocationDescription = case_when(
         Location == 8 ~ "Client.Does.Not.Know.or.Refused",
         TRUE ~ LocationDescription))
@@ -744,16 +744,12 @@ create_prior_residence_groups <- function(included_enrollments) {
       return_household_groups(., LocationDescription, residences_to_include$LocationDescription) %>%
       adorn_totals("row") %>%
       mutate(LocationDescription = case_when(
-        LocationDescription == "Total" ~ paste(str_to_title(residence_type), "Subtotal"),
+        LocationDescription == "Total" ~ "Subtotal",
         TRUE ~ LocationDescription
       ))
     
     group_title_row <- group_of_residences[0,]
-    group_title_row[1,1] <- if_else(residence_type == "homeless",
-                                    "Homeless Situations",
-                                    if_else(residence_type == "institution",
-                                            "Institutional Settings",
-                                            "Other Locations"))
+    group_title_row[1,1] <- paste(residence_type, "Situations")
     
     group_of_residences <- rbind(group_title_row, group_of_residences)
     

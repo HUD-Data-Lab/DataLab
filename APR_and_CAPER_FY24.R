@@ -839,31 +839,37 @@ generate_new_kits <- TRUE
       # Q12a
       {
         Q12a_detail <- recent_program_enrollment %>%
-          select(all_of(standard_detail_columns), "race_combined") %>%
+          select(all_of(standard_detail_columns)) %>%
           left_join(Client %>%
-                      select(PersonalID, AmIndAKNative, Asian, BlackAfAmerican,
-                             NativeHIPacific, White, RaceNone),
+                      select(PersonalID, all_of(names(race_columns)), RaceNone),
                     by = "PersonalID")
         
         Q12a <- Q12a_detail %>%
-          return_household_groups(., race_combined, race_list) %>%
+          ifnull(., 0) %>%
+          left_join(race_info,
+                    by = all_of(names(race_columns))) %>%
+          mutate(across(
+            all_of(names(race_columns)),
+            ~ as.numeric(.)),
+            race_count = rowSums(across(all_of(names(race_columns))),
+                                   na.rm = TRUE),
+            race_tabulation = case_when(
+              race_count %in% 1:2 ~ race_name_list,
+              race_count > 2 &
+                HispanicLatinaeo == 1 ~ "Hispanic/Latina/e/o and 2 or more races",
+              race_count > 2 ~ "Non-Hispanic/Latina/e/o and 2 or more races",
+              RaceNone %in% c(8, 9) ~ "Client Doesn’t Know/Prefers Not to Answer",
+              TRUE ~ "Data Not Collected"
+            )
+          ) %>%
+          return_household_groups(., race_tabulation, 
+                                  c(race_info$race_name_list, 
+                                    "Hispanic/Latina/e/o and 2 or more races",
+                                    "Non-Hispanic/Latina/e/o and 2 or more races",
+                                    "Client Doesn’t Know/Prefers Not to Answer",
+                                    "Data Not Collected")) %>%
           adorn_totals("row")
-      }
-      
-      # Q12b
-      {
-        Q12b_detail <- recent_program_enrollment %>%
-          select(all_of(standard_detail_columns)) %>%
-          left_join(Client %>%
-                      select(PersonalID, Ethnicity), by = "PersonalID") %>%
-          mutate(display_ethnicity = case_when(Ethnicity == 1 ~ "Hispanic/Latin(a)(o)(x)",
-                                               Ethnicity == 0 ~ "Non-Hispanic/Non-Latin(a)(o)(x)",
-                                               Ethnicity %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
-                                               TRUE ~ "Data.Not.Collected")) 
         
-        Q12b <- Q12b_detail %>%
-          return_household_groups(., display_ethnicity, ethnicity_list) %>%
-          adorn_totals("row")
       }
       
       # Q13a1
@@ -925,7 +931,6 @@ generate_new_kits <- TRUE
         Q13a2_detail <- "See Q13a1_detail.csv"
         Q13a2 <- recent_program_enrollment %>%
           left_join(Q13a1_detail %>%
-                      # earlier data lab logic did not account for the following step
                       group_by(PersonalID) %>%
                       summarise(disability_count = sum(disabilities)) %>%
                       ungroup(), 
@@ -980,14 +985,14 @@ generate_new_kits <- TRUE
                       group_by(EnrollmentID) %>%
                       slice(1L) %>%
                       ungroup() %>%
-                      select(EnrollmentID, DomesticViolenceVictim, CurrentlyFleeing),
+                      select(EnrollmentID, DomesticViolenceSurvivor, CurrentlyFleeing),
                     by = "EnrollmentID")
         
         Q14a_detail <- Q14 %>%
-          select(all_of(standard_detail_columns), DomesticViolenceVictim) %>%
-          mutate(dv_experience = case_when(DomesticViolenceVictim == 1 ~ "Yes",
-                                           DomesticViolenceVictim == 0 ~ "No",
-                                           DomesticViolenceVictim %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+          select(all_of(standard_detail_columns), DomesticViolenceSurvivor) %>%
+          mutate(dv_experience = case_when(DomesticViolenceSurvivor == 1 ~ "Yes",
+                                           DomesticViolenceSurvivor == 0 ~ "No",
+                                           DomesticViolenceSurvivor %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
                                            TRUE ~ "Data.Not.Collected")) 
         
         Q14a <- Q14a_detail %>%
@@ -998,9 +1003,9 @@ generate_new_kits <- TRUE
       # Q14b
       {
         Q14b_detail <- Q14 %>%
-          select(all_of(standard_detail_columns), DomesticViolenceVictim,
+          select(all_of(standard_detail_columns), DomesticViolenceSurvivor,
                  CurrentlyFleeing) %>%
-          filter(DomesticViolenceVictim == 1) %>%
+          filter(DomesticViolenceSurvivor == 1) %>%
           mutate(currently_fleeing = case_when(CurrentlyFleeing == 1 ~ "Yes",
                                                CurrentlyFleeing == 0 ~ "No",
                                                CurrentlyFleeing %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
@@ -1012,6 +1017,8 @@ generate_new_kits <- TRUE
       
       # Q15
       {
+        ##  added a comment to the document, but putting here too--easier to
+        ##  put in value order than an arbitrary one
         Q15_detail <- recent_program_enrollment %>%
           keep_adults_and_hoh_only() %>%
           select(all_of(standard_detail_columns), LivingSituation)
@@ -1019,6 +1026,7 @@ generate_new_kits <- TRUE
         Q15 <- Q15_detail %>%
           create_prior_residence_groups(.)
       }
+      
       
       # Q16
       {
@@ -1365,7 +1373,7 @@ generate_new_kits <- TRUE
         Q21_detail <- recent_program_enrollment %>%
           select(all_of(standard_detail_columns))
         
-        insurance_list <- c("Medicaid", "Medicare", "SCHIP", "VAMedicalServices", 
+        insurance_list <- c("Medicaid", "Medicare", "SCHIP", "VHAServicesHA", 
                             "EmployerProvided", "COBRA", "PrivatePay", "StateHealthIns",
                             "IndianHealthServices", "OtherInsurance")
         
@@ -1373,7 +1381,7 @@ generate_new_kits <- TRUE
           
           data <- get(paste0(period, "_income")) %>%
             mutate(insurance_count = ifnull(Medicaid == 1, 0) + ifnull(Medicare == 1, 0) +
-                     ifnull(SCHIP == 1, 0) + ifnull(VAMedicalServices == 1, 0) +
+                     ifnull(SCHIP == 1, 0) + ifnull(VHAServicesHA == 1, 0) +
                      ifnull(EmployerProvided == 1, 0) + ifnull(COBRA == 1, 0) +
                      ifnull(PrivatePay == 1, 0) + ifnull(StateHealthIns == 1, 0) +
                      ifnull(IndianHealthServices == 1, 0) + ifnull(OtherInsurance == 1, 0)
@@ -1618,7 +1626,7 @@ generate_new_kits <- TRUE
         Q23c <- create_destination_groups(Q23c_detail) %>%
           mutate(across(everything(), as.character))
         
-        Q23c[45, 2:6] <- as.list(decimal_format(as.numeric(Q23c[45, 2:6]), 4))
+        Q23c[41, 2:6] <- as.list(decimal_format(as.numeric(Q23c[41, 2:6]), 4))
       }
       
       # Q24
@@ -1729,10 +1737,9 @@ generate_new_kits <- TRUE
       # Q25c
       {
         Q25c_detail <- recent_veteran_enrollment %>%
-          select(c(all_of(standard_detail_columns), "gender_combined")) %>%
+          select(c(all_of(standard_detail_columns))) %>%
           left_join(Client %>%
-                      select(PersonalID, Female, Male, NoSingleGender, 
-                             Transgender, Questioning, GenderNone),
+                      select(PersonalID, all_of(names(gender_columns)), GenderNone),
                     by = "PersonalID") 
         
         Q25c <- Q25c_detail %>%
@@ -1859,10 +1866,9 @@ generate_new_kits <- TRUE
       # Q26c
       {
         Q26c_detail <- recent_chronic_enrollment %>%
-          select(c(all_of(standard_detail_columns), "gender_combined")) %>%
+          select(c(all_of(standard_detail_columns))) %>%
           left_join(Client %>%
-                      select(PersonalID, Female, Male, NoSingleGender, 
-                             Transgender, Questioning, GenderNone),
+                      select(PersonalID, all_of(names(gender_columns)), GenderNone),
                     by = "PersonalID") 
         
         Q26c <- Q26c_detail %>%
@@ -1993,10 +1999,9 @@ generate_new_kits <- TRUE
       # Q27c
       {
         Q27c_detail <- recent_youth_enrollment %>%
-          select(c(all_of(standard_detail_columns), "gender_combined")) %>%
+          select(c(all_of(standard_detail_columns))) %>%
           left_join(Client %>%
-                      select(PersonalID, Female, Male, NoSingleGender, 
-                             Transgender, Questioning, GenderNone),
+                      select(PersonalID, all_of(names(gender_columns)), GenderNone),
                     by = "PersonalID") 
         
         Q27c <- Q27c_detail %>%

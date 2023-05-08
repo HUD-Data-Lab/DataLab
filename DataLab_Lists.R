@@ -152,8 +152,14 @@ ResidenceUses <- read_excel("SupplementalTables.xlsx",
   mutate(PriorResidenceType_Chronicity = case_when(
     floor(Location/100) == 1 ~ "homeless",
     floor(Location/100) == 2 ~ "institution",
-    TRUE ~ "other"
-  ))
+    TRUE ~ "other"),
+    APR_LocationGroup = case_when(
+      Location <= 99 ~ "Other",
+      Location <= 199 ~ "Homeless",
+      Location <= 299 ~ "Institutional",
+      Location <= 399 ~ "Temporary",
+      Location <= 499 ~ "Permanent"),
+    APR_LocationOrder = if_else(Location <= 99, Location + 500, Location))
 
 
 # ------------------------------------------------------------------------------
@@ -162,10 +168,10 @@ ResidenceUses <- read_excel("SupplementalTables.xlsx",
 # used in:
 #   APR/CAPER - 
 
-# DestinationClassification <- read_excel("SupplementalTables.xlsx",
-#                                         sheet = "DestinationClassificationRead",
-#                                         col_types = c("numeric", "text",
-#                                                       "numeric", "text"))
+DestinationClassification <- read_excel("SupplementalTables.xlsx",
+                                        sheet = "DestinationClassificationRead",
+                                        col_types = c("numeric", "numeric", 
+                                                      "text"))
 
 
 # ------------------------------------------------------------------------------
@@ -211,28 +217,51 @@ EventTypes <- read_excel("SupplementalTables.xlsx",
                              sheet = "EventTypes",
                              col_types = c("numeric", "text"))
 
+
 # ------------------------------------------------------------------------------
-# ----------------------------- Race List --------------------------------------
+# ------------------------------ Race Columns --------------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   APR/CAPER
+
+race_columns <- c(AmIndAKNative = "American Indian, Alaska Native, or Indigenous", 
+                  Asian = "Asian or Asian American", 
+                  BlackAfAmerican = "Black, African American, or African", 
+                  HispanicLatinaeo = "Hispanic/Latina/e/o", 
+                  MidEastNAfrican = "Middle Eastern & North African", 
+                  NativeHIPacific = "Native Hawaiian or Pacific Islander", 
+                  White = "White")
+
+
+
+# ------------------------------------------------------------------------------
+# ----------------------------- Gender List ------------------------------------
 # ------------------------------------------------------------------------------
 # used in:
 #   APR/CAPER - Q12a
 
-race_list <- c("White", "Black, African American, or African", 
-               "Asian or Asian American", 
-               "American Indian, Alaska Native, or Indigenous", 
-               "Native Hawaiian or Pacific Islander", "Multiple Races", 
-               "Client.Does.Not.Know.or.Refused", "Data.Not.Collected")
+race_list <- names(race_columns)
+race_name_list <- unname(race_columns)
 
+possible_race_combos <- outer(race_list, race_list, paste, sep = '/')
+possible_race_name_combos <- outer(race_name_list, race_name_list, paste, sep = ' & ')
 
-# ------------------------------------------------------------------------------
-# -------------------------- Ethnicity List ------------------------------------
-# ------------------------------------------------------------------------------
-# used in:
-#   APR/CAPER - Q12b
+for (combo in 1:6) {
+  race_list <- c(race_list, possible_race_combos[combo, (combo + 1):7])
+  race_name_list <- c(race_name_list, possible_race_name_combos[combo, (combo + 1):7])
+}
 
-ethnicity_list <- c("Non-Hispanic/Non-Latin(a)(o)(x)", "Hispanic/Latin(a)(o)(x)",
-                    "Client.Does.Not.Know.or.Refused", "Data.Not.Collected")
+report_list_race <- setNames(race_name_list, race_list)
 
+race_info <- as.data.frame(race_list) 
+race_info$race_name_list <- race_name_list
+race_info[ , names(race_columns)] <- NA
+
+for (col in names(race_columns)) {
+  race_info <- race_info %>%
+    mutate(!!col := if_else(str_detect(race_list, col),
+                            1, 0))
+}
 
 # ------------------------------------------------------------------------------
 # ------------------------ Simple Age Group List -------------------------------
