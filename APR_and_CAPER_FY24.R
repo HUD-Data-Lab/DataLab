@@ -580,6 +580,31 @@ generate_new_kits <- TRUE
         }
       }
       
+      # Q7c
+      {
+        Q7c_detail <- recent_program_enrollment %>%
+          select(all_of(standard_detail_columns), age_group, HoH_HMID) %>%
+          left_join(Client %>%
+                      select(PersonalID, all_of(names(race_columns)), RaceNone),
+                    by = "PersonalID")
+        
+        Q7c_all <- Q7c_detail %>%
+          mutate(client_group = "Total") %>%
+          return_race_groups(., client_group, c("Total")) 
+        
+        Q7c_moved_in <- Q7c_detail %>%
+          filter(HoH_HMID <= report_end_date) %>% 
+          mutate(client_group = "For PSH & RRH - the total persons served who moved into housing") %>%
+          return_race_groups(., client_group, "For PSH & RRH - the total persons served who moved into housing") 
+        
+        Q7c <- Q7c_detail %>%
+          return_race_groups(., age_group, age_groups) %>%
+          rename(client_group = age_group) %>%
+          union(Q7c_all) %>%
+          union(Q7c_moved_in)
+        
+      }
+      
       # Q8a
       {
         Q8a_data <- households_served_table(recent_program_enrollment)
@@ -838,11 +863,7 @@ generate_new_kits <- TRUE
       
       # Q12a
       {
-        Q12a_detail <- recent_program_enrollment %>%
-          select(all_of(standard_detail_columns)) %>%
-          left_join(Client %>%
-                      select(PersonalID, all_of(names(race_columns)), RaceNone),
-                    by = "PersonalID")
+        Q12a_detail <- "See Q7c_detail.csv"
         
         Q12a <- Q12a_detail %>%
           ifnull(., 0) %>%

@@ -29,7 +29,7 @@ ifnull <- function(value, replace_with) {
       value[is.na(value) | is.nan(value) | 
               is.infinite(value) 
             # | value == "NaN"
-            ] <- replace_with
+      ] <- replace_with
     } 
   }
   # as.numeric(value)
@@ -72,7 +72,7 @@ sequential_ssn <- function(test_ssn) {
 return_household_groups <- function(APR_dataframe, grouped_by = grouped_by, 
                                     group_list = group_list,
                                     split_by_age = FALSE) {
-
+  
   potential_table <- APR_dataframe %>%
     group_by({{grouped_by}})
   
@@ -81,31 +81,22 @@ return_household_groups <- function(APR_dataframe, grouped_by = grouped_by,
     household_group_list <- split_household_group_list
     
     potential_table <- potential_table %>%
-      summarise(Total = n_distinct(PersonalID, na.rm = TRUE),
-                Without.Children = n_distinct(PersonalID[household_type == "AdultsOnly"], 
-                                              na.rm = TRUE),
+      summarise(Total = n_distinct(PersonalID),
+                Without.Children = n_distinct(PersonalID[household_type == "AdultsOnly"]),
                 Adults.in.HH.with.Children.and.Adults = n_distinct(PersonalID[household_type == "AdultsAndChildren" &
-                                                                                age_group == "Adults"], 
-                                                                   na.rm = TRUE),
+                                                                                age_group == "Adults"]),
                 Children.in.HH.with.Children.and.Adults = n_distinct(PersonalID[household_type == "AdultsAndChildren" &
-                                                                                  age_group == "Children"], 
-                                                                     na.rm = TRUE),
-                With.Only.Children = n_distinct(PersonalID[household_type == "ChildrenOnly"], 
-                                                na.rm = TRUE),
-                Unknown.Household.Type = n_distinct(PersonalID[household_type == "Unknown"], 
-                                                    na.rm = TRUE)) 
+                                                                                  age_group == "Children"]),
+                With.Only.Children = n_distinct(PersonalID[household_type == "ChildrenOnly"]),
+                Unknown.Household.Type = n_distinct(PersonalID[household_type == "Unknown"])) 
   } else {
     potential_table <- potential_table %>%
       group_by({{grouped_by}}) %>%
-      summarise(Total = n_distinct(PersonalID, na.rm = TRUE),
-                Without.Children = n_distinct(PersonalID[household_type == "AdultsOnly"], 
-                                              na.rm = TRUE),
-                With.Children.And.Adults = n_distinct(PersonalID[household_type == "AdultsAndChildren"], 
-                                                      na.rm = TRUE),
-                With.Only.Children = n_distinct(PersonalID[household_type == "ChildrenOnly"], 
-                                                na.rm = TRUE),
-                Unknown.Household.Type = n_distinct(PersonalID[household_type == "Unknown"], 
-                                                    na.rm = TRUE)) 
+      summarise(Total = n_distinct(PersonalID),
+                Without.Children = n_distinct(PersonalID[household_type == "AdultsOnly"]),
+                With.Children.And.Adults = n_distinct(PersonalID[household_type == "AdultsAndChildren"]),
+                With.Only.Children = n_distinct(PersonalID[household_type == "ChildrenOnly"]),
+                Unknown.Household.Type = n_distinct(PersonalID[household_type == "Unknown"])) 
   }
   
   potential_table <- potential_table %>%
@@ -171,7 +162,7 @@ determine_total_income <- function(enrollments_and_income, annual = FALSE) {
   total_income <- enrollments_and_income %>%
     mutate(earned_income = ifnull(
       if_else(Earned == 1 & EarnedAmount > 0, EarnedAmount, 0), 0),
-           amounts_combined = 
+      amounts_combined = 
         ifnull(if_else(Earned == 1 & EarnedAmount > 0, EarnedAmount, 0), 0) +
         ifnull(if_else(Unemployment == 1 & UnemploymentAmount > 0, UnemploymentAmount, 0), 0) +
         ifnull(if_else(SSI == 1 & SSIAmount > 0, SSIAmount, 0), 0) +
@@ -187,25 +178,25 @@ determine_total_income <- function(enrollments_and_income, annual = FALSE) {
         ifnull(if_else(ChildSupport == 1 & ChildSupportAmount > 0, ChildSupportAmount, 0), 0) +
         ifnull(if_else(Alimony == 1 & AlimonyAmount > 0, AlimonyAmount, 0), 0) +
         ifnull(if_else(OtherIncomeSource == 1 & OtherIncomeAmount > 0, OtherIncomeAmount, 0), 0),
-           #  use this line for systems that auto-calculate total monthly income
-           calculated_total_income = case_when(!is.na(TotalMonthlyIncome) &
-                                                 TotalMonthlyIncome > 0 ~ TotalMonthlyIncome,
-                                               amounts_combined > 0 ~ amounts_combined,
-                                               IncomeFromAnySource == 0 |
-                                                 (TotalMonthlyIncome <= 0 &
-                                                    (is.na(IncomeFromAnySource) |
-                                                       IncomeFromAnySource == 1)) ~ 0),
-           total_income_group = case_when(
-             is.na(calculated_total_income) ~ if_else(
-               IncomeFromAnySource %in% c(8, 9), "Client.Does.Not.Know.or.Refused", "Data.Not.Collected"),
-             calculated_total_income == 0 ~ "No Income",
-             calculated_total_income <= 150 ~ "$1 - $150",
-             calculated_total_income <= 250 ~ "$151 - $250",
-             calculated_total_income <= 500 ~ "$251 - $500",
-             calculated_total_income <= 1000 ~ "$501 - $1,000",
-             calculated_total_income <= 1500 ~ "$1,001 - $1,500",
-             calculated_total_income <= 2000 ~ "$1,501 - $2,000",
-             TRUE ~ "$2,001+"))
+      #  use this line for systems that auto-calculate total monthly income
+      calculated_total_income = case_when(!is.na(TotalMonthlyIncome) &
+                                            TotalMonthlyIncome > 0 ~ TotalMonthlyIncome,
+                                          amounts_combined > 0 ~ amounts_combined,
+                                          IncomeFromAnySource == 0 |
+                                            (TotalMonthlyIncome <= 0 &
+                                               (is.na(IncomeFromAnySource) |
+                                                  IncomeFromAnySource == 1)) ~ 0),
+      total_income_group = case_when(
+        is.na(calculated_total_income) ~ if_else(
+          IncomeFromAnySource %in% c(8, 9), "Client.Does.Not.Know.or.Refused", "Data.Not.Collected"),
+        calculated_total_income == 0 ~ "No Income",
+        calculated_total_income <= 150 ~ "$1 - $150",
+        calculated_total_income <= 250 ~ "$151 - $250",
+        calculated_total_income <= 500 ~ "$251 - $500",
+        calculated_total_income <= 1000 ~ "$501 - $1,000",
+        calculated_total_income <= 1500 ~ "$1,001 - $1,500",
+        calculated_total_income <= 2000 ~ "$1,501 - $2,000",
+        TRUE ~ "$2,001+"))
   
   if(annual) {
     total_income <- total_income %>%
@@ -226,7 +217,7 @@ create_income_groups <- function(enrollments_total_income, annual = FALSE) {
   
   income_groups <- enrollments_total_income %>%
     group_by(total_income_group) %>%
-    summarise(Income = n_distinct(PersonalID, na.rm = TRUE)) %>%
+    summarise(Income = n_distinct(PersonalID)) %>%
     full_join(as.data.frame(income_amount_categories) %>%
                 `colnames<-`(c("total_income_group")),
               by = "total_income_group") %>%
@@ -279,7 +270,7 @@ keep_adults_and_hoh_only <- function(enrollment_data) {
 
 # used in Q18
 categorize_income <- function(enrollments_total_income, annual = FALSE) {
-
+  
   if(annual) {
     income_type_categories <- annual_income_type_categories
   }
@@ -307,7 +298,7 @@ categorize_income <- function(enrollments_total_income, annual = FALSE) {
                 `colnames<-`(c("income_category")),
               by = "income_category") %>%
     mutate(income_category = factor(income_category, ordered = TRUE,
-                                       levels = annual_income_type_categories)) %>%
+                                    levels = annual_income_type_categories)) %>%
     ifnull(., 0)
   
   income_category_table %>%
@@ -320,66 +311,60 @@ get_income_type_changes <- function(income_categories, income_type, compare_to) 
   people <- income_categories %>%
     left_join(get(paste0(compare_to, "_income_for_changes")), by = "PersonalID") %>%
     summarise(lost_source = n_distinct(PersonalID[get(paste0("entry_", income_type, "_amount")) > 0 &
-                                                    get(paste0(compare_to, "_", income_type, "_amount")) == 0],
-                                       na.rm = TRUE),
+                                                    get(paste0(compare_to, "_", income_type, "_amount")) == 0]),
               retained_decreased = n_distinct(PersonalID[get(paste0("entry_", income_type, "_amount")) > get(paste0(compare_to, "_", income_type, "_amount")) &
-                                                           get(paste0(compare_to, "_", income_type, "_amount")) > 0], 
-                                              na.rm = TRUE),
+                                                           get(paste0(compare_to, "_", income_type, "_amount")) > 0]),
               retained_same = n_distinct(PersonalID[get(paste0("entry_", income_type, "_amount")) == get(paste0(compare_to, "_", income_type, "_amount")) &
-                                                      get(paste0(compare_to, "_", income_type, "_amount")) > 0], 
-                                         na.rm = TRUE),
+                                                      get(paste0(compare_to, "_", income_type, "_amount")) > 0]),
               retained_increased = n_distinct(PersonalID[get(paste0("entry_", income_type, "_amount")) < get(paste0(compare_to, "_", income_type, "_amount")) &
-                                                           get(paste0("entry_", income_type, "_amount")) > 0], 
-                                              na.rm = TRUE),
+                                                           get(paste0("entry_", income_type, "_amount")) > 0]),
               gained_source = n_distinct(PersonalID[get(paste0("entry_", income_type, "_amount")) == 0 &
-                                                      get(paste0(compare_to, "_", income_type, "_amount")) > 0], 
-                                         na.rm = TRUE),
+                                                      get(paste0(compare_to, "_", income_type, "_amount")) > 0]),
               did_not_have_source = n_distinct(PersonalID[get(paste0("entry_", income_type, "_amount")) == 0 &
-                                                            get(paste0(compare_to, "_", income_type, "_amount")) == 0], 
-                                               na.rm = TRUE),
-              total_adults = n_distinct(PersonalID, na.rm = TRUE)
+                                                            get(paste0(compare_to, "_", income_type, "_amount")) == 0]),
+              total_adults = n_distinct(PersonalID)
     ) %>%
     mutate(gained_or_increased = retained_increased + gained_source,
            percent_accomplished = gained_or_increased / total_adults)
   
-    amounts <- income_categories %>%
-            left_join(get(paste0(compare_to, "_income_for_changes")), by = "PersonalID") %>%
-            mutate(
-              income_change = get(paste0(compare_to, "_", income_type, "_amount")) -
-                get(paste0("entry_", income_type, "_amount")),
-              lost_source = case_when(
-                get(paste0("entry_", income_type, "_amount")) > 0 &
-                  get(paste0(compare_to, "_", income_type, "_amount")) == 0 ~ income_change),
-              retained_decreased = case_when(
-                get(paste0("entry_", income_type, "_amount")) > get(paste0(compare_to, "_", income_type, "_amount")) &
-                  get(paste0(compare_to, "_", income_type, "_amount")) > 0 ~ income_change),
-              retained_increased = case_when(
-                get(paste0("entry_", income_type, "_amount")) < get(paste0(compare_to, "_", income_type, "_amount")) &
-                  get(paste0("entry_", income_type, "_amount")) > 0 ~ income_change),
-              gained_source = case_when(
-                get(paste0("entry_", income_type, "_amount")) == 0 &
-                  get(paste0(compare_to, "_", income_type, "_amount")) > 0 ~ income_change),
-              ) %>%
-              summarise(lost_source = if_else(
-                people$lost_source > 0, mean(lost_source, na.rm = TRUE), 0),
-                        retained_decreased = if_else(
-                          people$retained_decreased > 0, mean(retained_decreased, na.rm = TRUE), 0),
-                        retained_same = NA,
-                        retained_increased = if_else(
-                          people$retained_increased > 0, mean(retained_increased, na.rm = TRUE), 0),
-                        gained_source = if_else(
-                          people$gained_source > 0, mean(gained_source, na.rm = TRUE), 0),
-                        did_not_have_source = NA,
-                        total_adults = if_else(income_type == "total",
-                                               mean(income_change, na.rm = TRUE), 0)
-              ) %>%
-      mutate(gained_or_increased = ifnull(((people$retained_increased * ifnull(retained_increased, 0)) +
-                                             (people$gained_source * ifnull(gained_source, 0))) / 
-                                            (people$retained_increased + people$gained_source), 0),
-             percent_accomplished = NA)
-    
-    people %>% 
-      union(amounts)
+  amounts <- income_categories %>%
+    left_join(get(paste0(compare_to, "_income_for_changes")), by = "PersonalID") %>%
+    mutate(
+      income_change = get(paste0(compare_to, "_", income_type, "_amount")) -
+        get(paste0("entry_", income_type, "_amount")),
+      lost_source = case_when(
+        get(paste0("entry_", income_type, "_amount")) > 0 &
+          get(paste0(compare_to, "_", income_type, "_amount")) == 0 ~ income_change),
+      retained_decreased = case_when(
+        get(paste0("entry_", income_type, "_amount")) > get(paste0(compare_to, "_", income_type, "_amount")) &
+          get(paste0(compare_to, "_", income_type, "_amount")) > 0 ~ income_change),
+      retained_increased = case_when(
+        get(paste0("entry_", income_type, "_amount")) < get(paste0(compare_to, "_", income_type, "_amount")) &
+          get(paste0("entry_", income_type, "_amount")) > 0 ~ income_change),
+      gained_source = case_when(
+        get(paste0("entry_", income_type, "_amount")) == 0 &
+          get(paste0(compare_to, "_", income_type, "_amount")) > 0 ~ income_change),
+    ) %>%
+    summarise(lost_source = if_else(
+      people$lost_source > 0, mean(lost_source, na.rm = TRUE), 0),
+      retained_decreased = if_else(
+        people$retained_decreased > 0, mean(retained_decreased, na.rm = TRUE), 0),
+      retained_same = NA,
+      retained_increased = if_else(
+        people$retained_increased > 0, mean(retained_increased, na.rm = TRUE), 0),
+      gained_source = if_else(
+        people$gained_source > 0, mean(gained_source, na.rm = TRUE), 0),
+      did_not_have_source = NA,
+      total_adults = if_else(income_type == "total",
+                             mean(income_change, na.rm = TRUE), 0)
+    ) %>%
+    mutate(gained_or_increased = ifnull(((people$retained_increased * ifnull(retained_increased, 0)) +
+                                           (people$gained_source * ifnull(gained_source, 0))) / 
+                                          (people$retained_increased + people$gained_source), 0),
+           percent_accomplished = NA)
+  
+  people %>% 
+    union(amounts)
 }
 
 # used in Q17 and Q20
@@ -405,13 +390,13 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type,
   
   if(in_project) {
     nbn_data <- data %>%
-      filter(ProjectID %in% Project$ProjectID[Project$ProjectType == 1]) %>%
+      filter(ProjectID %in% Project$ProjectID[Project$ProjectType == 1 &
+                                                Project$TrackingMethod == 3]) %>%
       left_join(all_bed_nights, 
                 by = "EnrollmentID",
                 multiple = "all") %>%
       group_by(EnrollmentID) %>%
-      summarise(nbn_number_of_days = n_distinct(na.omit(ymd(DateProvided)), 
-                                                na.rm = TRUE)) %>%
+      summarise(nbn_number_of_days = n_distinct(na.omit(ymd(DateProvided)))) %>%
       ungroup() %>%
       select(EnrollmentID, nbn_number_of_days)
     
@@ -419,7 +404,8 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type,
       left_join(nbn_data, by = "EnrollmentID") %>%
       mutate(number_of_days = 
                if_else(
-                 ProjectID %in% Project$ProjectID[Project$ProjectType == 1],
+                 ProjectID %in% Project$ProjectID[Project$ProjectType == 1 &
+                                                    Project$TrackingMethod == 3],
                  nbn_number_of_days,
                  as.integer(trunc((!!start_date %--% !!end_date) / days(1)))))
   } else {
@@ -429,22 +415,22 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type,
   
   time_groups <- time_groups %>%
     mutate(number_of_days_group = case_when(
-             is.na(number_of_days) |
-               !!start_date > !!end_date ~ "Data.Not.Collected",
-             number_of_days <= 7 ~ "0 to 7 days",
-             number_of_days <= 14 ~ "8 to 14 days",
-             number_of_days <= 21 ~ "15 to 21 days",
-             number_of_days <= 30 ~ "22 to 30 days",
-             number_of_days <= 60 ~ "31 to 60 days",
-             number_of_days <= 90 ~ "61 to 90 days",
-             number_of_days <= 180 ~ "91 to 180 days",
-             number_of_days <= 365 ~ "181 to 365 days",
-             number_of_days <= 730 ~ "366 to 730 days (1-2 Yrs)",
-             number_of_days <= 1095 ~ "731 to 1,095 days (2-3 Yrs)",
-             number_of_days <= 1460 ~ "1,096 to 1,460 days (3-4 Yrs)",
-             number_of_days <= 1825 ~ "1,461 to 1,825 days (4-5 Yrs)",
-             TRUE ~ "More than 1,825 days (>5 Yrs)"))
-           
+      is.na(number_of_days) |
+        !!start_date > !!end_date ~ "Data.Not.Collected",
+      number_of_days <= 7 ~ "0 to 7 days",
+      number_of_days <= 14 ~ "8 to 14 days",
+      number_of_days <= 21 ~ "15 to 21 days",
+      number_of_days <= 30 ~ "22 to 30 days",
+      number_of_days <= 60 ~ "31 to 60 days",
+      number_of_days <= 90 ~ "61 to 90 days",
+      number_of_days <= 180 ~ "91 to 180 days",
+      number_of_days <= 365 ~ "181 to 365 days",
+      number_of_days <= 730 ~ "366 to 730 days (1-2 Yrs)",
+      number_of_days <= 1095 ~ "731 to 1,095 days (2-3 Yrs)",
+      number_of_days <= 1460 ~ "1,096 to 1,460 days (3-4 Yrs)",
+      number_of_days <= 1825 ~ "1,461 to 1,825 days (4-5 Yrs)",
+      TRUE ~ "More than 1,825 days (>5 Yrs)"))
+  
   if(report_type == "APR") {
     time_groups <- time_groups %>%
       mutate(number_of_days_group = case_when(
@@ -467,9 +453,9 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type,
 length_of_time_groups <- function(report_type, column_name) {
   if(report_type == "APR") {
     rows <- c("30 days or less", "31 to 60 days", "61 to 90 days", "91 to 180 days", 
-      "181 to 365 days", "366 to 730 days (1-2 Yrs)", "731 to 1,095 days (2-3 Yrs)",
-      "1,096 to 1,460 days (3-4 Yrs)", "1,461 to 1,825 days (4-5 Yrs)",
-      "More than 1,825 days (>5 Yrs)")
+              "181 to 365 days", "366 to 730 days (1-2 Yrs)", "731 to 1,095 days (2-3 Yrs)",
+              "1,096 to 1,460 days (3-4 Yrs)", "1,461 to 1,825 days (4-5 Yrs)",
+              "More than 1,825 days (>5 Yrs)")
   } else if(report_type == "days_prior_to_housing") {
     rows <- c("0 to 7 days", "8 to 14 days", "15 to 21 days", "22 to 30 days", 
               "31 to 60 days", "61 to 180 days", "181 to 365 days", 
@@ -498,10 +484,10 @@ return_household_averages <- function(data, field_to_average,
   
   potential_table <- as.data.frame(household_group_list) %>%
     left_join(data %>%
-    group_by(household_type) %>%
-    summarise(field_average = mean({{field_to_average}})) %>%
-    mutate(column_label = {{new_row_name}}), by = "household_type") #%>%
-    # select(c({{column_label}}, names(household_group_list)))
+                group_by(household_type) %>%
+                summarise(field_average = mean({{field_to_average}})) %>%
+                mutate(column_label = {{new_row_name}}), by = "household_type") #%>%
+  # select(c({{column_label}}, names(household_group_list)))
   
   potential_table
 }
@@ -598,27 +584,8 @@ create_age_groups <- function(filtered_recent_program_enrollment,
 
 # create gender group table
 create_gender_groups <- function(filtered_recent_program_enrollment) {
-  
- filtered_recent_program_enrollment %>%
-    left_join(gender_info,
-              by = all_of(names(gender_columns))) %>%
-    mutate(across(
-      all_of(names(gender_columns)),
-      ~ as.numeric(.)),
-      gender_count = rowSums(across(all_of(names(gender_columns))),
-                              na.rm = TRUE),
-      gender_tabulation = case_when(
-        gender_count %in% 1:2 ~ gender_name_list,
-        gender_count > 2 ~ "More than 2 Gender Identities Selected",
-        GenderNone %in% c(8, 9) ~ "Client Doesn’t Know/Prefers Not to Answer",
-        TRUE ~ "Data Not Collected"
-      )
-    ) %>%
-    return_household_groups(., gender_tabulation, 
-                            c(gender_info$gender_name_list, 
-                              "More than 2 Gender Identities Selected",
-                              "Client Doesn’t Know/Prefers Not to Answer",
-                              "Data Not Collected")) %>%
+  filtered_recent_program_enrollment %>%
+    return_household_groups(., gender_combined, gender_list) %>%
     adorn_totals("row")
 }
 
@@ -650,12 +617,10 @@ create_benefit_groups <- function(included_enrollments) {
 
 # create destination table for APR/CAPER
 create_destination_groups <- function(included_enrollments) {
-  for(residence_type in c("Permanent", "Temporary", "Institutional", 
-                          "Homeless", "Other")) {
+  for(residence_type in c("permanent", "temporary", "institution", "other")) {
     residences_to_include <- ResidenceUses %>%
-      filter(APR_LocationGroup == residence_type &
-               !is.na(LocationDescription) &
-               Destination) %>%
+      filter(APR_ExitLocationGroup == residence_type &
+               !is.na(LocationDescription)) %>%
       mutate(LocationDescription = case_when(
         Location %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
         Location %in% c(30, 99) ~ "Data.Not.Collected",
@@ -667,7 +632,7 @@ create_destination_groups <- function(included_enrollments) {
       full_join(residences_to_include %>%
                   filter(Location %nin% c(9, 30)), 
                 by = "LocationDescription") %>%
-      arrange(APR_LocationOrder) %>%
+      arrange(APR_ExitOrder) %>%
       adorn_totals("row") %>%
       ifnull(., 0) %>%
       mutate(LocationDescription = case_when(
@@ -675,11 +640,14 @@ create_destination_groups <- function(included_enrollments) {
         TRUE ~ LocationDescription))
     
     group_title_row <- group_of_residences[0,]
-    group_title_row[1,1] <- paste(residence_type, "Situations")
+    group_title_row[1,1] <- if_else(
+      residence_type == "institution", 
+      "Institutional Settings",
+      paste(str_to_title(residence_type), "Destinations"))
     
     group_of_residences <- rbind(group_title_row, group_of_residences)
     
-    if (residence_type == "Permanent") {
+    if (residence_type == "permanent") {
       destination_group <- group_of_residences
     } else {
       destination_group <- destination_group %>%
@@ -724,14 +692,13 @@ create_destination_groups <- function(included_enrollments) {
 # create prior residence table, used for Q15 and Q27d
 
 create_prior_residence_groups <- function(included_enrollments) {
-  for(residence_type in c("Homeless", "Institutional", "Temporary",
-                          "Permanent", "Other")) {
+  for(residence_type in c("homeless", "institution", "other")) {
     residences_to_include <- ResidenceUses %>%
-      filter(APR_LocationGroup == residence_type &
+      filter(APR_PriorLocationGroup == residence_type &
                !is.na(LocationDescription) &
-               PriorLivingSituation &
+               !is.na(APR_PriorOrder) &
                Location != 9) %>%
-      arrange(APR_LocationOrder) %>%
+      arrange(APR_PriorOrder) %>%
       mutate(LocationDescription = case_when(
         Location == 8 ~ "Client.Does.Not.Know.or.Refused",
         TRUE ~ LocationDescription))
@@ -744,12 +711,16 @@ create_prior_residence_groups <- function(included_enrollments) {
       return_household_groups(., LocationDescription, residences_to_include$LocationDescription) %>%
       adorn_totals("row") %>%
       mutate(LocationDescription = case_when(
-        LocationDescription == "Total" ~ "Subtotal",
+        LocationDescription == "Total" ~ paste(str_to_title(residence_type), "Subtotal"),
         TRUE ~ LocationDescription
       ))
     
     group_title_row <- group_of_residences[0,]
-    group_title_row[1,1] <- paste(residence_type, "Situations")
+    group_title_row[1,1] <- if_else(residence_type == "homeless",
+                                    "Homeless Situations",
+                                    if_else(residence_type == "institution",
+                                            "Institutional Settings",
+                                            "Other Locations"))
     
     group_of_residences <- rbind(group_title_row, group_of_residences)
     
@@ -897,22 +868,19 @@ create_contact_table <- function(filtered_enrollments, first_CLS_group,
   data <- filtered_enrollments %>%
     left_join(first_CLS_group, by = "EnrollmentID") %>%
     inner_join(all_CLS_for_Q9 %>%
-                group_by(EnrollmentID) %>%
-                summarise(Contacts = n()) %>%
-                mutate(ContactGroup = case_when(
-                  Contacts == 1 ~ "Once",
-                  Contacts <= 5 ~ "2-5 times",
-                  Contacts <= 9 ~ "6-9 times",
-                  TRUE ~ "10+ times")),
-              by = "EnrollmentID") %>% 
+                 group_by(EnrollmentID) %>%
+                 summarise(Contacts = n()) %>%
+                 mutate(ContactGroup = case_when(
+                   Contacts == 1 ~ "Once",
+                   Contacts <= 5 ~ "2-5 times",
+                   Contacts <= 9 ~ "6-9 times",
+                   TRUE ~ "10+ times")),
+               by = "EnrollmentID") %>% 
     group_by(ContactGroup) %>%
-    summarise(All.Persons.Contacted = n_distinct(PersonalID, na.rm = TRUE),
-              First.contact.NOT.staying.on.the.Streets.ES.or.SH = n_distinct(PersonalID[CLS_group == "Not LH"], 
-                                                                             na.rm = TRUE),
-              First.contact.WAS.staying.on.the.Streets.ES.or.SH = n_distinct(PersonalID[CLS_group == "LH"], 
-                                                                             na.rm = TRUE),
-              First.contact.Worker.unable.to.determine = n_distinct(PersonalID[CLS_group == "Unknown"], 
-                                                                    na.rm = TRUE)) %>%
+    summarise(All.Persons.Contacted = n_distinct(PersonalID),
+              First.contact.NOT.staying.on.the.Streets.ES.or.SH = n_distinct(PersonalID[CLS_group == "Not LH"]),
+              First.contact.WAS.staying.on.the.Streets.ES.or.SH = n_distinct(PersonalID[CLS_group == "LH"]),
+              First.contact.Worker.unable.to.determine = n_distinct(PersonalID[CLS_group == "Unknown"])) %>%
     adorn_totals("row")
   
   as.data.frame(contact_groups) %>%
@@ -936,32 +904,32 @@ create_summary_table <- function(filtered_enrollments, column_name) {
   filtered_enrollments %>%
     # left_join(client_plus, by = "PersonalID") %>%
     # left_join(chronicity_data, by = "EnrollmentID") %>%
-    summarise(Total.number.of.persons.served = n_distinct(PersonalID, na.rm = TRUE),
+    summarise(Total.number.of.persons.served = n_distinct(PersonalID),
               Number.of.adults.age.18.or.over = uniqueN(na.omit(PersonalID[age_group == "Adults"])),
               Number.of.children.under.age.18 = uniqueN(na.omit(PersonalID[age_group == "Children"])),
               Number.of.persons.with.unknown.age = uniqueN(na.omit(PersonalID[age_group %in% c("Client.Does.Not.Know.or.Refused", "Data.Not.Collected")])),
               Number.of.leavers = uniqueN(na.omit(PersonalID[!is.na(ExitDate)])),
               Number.of.adult.leavers = uniqueN(na.omit(PersonalID[age_group == "Adults" &
-                                                             !is.na(ExitDate)])),
+                                                                     !is.na(ExitDate)])),
               Number.of.adult.and.head.of.household.leavers = uniqueN(na.omit((PersonalID[(age_group == "Adults" |
-                                                                                     RelationshipToHoH == 1) &
-                                                                                    !is.na(ExitDate)]))),
+                                                                                             RelationshipToHoH == 1) &
+                                                                                            !is.na(ExitDate)]))),
               Number.of.stayers = uniqueN(na.omit(PersonalID[is.na(ExitDate)])),
               Number.of.adult.stayers = uniqueN(na.omit(PersonalID[age_group == "Adults" &
-                                                             is.na(ExitDate)])),
+                                                                     is.na(ExitDate)])),
               Number.of.veterans = uniqueN(na.omit(PersonalID[new_veteran_status == 1])),
               Number.of.chronically.homeless.persons = uniqueN(na.omit(PersonalID[chronic == "Y"])),
               Number.of.youth.under.age.25 = uniqueN(na.omit(PersonalID[youth == 1])),
               Number.of.parenting.youth.under.age.25.with.children = uniqueN(na.omit(PersonalID[has_children == 1 & youth == 1])),
               Number.of.adult.heads.of.household = uniqueN(na.omit(PersonalID[age_group == "Adults" &
-                                                                        RelationshipToHoH == 1])),
+                                                                                RelationshipToHoH == 1])),
               Number.of.child.and.unknown.age.heads.of.household = uniqueN(na.omit(PersonalID[age_group != "Adults" &
-                                                                                        RelationshipToHoH == 1])),
+                                                                                                RelationshipToHoH == 1])),
               Heads.of.households.and.adult.stayers.in.the.project.365.days.or.more = uniqueN(
                 na.omit(PersonalID[PersonalID %in% long_stayers$PersonalID |
                                      (age_group == "Adults" &
                                         HouseholdID %in% long_stayers$HouseholdID[long_stayers$RelationshipToHoH == 1])]))
-              ) %>% 
+    ) %>% 
     mutate(rowname = column_name) %>% 
     pivot_longer(!rowname, names_to = "Group", values_to = "values") %>% 
     pivot_wider(names_from = "rowname", values_from = "values")
@@ -988,7 +956,8 @@ create_inactive_table <- function(dq_enrollments,
   dq_enrollments %>%
     filter(is.na(ExitDate) &
              trunc((EntryDate %--% report_end_date) / days(1)) >= 90 &
-             ((ProjectType == 1) |
+             ((ProjectType == 1 &
+                 TrackingMethod == 3) |
                 (activity_type == "contact" &
                    ProjectType == 4))) %>%
     left_join(activity_events %>%
@@ -996,9 +965,8 @@ create_inactive_table <- function(dq_enrollments,
                 `colnames<-`(c("EnrollmentID", "included_activity_type")),
               by = "EnrollmentID") %>%
     summarise(Data.Element = activity_type_header,
-              Number.of.Records = n_distinct(PersonalID, na.rm = TRUE),
-              Number.of.Inactive.Records = n_distinct(PersonalID[is.na(included_activity_type)], 
-                                                      na.rm = TRUE)) %>%
+              Number.of.Records = n_distinct(PersonalID),
+              Number.of.Inactive.Records = n_distinct(PersonalID[is.na(included_activity_type)])) %>%
     ifnull(., 0) %>%
     mutate(Percent.of.Inactive.Records = Number.of.Inactive.Records / Number.of.Records)
 }
@@ -1009,10 +977,10 @@ set_hud_format <- function(data_for_csv) {
   first_col_name <- names(data_for_csv)[1]
   data_for_csv <- data_for_csv %>%
     mutate(!!first_col_name := gsub(".", " ", get(first_col_name), fixed = TRUE),
-      !!first_col_name := case_when(
-               get(first_col_name) == "Client Does Not Know or Refused" ~
-                 "Client Doesn't Know/Refused",
-               TRUE ~ get(first_col_name)))
+           !!first_col_name := case_when(
+             get(first_col_name) == "Client Does Not Know or Refused" ~
+               "Client Doesn't Know/Refused",
+             TRUE ~ get(first_col_name)))
   
   new_header <- names(data_for_csv)[2:length(data_for_csv)]
   new_header[new_header == "Client.Does.Not.Know.or.Refused"] <- "Client Doesn't Know/Refused"
@@ -1137,7 +1105,7 @@ create_time_to_move_in <- function(filtered_enrollments) {
 # make table for 'time homeless before housing' questions
 create_time_prior_to_housing <- function(filtered_enrollments) {
   filtered_enrollments %>%
-    filter(ProjectType %in% c(0, 1, 2, 3, 8, 9, 13)) %>%
+    filter(ProjectType %in% c(1, 2, 3, 8, 9, 13)) %>%
     mutate(housing_date = case_when(
       ProjectType %nin% c(3, 9, 13) |
         EntryDate > HoH_HMID ~ EntryDate,
@@ -1189,7 +1157,27 @@ add_client_info <- function(filtered_enrollments) {
                                  age < 18 ~ "Children",
                                  TRUE ~ detailed_age_group),
            new_veteran_status = if_else(
-             age_group == "Children", as.integer(0), VeteranStatus)) %>%
+             age_group == "Children", as.integer(0), VeteranStatus),
+           gender_combined = case_when(
+             Questioning == 1 ~ "Questioning",
+             NoSingleGender == 1 |
+               (Female == 1 &
+                  Male == 1) ~ "No Single Gender",
+             Transgender == 1 ~ "Transgender",
+             Female == 1 ~ "Female",
+             Male == 1 ~ "Male",
+             GenderNone %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+             TRUE ~ "Data.Not.Collected"),
+           race_combined = case_when(
+             AmIndAKNative + Asian + BlackAfAmerican +
+               NativeHIPacific + White > 1 ~ "Multiple Races",
+             White == 1 ~ "White",
+             BlackAfAmerican == 1 ~ "Black, African American, or African",
+             Asian == 1 ~ "Asian or Asian American",
+             AmIndAKNative == 1 ~ "American Indian, Alaska Native, or Indigenous",
+             NativeHIPacific == 1 ~ "Native Hawaiian or Pacific Islander",
+             RaceNone %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+             TRUE ~ "Data.Not.Collected")) %>%
     # get a second opinion on when to apply the household type calcs
     group_by(HouseholdID) %>%
     mutate(oldest_age = max(age, na.rm = TRUE),
@@ -1204,13 +1192,8 @@ add_client_info <- function(filtered_enrollments) {
     ungroup() %>%
     filter(EnrollmentID %in% filtered_enrollments$EnrollmentID) %>%
     select(PersonalID, age, age_group, detailed_age_group, VeteranStatus, 
-           youth_household, youth, has_children, new_veteran_status
-           # ,
-           # Woman, Man, NonBinary, CulturallySpecific, Transgender, 
-           # Questioning, DifferentIdentity, GenderNone, AmIndAKNative,
-           # Asian, BlackAfAmerican, HispanicLatinaeo, MidEastNAfrican,
-           # NativeHIPacific, White, RaceNone
-           )
+           youth_household, youth, has_children, new_veteran_status,
+           gender_combined, race_combined)
 }
 
 # returns program information table for CoC APR, CAPER, and CE APR
@@ -1219,7 +1202,7 @@ program_information_table <- function(project_list, filtered_enrollments) {
   Project %>%
     filter(ProjectID %in% project_list) %>%
     select(OrganizationID, ProjectName, ProjectID, ProjectType,
-           ResidentialAffiliation) %>%
+           TrackingMethod, ResidentialAffiliation) %>%
     left_join(Organization %>%
                 select(OrganizationID, OrganizationName,
                        VictimServiceProvider), 
@@ -1239,24 +1222,23 @@ program_information_table <- function(project_list, filtered_enrollments) {
               by = "ProjectID") %>%
     left_join(filtered_enrollments %>%
                 group_by(ProjectID) %>%
-                summarise(active_clients = n_distinct(PersonalID, na.rm = TRUE),
-                          active_households = n_distinct(HouseholdID, 
-                                                         na.rm = TRUE)),
+                summarise(active_clients = n_distinct(PersonalID),
+                          active_households = n_distinct(HouseholdID)),
               by = "ProjectID") %>%
     mutate(software_name = "generated by Data Lab",
            report_start_date = report_start_date,
            report_end_date = report_end_date) %>%
     select(OrganizationName, OrganizationID, ProjectName, ProjectID,
-           ProjectType, ResidentialAffiliation, affiliated_with, 
-           coc_codes, geocodes, VictimServiceProvider,
+           ProjectType, TrackingMethod, ResidentialAffiliation,
+           affiliated_with, coc_codes, geocodes, VictimServiceProvider,
            software_name, report_start_date, report_end_date,
            active_clients, active_households) %>%
     `colnames<-`(c("Organization Name", "Organization ID",
                    "Project Name", "Project ID",
-                   "HMIS Project Type",
+                   "HMIS Project Type", "Method for Tracking ES",
                    "Affiliated with a residential project",
-                   "Project IDs of affiliations", "CoC Number", 
-                   "Geocode", "Victim Service Provider",
+                   "Project IDs of affiliations",
+                   "CoC Number", "Geocode", "Victim Service Provider",
                    "HMIS Software Name", "Report Start Date",
                    "Report End Date", "Total Active Clients",
                    "Total Active Households"))
@@ -1371,31 +1353,31 @@ create_dq_Q1 <- function(filtered_enrollments) {
         (AmIndAKNative == 0 &
            Asian == 0 &
            BlackAfAmerican == 0 &
-           HispanicLatinaeo == 0 &
-           MidEastNAfrican == 0 &
            NativeHIPacific == 0 &
            White == 0) ~ "Information.Missing",
       TRUE ~ "OK")) %>%
     select(PersonalID, AmIndAKNative, Asian, BlackAfAmerican,
-           HispanicLatinaeo, MidEastNAfrican,
            NativeHIPacific, White, RaceNone, dq_flag)
+  
+  DQ1_ethnicity <- DQ1_data %>%
+    mutate(dq_flag = case_when(
+      Ethnicity %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+      Ethnicity == 99 ~ "Information.Missing",
+      TRUE ~ "OK")) %>%
+    select(PersonalID, Ethnicity, dq_flag)
   
   DQ1_gender <- DQ1_data %>%
     mutate(dq_flag = case_when(
       GenderNone %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
       GenderNone == 99 |
-        (Woman == 0 &
-           Man == 0 &
-           NonBinary == 0 &
-           CulturallySpecific == 0 &
+        (Female == 0 &
+           Male == 0 &
+           NoSingleGender == 0 &
            Transgender == 0 &
-           Questioning == 0 &
-           !(DifferentIdentity == 1 &
-               !is.na(DifferentIdentityText))) ~ "Information.Missing",
+           Questioning == 0) ~ "Information.Missing",
       TRUE ~ "OK")) %>%
-    select(PersonalID, Woman, Man, NonBinary, CulturallySpecific, Transgender, 
-           Questioning, DifferentIdentity, DifferentIdentityText, GenderNone, 
-           dq_flag)
+    select(PersonalID, Female, Male, NoSingleGender, Transgender,
+           Questioning, GenderNone, dq_flag)
   
   columns <- c("DataElement", "Client.Does.Not.Know.or.Refused", 
                "Information.Missing", "Data.Issues", "OK")
@@ -1406,7 +1388,7 @@ create_dq_Q1 <- function(filtered_enrollments) {
   DQ1_detail <- filtered_enrollments %>%
     select(all_of(standard_detail_columns))
   
-  elements <- list("Name", "SSN", "DOB", "Race", "Gender")
+  elements <- list("Name", "SSN", "DOB", "Race", "Ethnicity", "Gender")
   
   for (element in elements) {
     table <- get(paste0("DQ1_", tolower(element))) 
@@ -1460,7 +1442,7 @@ create_dq_Q1 <- function(filtered_enrollments) {
   
   DQ1[DQ1$DataElement == "Overall Score", c("Client.Does.Not.Know.or.Refused",
                                             "Information.Missing")] <- NA
-  DQ1$Data.Issues[4:6] <- NA
+  DQ1$Data.Issues[4:7] <- NA
   
   DQ1_results <- list()
   DQ1_results[[1]] <- DQ1
@@ -1550,28 +1532,3 @@ decimal_format <- function(value, decimal_places = 2) {
   value
 }
 
-
-# provides client counts by race for a given grouping
-return_race_groups <- function(APR_dataframe, grouped_by = grouped_by, 
-                                    group_list = group_list,
-                                    split_by_age = FALSE) {
-  
-  potential_table <- APR_dataframe %>%
-    group_by({{grouped_by}}) %>%
-      select({{grouped_by}}, all_of(names(race_columns))) %>% 
-    summarize(across(all_of(names(race_columns)),
-                     #  we can use sum() here instead of a distinct count
-                     #  because these columns are non-nullable binary fields
-                     #  and we're working with a deduplicated data set
-                     ~ sum(., na.rm = TRUE)))
-  
-  deparsed_grouped_by <- deparse(substitute(grouped_by))
-
-  as.data.frame(group_list) %>%
-    rename({{grouped_by}} := group_list) %>%
-    full_join(potential_table, by = deparsed_grouped_by) %>%
-    ifnull(., 0)
-  
-  # potential_table
-  
-}
