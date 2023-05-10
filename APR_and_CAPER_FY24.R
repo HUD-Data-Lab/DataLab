@@ -585,7 +585,7 @@ generate_new_kits <- TRUE
         Q7c_detail <- recent_program_enrollment %>%
           select(all_of(standard_detail_columns), age_group, HoH_HMID) %>%
           left_join(Client %>%
-                      select(PersonalID, all_of(names(race_columns)), RaceNone),
+                      select(PersonalID, all_of(unname(race_columns)), RaceNone),
                     by = "PersonalID")
         
         Q7c_all <- Q7c_detail %>%
@@ -865,14 +865,14 @@ generate_new_kits <- TRUE
       {
         Q12a_detail <- "See Q7c_detail.csv"
         
-        Q12a <- Q12a_detail %>%
+        Q12a <- Q7c_detail %>%
           ifnull(., 0) %>%
           left_join(race_info,
-                    by = all_of(names(race_columns))) %>%
+                    by = all_of(unname(race_columns))) %>%
           mutate(across(
-            all_of(names(race_columns)),
+            all_of(unname(race_columns)),
             ~ as.numeric(.)),
-            race_count = rowSums(across(all_of(names(race_columns))),
+            race_count = rowSums(across(all_of(unname(race_columns))),
                                    na.rm = TRUE),
             race_tabulation = case_when(
               race_count %in% 1:2 ~ race_name_list,

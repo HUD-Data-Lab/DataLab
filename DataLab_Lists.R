@@ -232,6 +232,7 @@ race_columns <- c(AmIndAKNative = "American Indian, Alaska Native, or Indigenous
                   NativeHIPacific = "Native Hawaiian or Pacific Islander", 
                   White = "White")
 
+race_columns <- setNames(names(race_columns), race_columns)
 
 
 # ------------------------------------------------------------------------------
@@ -240,8 +241,8 @@ race_columns <- c(AmIndAKNative = "American Indian, Alaska Native, or Indigenous
 # used in:
 #   APR/CAPER - Q12a
 
-race_list <- names(race_columns)
-race_name_list <- unname(race_columns)
+race_list <- unname(race_columns)
+race_name_list <- names(race_columns)
 
 possible_race_combos <- outer(race_list, race_list, paste, sep = '/')
 possible_race_name_combos <- outer(race_name_list, race_name_list, paste, sep = ' & ')
@@ -255,9 +256,9 @@ report_list_race <- setNames(race_name_list, race_list)
 
 race_info <- as.data.frame(race_list) 
 race_info$race_name_list <- race_name_list
-race_info[ , names(race_columns)] <- NA
+race_info[ , unname(race_columns)] <- NA
 
-for (col in names(race_columns)) {
+for (col in unname(race_columns)) {
   race_info <- race_info %>%
     mutate(!!col := if_else(str_detect(race_list, col),
                             1, 0))

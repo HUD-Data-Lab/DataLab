@@ -1558,12 +1558,14 @@ return_race_groups <- function(APR_dataframe, grouped_by = grouped_by,
   
   potential_table <- APR_dataframe %>%
     group_by({{grouped_by}}) %>%
-      select({{grouped_by}}, all_of(names(race_columns))) %>% 
-    summarize(across(all_of(names(race_columns)),
+      select({{grouped_by}}, all_of(unname(race_columns))) %>%
+    summarize(across(all_of(unname(race_columns)),
                      #  we can use sum() here instead of a distinct count
                      #  because these columns are non-nullable binary fields
-                     #  and we're working with a deduplicated data set
-                     ~ sum(., na.rm = TRUE)))
+                     #  and we're working with a deduplicated data
+                     ~ sum(., na.rm = TRUE))) %>% 
+    # rename_at(vars(names$vars), ~ names$labels)
+    rename(!!!race_columns)
   
   deparsed_grouped_by <- deparse(substitute(grouped_by))
 
