@@ -53,7 +53,10 @@ enrollment_data <- Enrollment %>%
             by = "EnrollmentID") %>%
   left_join(Project %>%
               select(ProjectID, ProjectType),
-            by = "ProjectID")
+            by = "ProjectID") %>%
+  mutate(Method5_ExitDate = if_else(
+    is.na(ExitDate) | ExitDate >= report_end_date,
+    report_end_date, ExitDate %m-% days(1)))
 
 NbN_projects <- c(1212, 1210)
 source("create_NbN_stays.R")
@@ -83,8 +86,8 @@ bed_nights_in_report_ee_format <- bed_nights_in_report %>%
             by = "EnrollmentID") %>%
   mutate(EnrollmentID = paste("S_", ServicesID),
          EntryDate = DateProvided,
-         ExitDateAdj = DateProvided) %>%
-  select(EnrollmentID, PersonalID, EntryDate, ExitDateAdj,
+         Method5_ExitDate = DateProvided) %>%
+  select(EnrollmentID, PersonalID, EntryDate, Method5_ExitDate,
          ProjectID, ProjectType)
 
 method_5_active_enrollments <- enrollment_data %>%
@@ -99,39 +102,52 @@ method_5_active_enrollments <- enrollment_data %>%
            )
          )
 
-##  Measure 1a
+#  Measure 1a
 {
   ##  uses this algorithm 
   ##  https://www.pharmasug.org/proceedings/2019/BP/PharmaSUG-2019-BP-219.pdf
   Q1a_line1_detail <- method_5_active_enrollments %>%
-    filter(ProjectType %in% c(0, 8)) %>%
-    mutate(ExitDateAdj = if_else(
-      is.na(ExitDate) | ExitDate >= report_end_date,
-      report_end_date, ExitDate %m-% days(1))) %>%
+    filter(ProjectType %in% c(0, 8) &
     # is this right?
-    filter(EntryDate < ExitDateAdj) %>%
+      EntryDate < Method5_ExitDate) %>%
     # ...and the way I add it here
     full_join(bed_nights_in_report_ee_format,
               by = colnames(bed_nights_in_report_ee_format)) %>%
     # unnecessary, added for algorithm QA
     select(colnames(bed_nights_in_report_ee_format)) %>%
-    arrange(PersonalID, EntryDate, ExitDateAdj) %>%
-    group_by(PersonalID) %>%
-    mutate(lag_EntryDate = lag(EntryDate),
-           lag_ExitDateAdj = lag(ExitDateAdj),
-           cummax_ExitDateAdj = as.Date(cummax(
-             if_else(is.na(lag_ExitDateAdj), -Inf, as.integer(lag_ExitDateAdj))
-           ), "1970-01-01"),
-           cummax_ExitDateAdj = case_when(
-             cummax_ExitDateAdj != -Inf ~ cummax_ExitDateAdj)) %>%
-    ungroup() %>%
-    mutate(
-      after_earlier = (EntryDate > cummax_ExitDateAdj &
-                            !is.na(lag_EntryDate)),
-      different_person = PersonalID != lag(PersonalID) &
-        !is.na(lag(PersonalID)),
-      lot_block = cumsum(after_earlier | different_person) + 1
-           )
+    create_lot_blocks()
+  
+  df_for_negation <- enrollment_data %>%
+    select(PersonalID, ProjectType, EntryDate, Method5_ExitDate)
+  
+  negated <- method_5_active_enrollments %>%
+    filter(ProjectType %in% c(0, 8)) %>%
+    select(PersonalID, ProjectType, EntryDate, Method5_ExitDate)
+    left
+  
+  create_lot_blocks <- function(enrollments_with_Method5_ExitDate) {
+    enrollments_with_Method5_ExitDate %>%
+      arrange(PersonalID, EntryDate, Method5_ExitDate) %>%
+      group_by(PersonalID) %>%
+      mutate(lag_EntryDate = lag(EntryDate),
+             lag_Method5_ExitDate = lag(Method5_ExitDate),
+             cummax_Method5_ExitDate = as.Date(cummax(
+               if_else(is.na(lag_Method5_ExitDate), -Inf, as.integer(lag_Method5_ExitDate))
+             ), "1970-01-01"),
+             cummax_Method5_ExitDate = case_when(
+               cummax_Method5_ExitDate != -Inf ~ cummax_Method5_ExitDate)) %>%
+      ungroup() %>%
+      mutate(
+        after_earlier = (EntryDate > cummax_Method5_ExitDate &
+                           !is.na(lag_EntryDate)),
+        different_person = PersonalID != lag(PersonalID) &
+          !is.na(lag(PersonalID)),
+        lot_block = cumsum(after_earlier | different_person) + 1
+      ) %>%
+      group_by(PersonalID, lot_block) %>%
+      summarise(EntryDate = min(EntryDate),
+                Method5_ExitDate = max(Method5_ExitDate))
+  }
   
   View(Q1a_line1_detail %>%filter(PersonalID == 670613))
   }
