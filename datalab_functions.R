@@ -7,9 +7,9 @@ library(archive)
 
 set.seed(2022)
 
-#install.packages("remotes")
+# install.packages("remotes")
 # remotes::install_github("COHHIO/HMIS")
-library(HMIS)
+# library(HMIS)
 
 `%nin%` = Negate(`%in%`)
 

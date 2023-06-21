@@ -47,8 +47,9 @@ FY24_residence_types <- ResidenceUses %>%
     mutate(
       # If FY22 2.02.06C = 3, then set FY24 2.02.06 to 15
       ProjectType = case_when(
-        ProjectType == 1 ~ 0,
         TrackingMethod == 3 ~ 1, 
+        ProjectType == 1 &
+          TrackingMethod != 3 ~ 0,
         TRUE ~ ProjectType),
       # If FY22 2.02.06 = 13, then require FY24 2.02.06A
       RRHSubType = case_when(
