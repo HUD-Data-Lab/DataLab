@@ -8,6 +8,25 @@ library(readxl)
 source("00_read_2022_csv.R")
 source("FY2024_mapping.R")
 
+enrollment_data <- Enrollment %>%
+  select(all_of(colnames(Enrollment)[1:18])) %>%
+  left_join(Exit %>%
+              select(EnrollmentID, ExitDate, Destination),
+            by = "EnrollmentID") %>%
+  left_join(Project %>%
+              select(ProjectID, ProjectType),
+            by = "ProjectID") %>%
+  mutate(Method5_ExitDate = if_else(
+    is.na(ExitDate) | ExitDate >= report_end_date,
+    report_end_date, ExitDate %m-% days(1)))
+NbN_projects <- c(1212, 1210)
+
+source("create_NbN_stays.R")
+
+Project$ProjectType[Project$ProjectID %in% NbN_projects] <- 1
+
+
+
 #Create table to fill values in as we complete them.
 SPM.1a <- data.frame(
   "Population" =c("Persons in ES-EE,ES-NbN, and SH","Persons in ES-EE, ES-NbN,SH,TH, and PH"),
@@ -37,13 +56,20 @@ df_entryExit <- Client %>%
   left_join(Enrollment, by = "PersonalID",keep = FALSE) %>% 
   left_join(Exit, by = "EnrollmentID","PersonalID",keep = FALSE) %>% 
   left_join(Project, by = "ProjectID",keep = FALSE)
-  
+
 df_entryExit <- df_entryExit %>% 
   rename(PersonalID = PersonalID.x)
 
 # 1. System Performance Measure 1: Length of Time Persons Remain Homeless ----
 ## Step 1: Create DF  ----
 #Select active clients across all projects of relevant types in the CoC who have a Bednight in the report range. Use Method 5: Active Clients
+# NOTE: NbN only applies to Nbn. Use Service date to create Dummy enrollemnts to allow entrydate to be used consistently through
+
+df_NbN_srvcs <- Services %>% 
+  filter(RecordType == 200) %>% 
+  select(EnrollmentID,PersonalID,DateProvided) %>% 
+  mutate(Entrydate = DateProvided,
+         Exitdate = DateProvided)
 
 df_SPM.1.join <- Services %>% 
   left_join(df_entryExit,by="EnrollmentID","PersonalID")
@@ -59,26 +85,18 @@ df_SPM.1_base <- df_SPM.1.join %>%
            DateProvided >= report_start_date & 
            DateProvided <= report_end_date & 
            DateProvided >= EntryDate, 
-         M5_ptype_qual = ProjectType == 0 | 
-           ProjectType == 2 | 
-           ProjectType == 3 | 
-           ProjectType == 8 | 
-           ProjectType == 9 | 
-           ProjectType == 10 | 
-           ProjectType == 13, #Use this to filter by clients that meet base qualifier under Method 5: Active Clients
+         M5_ptype_qual = ProjectType %in% c(0,2,3,8,9,10,13), #Use this to filter by clients that meet base qualifier under Method 5: Active Clients
          M5.Active.Clients = 
            M5_EE_qual & 
            (M5_bdnt_qual | M5_ptype_qual), # Active clients following Method 5 outlined in the Glossary 
          M1ab.L1.crrnt.prsns_qual = #Using [M5.Active.Clients] create the base active clients using the identified project types in the SPM reporting specs
            M5.Active.Clients & 
-           (ProjectType == 0 | ProjectType == 1 | ProjectType == 8), #Active clients who are in ES-EE, ES-Nbn, and SH
+           (ProjectType %in% c(0,1,8)), #Active clients who are in ES-EE, ES-Nbn, and SH
          M1ab.L2.crrnt.prsns_qual = 
            M5.Active.Clients == 1 &
-           (ProjectType == 0 | ProjectType == 1 | ProjectType == 8 | ProjectType == 2), # Active clients who are in ES-EE, ES-Nbn, SH, TH
+           (ProjectType %in% c(0,1,8,2)), # Active clients who are in ES-EE, ES-Nbn, SH, TH
          M1b.HmlsEntry_qual =  #Homeless at entry qualification for SPM 1b
-           LivingSituation == 16 | 
-           LivingSituation == 1 | 
-           LivingSituation == 18, #living situation codes are changed in FY24 (i.e., 16 ~ 116)
+           LivingSituation %in% c(16,1,18), #living situation codes are changed in FY24 (i.e., 16 ~ 116)
          M1b.strtdate_qual = 
            EntryDate >= report_start_date & 
            EntryDate <= report_end_date,
