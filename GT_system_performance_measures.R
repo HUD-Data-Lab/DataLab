@@ -4,28 +4,9 @@ library(lubridate)
 library(readxl)
 
 #SPM Programming specs: https://icfonline.sharepoint.com/:w:/r/sites/NHDAP/_layouts/15/Doc.aspx?action=edit&sourcedoc=%7B4ec4f3da-89f4-4c2d-810c-1f93ecc0e60c%7D&wdOrigin=TEAMS-ELECTRON.teamsSdk.openFilePreview&wdExp=TEAMS-CONTROL&web=1
+#HMIS Glossary: https://icfonline.sharepoint.com/:w:/r/sites/NHDAP/_layouts/15/Doc.aspx?action=edit&sourcedoc=%7Bda79cae5-b933-41f0-b408-40162ade797d%7D&wdOrigin=TEAMS-ELECTRON.teamsSdk.openFilePreview&wdExp=TEAMS-CONTROL&web=1
 
-source("00_read_2022_csv.R")
-source("FY2024_mapping.R")
-
-enrollment_data <- Enrollment %>%
-  select(all_of(colnames(Enrollment)[1:18])) %>%
-  left_join(Exit %>%
-              select(EnrollmentID, ExitDate, Destination),
-            by = "EnrollmentID") %>%
-  left_join(Project %>%
-              select(ProjectID, ProjectType),
-            by = "ProjectID") %>%
-  mutate(Method5_ExitDate = if_else(
-    is.na(ExitDate) | ExitDate >= report_end_date,
-    report_end_date, ExitDate %m-% days(1)))
-NbN_projects <- c(1212, 1210)
-
-source("create_NbN_stays.R")
-
-Project$ProjectType[Project$ProjectID %in% NbN_projects] <- 1
-
-
+#Run lines 1 - 102 in source(system_performance_measures.R)
 
 #Create table to fill values in as we complete them.
 SPM.1a <- data.frame(
@@ -48,9 +29,6 @@ view(SPM.1a) # view empty table
 # ([Project Start Date] )
 
 ###****
-lookback_stop_date <- ymd("2014-10-1")
-report_end_date <- ymd("2022-09-30")
-report_start_date <- ymd("2021-10-01")
 
 df_entryExit <- Client %>% 
   left_join(Enrollment, by = "PersonalID",keep = FALSE) %>% 
@@ -300,14 +278,90 @@ SPM.3.2_TH.Count <- df_spm.3.2_base %>%
 
 ## 4.1 Adult system stayers
 
-#New line here
+# 7. System Performance Performance Measure 7: Exit from Street Outreach ----
+
+#Street Outreach Projectype = 4
+# Homeless situations -> 101,116,118
+# Institutional settings -> 206 (exclude from measure),215,207,204,205,225
+# Temporary Housing Situations -> 329 (exclude from measure), 314, 312, 313, 302, 327, 332
+# Permanent -> 426,411,421,410,435,422,423
+# Other -> 24 (Exclude from universe),8,9,99,30,17
+
+#Baseline data
+df_SPM.7.baseline <- enrollment_data # May not be an important step, but i always liked using "df"
+
+## Identify Leavers qualifier ----
+df_SPM.7a1.M1.active <- df_SPM.7.baseline %>% 
+  filter(ProjectType == 4,
+         EntryDate <= report_end_date &
+           (is.na(ExitDate) | ExitDate > report_start_date)) %>% 
+  mutate(Destination_Names = case_when(
+    Destination %in% c(101,116,118) ~ "Homeless.Sit",
+    Destination %in% c(206,215,207,204,205,225) ~ "Institutional.Set",
+    Destination %in% c(329,314,312,313,302,327,332) ~ "Temporary.Sit",
+    Destination %in% c(426,411,421,410,435,422,423) ~ "Permanent.Sit",
+    Destination %in% c(24,8,9,99,30,17) ~ "Other"
+  ))
+
+df_spm.7_dupCnt<- df_SPM.7a1.M1.active %>% 
+  group_by(PersonalID) %>% 
+  summarise(n=n()) %>% 
+  arrange(desc(n))
+
+df_SPM.7a.1.exits <- df_SPM.7a1.M1.active %>% 
+  arrange(PersonalID,by=EntryDate) %>% 
+  left_join(df_spm.7_dupCnt, by = "PersonalID") %>% 
+  mutate(No_exit = is.na(ExitDate) | ExitDate > report_end_date,
+         No_exit_list = ifelse(No_exit,PersonalID,NA))
+
+df_SPM.7_list <- unique(df_SPM.7a.1.exits$No_exit_list,na.rm=TRUE)
+df_SPM.7_list <- df_SPM.7_list[!is.na(df_SPM.7_list)]
+
+`%nin%` = Negate(`%in%`)
+
+df_SPM.7a.1.exits <- df_SPM.7a.1.exits %>% 
+  filter(PersonalID %nin% df_SPM.7_list,
+         Destination %nin% c(206,329,24)) %>% 
+  group_by(PersonalID) %>% 
+  slice(which.max(ExitDate))
+
+SPM.7a.1_counts <- df_SPM.7a.1.exits %>% 
+  group_by(Destination_Names) %>% 
+  summarise(n=n())
+
+
+# %>% add_row(tibble_row(total = NA))
 
 
 
 
 
+### Test ----
+df_SPM.7.test <- df_SPM.7a1.M1.active %>% 
+  filter(PersonalID %in% c(640839, 652692, 512662,104183, 112123)) %>% 
+  select(EnrollmentID,PersonalID,ProjectID,ProjectType, EntryDate,ExitDate,Destination,Destination_Names) %>% 
+  arrange(PersonalID,by=EntryDate)
+
+df_SPM.7.test <- df_SPM.7.test %>% 
+  left_join(df_spm.7_dupCnt, by = "PersonalID")
+
+df_SPM.7.test <-df_SPM.7.test %>% 
+  mutate(No_exit = is.na(ExitDate) | ExitDate > report_end_date,
+         No_exit_list = ifelse(No_exit,PersonalID,NA))
 
 
+df_SPM.7_list <- unique(df_SPM.7.test$No_exit_list,na.rm=TRUE)
+df_SPM.7_list <- df_SPM.7_list[!is.na(df_SPM.7_list)]
+
+`%nin%` = Negate(`%in%`)
+
+df_SPM.7.test <- df_SPM.7.test %>% 
+  filter(PersonalID %nin% df_SPM.7_list,
+         Destination %nin% c(206,329,24)) %>% 
+  group_by(PersonalID) %>% 
+  slice(which.max(ExitDate))
+
+df_SPM.7.test %>% group_by(Destination_Names) %>% summarise(n=n())
 
 
 
