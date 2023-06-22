@@ -290,7 +290,8 @@ SPM.3.2_TH.Count <- df_spm.3.2_base %>%
 #Baseline data
 df_SPM.7.baseline <- enrollment_data # May not be an important step, but i always liked using "df"
 
-## Identify Leavers qualifier ----
+## 7a.1 Change in exits to permanent housing destinations ----  
+### Add active clients filter Method1 and add destination names ----
 df_SPM.7a1.M1.active <- df_SPM.7.baseline %>% 
   filter(ProjectType == 4,
          EntryDate <= report_end_date &
@@ -303,37 +304,33 @@ df_SPM.7a1.M1.active <- df_SPM.7.baseline %>%
     Destination %in% c(24,8,9,99,30,17) ~ "Other"
   ))
 
+# This is unimportant, but one idea I had was identifying duplicates to identify who exited and then returned to another SO project
 df_spm.7_dupCnt<- df_SPM.7a1.M1.active %>% 
   group_by(PersonalID) %>% 
   summarise(n=n()) %>% 
   arrange(desc(n))
 
-df_SPM.7a.1.exits <- df_SPM.7a1.M1.active %>% 
-  arrange(PersonalID,by=EntryDate) %>% 
-  left_join(df_spm.7_dupCnt, by = "PersonalID") %>% 
-  mutate(No_exit = is.na(ExitDate) | ExitDate > report_end_date,
-         No_exit_list = ifelse(No_exit,PersonalID,NA))
 
-df_SPM.7_list <- unique(df_SPM.7a.1.exits$No_exit_list,na.rm=TRUE)
-df_SPM.7_list <- df_SPM.7_list[!is.na(df_SPM.7_list)]
+df_SPM.7a.1.exits <- df_SPM.7a1.M1.active %>% 
+  arrange(PersonalID,by=EntryDate) %>% # May be able to remove this line
+  left_join(df_spm.7_dupCnt, by = "PersonalID") %>%  # May be able to remove this line
+   mutate(No_exit = is.na(ExitDate) | ExitDate > report_end_date,
+         No_exit_list = ifelse(No_exit,PersonalID,NA)) # This is to get a list of all personalIDs with an ineligible enrollment.
+
+df_SPM.7_list <- unique(df_SPM.7a.1.exits$No_exit_list,na.rm=TRUE) #Use the T/F from No_exit_list to create the list
+df_SPM.7_list <- df_SPM.7_list[!is.na(df_SPM.7_list)] # Remove the NA
 
 `%nin%` = Negate(`%in%`)
 
 df_SPM.7a.1.exits <- df_SPM.7a.1.exits %>% 
-  filter(PersonalID %nin% df_SPM.7_list,
+  filter(PersonalID %nin% df_SPM.7_list, # Exclude everyone with a ineligible exit. This should only leave people with a single enrollment or enrollments that end in the report period
          Destination %nin% c(206,329,24)) %>% 
   group_by(PersonalID) %>% 
-  slice(which.max(ExitDate))
+  slice(which.max(ExitDate)) # Why not slice_max()? // this keeps the latest exit for all duplicates. There shoudl be no duplicates after this
 
-SPM.7a.1_counts <- df_SPM.7a.1.exits %>% 
+SPM.7a.1_counts <- df_SPM.7a.1.exits %>% #creates a summary table with the counts for SPM.7a.1
   group_by(Destination_Names) %>% 
   summarise(n=n())
-
-
-# %>% add_row(tibble_row(total = NA))
-
-
-
 
 
 ### Test ----
