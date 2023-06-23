@@ -300,13 +300,6 @@ df_SPM.7a1.M1.active <- df_SPM.7.baseline %>%
     Destination %in% c(24,8,9,99,30,17) ~ "Other"
   ))
 
-# This is unimportant, but one idea I had was identifying duplicates to identify who exited and then returned to another SO project
-df_spm.7_dupCnt<- df_SPM.7a1.M1.active %>% 
-  group_by(PersonalID) %>% 
-  summarise(n=n()) %>% 
-  arrange(desc(n))
-
-
 df_SPM.7a.1.exits <- df_SPM.7a1.M1.active %>% 
   arrange(PersonalID,by=EntryDate) %>% # May be able to remove this line
   left_join(df_spm.7_dupCnt, by = "PersonalID") %>%  # May be able to remove this line
@@ -319,57 +312,52 @@ df_SPM.7_list <- df_SPM.7_list[!is.na(df_SPM.7_list)] # Remove the NA
 `%nin%` = Negate(`%in%`)
 
 df_SPM.7a.1.exits <- df_SPM.7a.1.exits %>% 
-  filter(PersonalID %nin% df_SPM.7_list, # Exclude everyone with a ineligible exit. This should only leave people with a single enrollment or enrollments that end in the report period
+  filter(PersonalID %nin% df_SPM.7a1.M1.active$PersonalID[df_SPM.7a1.M1.active$ExitDate > report_end_date | is.na(df_SPM.7a1.M1.active$ExitDate)], # Exclude everyone with a ineligible exit. This should only leave people with a single enrollment or enrollments that end in the report period
          Destination %nin% c(206,329,24)) %>% 
   group_by(PersonalID) %>% 
   slice(which.max(ExitDate)) # Why not slice_max()? // this keeps the latest exit for all duplicates. There should be no duplicates after this
+# if there is a tie it will take the first one in DF
 
 SPM.7a.1_counts <- df_SPM.7a.1.exits %>% #creates a summary table with the counts for SPM.7a.1
   group_by(Destination_Names) %>% 
   summarise(n=n())
 SPM.7a.1_counts
 
-### df for testing ----
-df_SPM.7.test <- df_SPM.7a1.M1.active %>%
-filter(PersonalID %in% c(640839, 652692, 512662,104183, 112123)) %>%
-select(EnrollmentID,PersonalID,ProjectID,ProjectType, EntryDate,ExitDate,Destination,Destination_Names) %>%
-arrange(PersonalID,by=EntryDate)
+
+## 7b - Set Dataframe for metric
+
+df_7b_test<- enrollment_data %>% 
+  select(EnrollmentID,PersonalID,ProjectType,EntryDate,MoveInDate,ExitDate,Destination) %>% 
+  filter(PersonalID %in% c(641917,421470,640265),
+         ProjectType %in% c(0,1,2,3,8,9,10,13),
+         EntryDate <= report_end_date & (is.na(ExitDate) | ExitDate > report_start_date)) %>% 
+  group_by(PersonalID) %>% 
+  arrange(desc(EnrollmentID), .by_group = TRUE)
+#,
+#        is.na(MoveInDate))
+
 
 ## 7b.1 - Change in exits to PSH ----
 # Set Universe - Persons in ES-EE (0), ES-NbN (1), SH (8) , TH (2), and PH-RRH (13) who exited
-# bed_nights_in_report_ee_format + M1 baseline
 
 df_SPM.7b1.M1.active <- df_SPM.7.baseline %>% 
   mutate(Destination_Names = case_when(
-    Destination %in% c(101,116,118) ~ "Homeless.Sit",
-    Destination %in% c(206,215,207,204,205,225) ~ "Institutional.Set",
-    Destination %in% c(329,314,312,313,302,327,332) ~ "Temporary.Sit",
-    Destination %in% c(426,411,421,410,435,422,423) ~ "Permanent.Sit",
-    Destination %in% c(24,8,9,99,30,17) ~ "Other"),
+    Destination %in% c(101,116,118) ~ "Homeless.Sit", #100-199
+    Destination %in% c(206,215,207,204,205,225) ~ "Institutional.Set", #200-299
+    Destination %in% c(329,314,312,313,302,327,332) ~ "Temporary.Sit", #300-399
+    Destination %in% c(426,411,421,410,435,422,423) ~ "Permanent.Sit", #400-499
+    Destination %in% c(24,8,9,99,30,17) ~ "Other"), #0-99 other series
     MoveinDate_qual = MoveInDate <= report_end_date) %>% #Qualifier variable for Movein date. If TRUE exclude
-filter(ProjectType %in% c(0,1,8,2,13),
+filter(ProjectType %in% c(0,1,2,8,9,10,13),
        EntryDate <= report_end_date &
          (is.na(ExitDate) | ExitDate > report_start_date),
-       is.na(MoveInDate))
+       is.na(MoveInDate)) #Once complete refer to MoveInDateAdj
 
-# Need to include NbN shelter as some point. Still not sure how to best approach it.
-#%>% 
-#  full_join(bed_nights_in_report_ee_format,
-#            by = colnames(bed_nights_in_report_ee_format))
-
-#Once the universe is identified with active clients we can got hrough arrange and slice process
-
-df_SPM.7b.1.exits <- df_SPM.7b1.M1.active %>% 
-  mutate(No_exit = is.na(ExitDate) | ExitDate > report_end_date,
-         No_exit_list = ifelse(No_exit,PersonalID,NA)) # This is to get a list of all personalIDs with an ineligible enrollment.
-
-df_SPM.7b_list <- unique(df_SPM.7b.1.exits$No_exit_list,na.rm=TRUE) #Use the T/F from No_exit_list to create the list
-df_SPM.7b_list <- df_SPM.7b_list[!is.na(df_SPM.7b_list)] # Remove the NA
-
+#Once the universe is identified with active clients we can got through arrange and slice process
 `%nin%` = Negate(`%in%`)
 
-df_SPM.7b.1.exits <- df_SPM.7b.1.exits %>% 
-  filter(PersonalID %nin% df_SPM.7b_list, # Exclude everyone with a ineligible exit. This should only leave people with a single enrollment or enrollments that end in the report period
+df_SPM.7b.1.exits <- df_SPM.7b1.M1.active %>% 
+  filter(PersonalID %nin% df_SPM.7b1.M1.active$PersonalID[df_SPM.7b1.M1.active$ExitDate > report_end_date | is.na(df_SPM.7b1.M1.active$ExitDate)], # Exclude everyone with a ineligible exit. This should only leave people with a single enrollment or enrollments that end in the report period
          Destination %nin% c(206,329,24)) %>% 
   group_by(PersonalID) %>% 
   slice(which.max(ExitDate))  # Why not slice_max()? // this keeps the latest exit for all duplicates. There should be no duplicates after this
@@ -379,6 +367,22 @@ SPM.7b.1_counts <- df_SPM.7b.1.exits %>% #creates a summary table with the count
   summarise(n=n())
 
 SPM.7b.1_counts
+
+
+## 7b.2 - Change in exit or retention pf permanent housing ----
+df_SPM.7b1.M1.active <- df_SPM.7.baseline %>% 
+  mutate(Destination_Names = case_when(
+    Destination %in% c(101,116,118) ~ "Homeless.Sit", #100-199
+    Destination %in% c(206,215,207,204,205,225) ~ "Institutional.Set", #200-299
+    Destination %in% c(329,314,312,313,302,327,332) ~ "Temporary.Sit", #300-399
+    Destination %in% c(426,411,421,410,435,422,423) ~ "Permanent.Sit", #400-499
+    Destination %in% c(24,8,9,99,30,17) ~ "Other"), #0-99 other series
+    MoveinDate_qual = MoveInDate <= report_end_date) %>% #Qualifier variable for Movein date. If TRUE exclude
+  filter(ProjectType %in% c(3,9,10),
+         EntryDate <= report_end_date &
+           (is.na(ExitDate) | ExitDate > report_start_date),
+         is.na(MoveInDate)) #Once complete refer to MoveInDateAdj
+
 
 ## CHECK Compare universe client lists to check for duplicates ----
 spm.7a1_persons <- df_SPM.7a.1.exits[,2]
@@ -407,7 +411,7 @@ df_sppm_duplicates <- df_sppm_duplicates %>%
 DF_duplicates_test <- df_SPM.7.baseline %>% 
   filter(PersonalID == 416498)
 
-## New idea: Arrange and slice the baseline to keep the most recent exit for all projects types ( still trying to think through NbN) ----
+## 7ab.1 New idea: Arrange and slice the baseline to keep the most recent exit for all projects types ( still trying to think through NbN) ----
 # This would keep the most recent exit for each project type. We don't need total active for this measure
 # In theory this would allow us to have distinct persons between each metrics
 # baseline data - enrollment_data
@@ -424,9 +428,8 @@ df_SPM.7.M1.active <- df_SPM.7.baseline %>%
     Destination %in% c(24,8,9,99,30,17) ~ "Other"),
     MoveinDate_qual = MoveInDate <= report_end_date) %>% #Qualifier variable for Movein date. If TRUE exclude
   filter(ProjectType %in% c(0,4,1,8,2,13),
-         EntryDate <= report_end_date &
-           (is.na(ExitDate) | ExitDate > report_start_date),
-         is.na(MoveInDate))
+         EntryDate <= report_end_date & (is.na(ExitDate) | ExitDate > report_start_date),
+         is.na(MoveInDate) | MoveInDate > report_end_date)
 
 df_SPM.7.exits <- df_SPM.7.M1.active %>% 
   mutate(No_exit = is.na(ExitDate) | ExitDate > report_end_date,
@@ -473,4 +476,7 @@ df_dupCount <- Duplicates %>%
   arrange(desc(n)) %>%
   filter(n > 1)
 # looks like there are no duplicates.
+
+## 7b.2 - exit or retention of permanent housing
+
 
