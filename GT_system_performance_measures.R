@@ -328,14 +328,26 @@ SPM.7a.1_counts
 
 df_7b_test<- enrollment_data %>% 
   select(EnrollmentID,PersonalID,ProjectType,EntryDate,MoveInDate,ExitDate,Destination) %>% 
-  filter(PersonalID %in% c(641917,421470,640265),
-         ProjectType %in% c(0,1,2,3,8,9,10,13),
-         EntryDate <= report_end_date & (is.na(ExitDate) | ExitDate > report_start_date)) %>% 
+  filter(ProjectType %in% c(0,1,2,3,8,9,10,13), #leaving SO out of this. Could be duplicates between 7a and 7b
+         Destination %nin% c(206,329,24),
+         EntryDate <= report_end_date & (ExitDate < report_end_date | MoveInDate < report_end_date)) %>%
   group_by(PersonalID) %>% 
-  arrange(desc(EnrollmentID), .by_group = TRUE)
-#,
-#        is.na(MoveInDate))
+  arrange(desc(EnrollmentID), .by_group = TRUE) %>% 
+  slice(which.max(ExitDate))
+# This arranges by enrollmentID. Higher enrollment = most recent entry. 
+# For slice(which.max(ExitDate) if there is a tie between exit dates it keeps the first exit date found in DF
+# This makes the tie-breaker enrollmentID and keeps the information from the most recent entry. 
 
+df_7b_test %>% 
+  filter(ProjectType %in% c(3,9,10),
+         MoveInDate <= report_end_date)
+
+df_7b_test %>% 
+  filter(df_7b_test$PersonalID[df_7b_test$ProjectType %in% c(3,9,10) & df_7b_test$MoveInDate <=report_end_date])
+
+df_7b_test$PersonalID[df_7b_test$ProjectType %in% c(3,9,10) & df_7b_test$MoveInDate <=report_end_date]
+
+df_SPM.7b1.M1.active$PersonalID[df_SPM.7b1.M1.active$ExitDate > report_end_date | is.na(df_SPM.7b1.M1.active$ExitDate)]
 
 ## 7b.1 - Change in exits to PSH ----
 # Set Universe - Persons in ES-EE (0), ES-NbN (1), SH (8) , TH (2), and PH-RRH (13) who exited
