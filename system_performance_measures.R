@@ -9,17 +9,25 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
-library(tidyverse)
+# install and/or load packages
+if(!require(tidyverse)) {
+  install.packages("tidyverse"); 
+  library(tidyverse)
+}
 
+# parameters
 lookback_stop_date <- ymd("2014-10-1")
 
 system_performance_measures <- TRUE
 
+# subscripts
 source("00_read_2022_csv.R")
 source("FY2024_mapping.R")
 
+# Is there a reason this needs to be here and not above with other params?
 report_start_date <- lookback_stop_date %m+% years(7)
 
+# SPM universe
 single_CoC_projects <- ProjectCoC %>%
   mutate(relevant_to_CoC = 
            str_sub(relevant_CoC, 4, 6) == str_sub(CoCCode, 4, 6)) %>%
@@ -151,3 +159,105 @@ method_5_active_enrollments <- enrollment_data %>%
   
   View(Q1a_line1_detail %>%filter(PersonalID == 670613))
   }
+
+
+# Measure 5 - Number of Persons who Become Homeless for the First Time
+
+#### QUESTIONS
+  ### Appropriate to use Method 5 exit date for last active date?
+  ### Do we want to consolidate the code with functions (loops) or fine as-is?
+
+  ## define report range universes
+
+    ### 5.1 (ES, SH, TH, PH)
+    Q5M1_report <- method_5_active_enrollments %>%
+      filter(ProjectType %in% c(0,1,2,8) & 
+               EntryDate >= report_start_date ) %>%
+      arrange(PersonalID, EntryDate, EnrollmentID) %>%
+      group_by(PersonalID) %>%
+      filter(row_number()==1) %>%
+      ungroup() %>%
+      mutate(
+        client_lookbackdate = max( EntryDate %m-% days(730), lookback_stop_date )
+        ) %>% 
+      rename( "client_startdate" = "EntryDate") %>%
+      select(PersonalID, client_startdate, client_lookbackdate)
+    
+    ### 5.2 (ES, SH, TH, PH)
+    Q5M2_report <- method_5_active_enrollments %>%
+      filter(ProjectType %in% c(0,1,2,8,3,9,10,13) &
+               EntryDate >= report_start_date) %>%
+      arrange(PersonalID, EntryDate, EnrollmentID) %>%
+      group_by(PersonalID) %>%
+      filter(row_number()==1) %>%
+      ungroup() %>%
+      mutate(
+        client_lookbackdate = max( EntryDate %m-% days(730), lookback_stop_date )
+      ) %>% 
+      rename( "client_startdate" = "EntryDate") %>%
+      select(PersonalID, client_startdate, client_lookbackdate)
+  
+  ## define lookback universes
+  Q5_lookback_u <- method_5_active_enrollments %>%
+    filter(ProjectType %in% c(0,1,2,8,3,9,10,13) &
+             EntryDate < report_start_date)
+  
+    ### 5.1 lookback
+    Q5M1_lookback <- Q5_lookback_u %>%
+      filter(PersonalID %in% Q5M1_report$PersonalID ) %>%
+      arrange(PersonalID, desc(Method5_ExitDate), desc(EnrollmentID)) %>%
+      group_by(PersonalID) %>% 
+      filter(row_number()==1) %>%
+      ungroup() %>%
+      rename( "lookback_lastactivedate" = "Method5_ExitDate") %>%
+      select(PersonalID, lookback_lastactivedate)
+    
+    ### 5.2 lookback
+    Q5M2_lookback <- Q5_lookback_u %>%
+      filter( PersonalID %in% Q5M2_report$PersonalID ) %>%
+      arrange(PersonalID, desc(Method5_ExitDate), desc(EnrollmentID)) %>%
+      group_by(PersonalID) %>% 
+      filter(row_number()==1) %>%
+      ungroup() %>%
+      rename( "lookback_lastactivedate" = "Method5_ExitDate") %>%
+      select(PersonalID, lookback_lastactivedate)
+  
+  ## calculations
+    
+    ### counts of report persons
+    Q5M1_C2 <- Q5M1_report %>% 
+      summarise(count = n()) %>%
+      .$count
+    
+    Q5M2_C2 <- Q5M2_report %>% 
+      summarise(count = n()) %>%
+      .$count
+    
+    ### counts of report persons in lookback
+    Q5M1_C3 <- 
+      inner_join(
+        x = Q5M1_report,
+        y = Q5M1_lookback,
+        by = "PersonalID"
+      ) %>%
+      filter(lookback_lastactivedate >= client_lookbackdate) %>%
+      summarise(count = n()) %>%
+      .$count
+    
+    Q5M2_C3 <- 
+      inner_join(
+        x = Q5M2_report,
+        y = Q5M2_lookback,
+        by = "PersonalID"
+      ) %>%
+      filter(lookback_lastactivedate >= client_lookbackdate) %>%
+      summarise(count = n()) %>%
+      .$count
+    
+    ### counts of new report persons (not in lookback)
+    Q5M1_C4 <- Q5M1_C2 - Q5M1_C3
+    
+    Q5M2_C4 <- Q5M2_C2 - Q5M2_C3
+  
+  ## output tables
+  
