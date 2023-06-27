@@ -37,6 +37,16 @@ relevant_household_ids <- Enrollment %>%
   select(HouseholdID) %>%
   distinct()
 
+hmids <- Enrollment %>%
+  filter(RelationshipToHoH == 1 &
+           ProjectID %in% Project$ProjectID[Project$ProjectType %in% c(3, 9, 10, 13)]) %>%
+  group_by(HouseholdID) %>%
+  arrange(EntryDate) %>%
+  slice(1L) %>%
+  ungroup() %>%
+  select(HouseholdID, MoveInDate) %>%
+  rename(HoH_HMID = MoveInDate)
+
 Enrollment <- Enrollment %>%
   filter(HouseholdID %in% relevant_household_ids$HouseholdID)
 
@@ -46,6 +56,9 @@ for (csv in c("Exit", "IncomeBenefits")) {
            filter(EnrollmentID %in% Enrollment$EnrollmentID))
 }
 
+NbN_projects <- c(1212, 1210)
+Project$ProjectType[Project$ProjectID %in% NbN_projects] <- 1
+
 enrollment_data <- Enrollment %>%
   select(all_of(colnames(Enrollment)[1:18])) %>%
   left_join(Exit %>%
@@ -54,13 +67,37 @@ enrollment_data <- Enrollment %>%
   left_join(Project %>%
               select(ProjectID, ProjectType),
             by = "ProjectID") %>%
-  mutate(Method5_ExitDate = if_else(
-    is.na(ExitDate) | ExitDate >= report_end_date,
-    report_end_date, ExitDate %m-% days(1)))
+  left_join(Client %>%
+              select(PersonalID, DOB),
+            by = "PersonalID") %>%
+  left_join(hmids,
+            by = "HouseholdID") %>%
+  mutate(MoveInDateAdj = case_when(
+    !is.na(HoH_HMID) &
+      HoH_HMID >= DOB &
+      HoH_HMID >= EntryDate &
+      (HoH_HMID <= ExitDate |
+         is.na(ExitDate)) ~ HoH_HMID,
+    !is.na(HoH_HMID) &
+      (HoH_HMID <= ExitDate |
+         is.na(ExitDate)) ~ EntryDate
+  ))
 
-NbN_projects <- c(1212, 1210)
 source("create_NbN_stays.R")
-Project$ProjectType[Project$ProjectID %in% NbN_projects] <- 1
+
+# enrollment_data <- Enrollment %>%
+#   select(all_of(colnames(Enrollment)[1:18])) %>%
+#   left_join(Exit %>%
+#               select(EnrollmentID, ExitDate, Destination),
+#             by = "EnrollmentID") %>%
+#   left_join(Project %>%
+#               select(ProjectID, ProjectType),
+#             by = "ProjectID") %>%
+#   mutate(Method5_ExitDate = if_else(
+#     is.na(ExitDate) | ExitDate >= report_end_date,
+#     report_end_date, ExitDate %m-% days(1)))
+
+
 
 all_bed_nights <- Services %>%
   inner_join(enrollment_data %>%
@@ -86,8 +123,8 @@ bed_nights_in_report_ee_format <- bed_nights_in_report %>%
             by = "EnrollmentID") %>%
   mutate(EnrollmentID = paste("S_", ServicesID),
          EntryDate = DateProvided,
-         Method5_ExitDate = DateProvided) %>%
-  select(EnrollmentID, PersonalID, EntryDate, Method5_ExitDate,
+         ExitDate = DateProvided) %>%
+  select(EnrollmentID, PersonalID, EntryDate, ExitDate,
          ProjectID, ProjectType)
 
 method_5_active_enrollments <- enrollment_data %>%
@@ -122,8 +159,59 @@ method_5_active_enrollments <- enrollment_data %>%
   
   negated <- method_5_active_enrollments %>%
     filter(ProjectType %in% c(0, 8)) %>%
-    select(PersonalID, ProjectType, EntryDate, Method5_ExitDate)
-    left
+    create_lot_blocks() %>%
+    left_join(df_for_negation %>%
+                filter(ProjectType == 2) %>%
+                create_lot_blocks() %>%
+                rename(n_EntryDate = EntryDate,
+                       n_Method5_ExitDate = Method5_ExitDate),
+              by = "PersonalID",
+              relationship = "many-to-many") %>%
+    filter(n_EntryDate <= Method5_ExitDate &
+             n_Method5_ExitDate >= EntryDate)
+  
+  hold <- negated %>%
+    select(lot_block.x, EntryDate, Method5_ExitDate,
+           n_EntryDate, n_Method5_ExitDate) #%>%
+    # ungroup() %>%
+    
+  
+  hold_3 <- as.data.frame(melt(as.data.table(hold), 
+                 id = c("lot_block.x", "EntryDate", "Method5_ExitDate"))) %>%
+    filter(value >= EntryDate &
+             (value < Method5_ExitDate |
+                (value == Method5_ExitDate &
+                   variable == "n_EntryDate")))
+  
+  hold_4 <- hold_3 %>%
+    left_join(hold_3 %>%
+                group_by(lot_block.x) %>%
+                summarise(rows = n()),
+              by = "lot_block.x")
+  
+  single_row_adjustments <- hold_4 %>%
+    filter(rows == 1) %>%
+    mutate(EntryDate = if_else(
+      variable == "n_Method5_ExitDate", value,
+      EntryDate),
+      Method5_ExitDate = if_else(
+        variable == "n_EntryDate", value,
+        Method5_ExitDate))
+  
+  multi_row_adjustments <- as.data.frame(melt(as.data.table(hold %>%
+                                                              filter(lot_block.x %nin% single_row_adjustments$lot_block.x)), 
+                                              id = c("lot_block.x", "EntryDate", "Method5_ExitDate")))
+  
+  test <- hold %>%
+    select(lot_block.x, EntryDate, Method5_ExitDate) %>%
+    left_join(as.data.frame(melt(as.data.table(hold), 
+                                 id = c("lot_block.x"))),
+              by = "lot_block.x") %>%
+    filter(variable %in% c("EntryDate", "Method5_ExitDate") |
+             (value >= EntryDate &
+                (value < Method5_ExitDate |
+                   (value == Method5_ExitDate &
+                      variable == "n_EntryDate"))))
   
   create_lot_blocks <- function(enrollments_with_Method5_ExitDate) {
     enrollments_with_Method5_ExitDate %>%
@@ -146,8 +234,43 @@ method_5_active_enrollments <- enrollment_data %>%
       ) %>%
       group_by(PersonalID, lot_block) %>%
       summarise(EntryDate = min(EntryDate),
-                Method5_ExitDate = max(Method5_ExitDate))
+                Method5_ExitDate = max(Method5_ExitDate)) %>%
+      ungroup()
   }
   
   View(Q1a_line1_detail %>%filter(PersonalID == 670613))
+  
+  
+  
+  test_full <- enrollment_data %>%
+    filter(ProjectType %in% c(0, 8,
+                              2) &
+             # is this right?
+             EntryDate < Method5_ExitDate) %>%
+    # ...and the way I add it here
+    full_join(bed_nights_in_report_ee_format,
+              by = colnames(bed_nights_in_report_ee_format)) %>%
+    # unnecessary, added for algorithm QA
+    select(colnames(bed_nights_in_report_ee_format))
+  
+  
+  test_blocks <- test_full %>%
+    arrange(PersonalID, EntryDate, Method5_ExitDate) %>%
+    group_by(PersonalID) %>%
+    mutate(lag_EntryDate = lag(EntryDate),
+           lag_Method5_ExitDate = lag(Method5_ExitDate),
+           cummax_Method5_ExitDate = as.Date(cummax(
+             if_else(is.na(lag_Method5_ExitDate), -Inf, as.integer(lag_Method5_ExitDate))
+           ), "1970-01-01"),
+           cummax_Method5_ExitDate = case_when(
+             cummax_Method5_ExitDate != -Inf ~ cummax_Method5_ExitDate)) %>%
+    ungroup() %>%
+    mutate(
+      after_earlier = (EntryDate > cummax_Method5_ExitDate &
+                         !is.na(lag_EntryDate)),
+      different_person = PersonalID != lag(PersonalID) &
+        !is.na(lag(PersonalID)),
+      lot_block = cumsum(after_earlier | different_person) + 1
+    )
+  
   }
