@@ -276,17 +276,13 @@ SPM.3.2_TH.Count <- df_spm.3.2_base %>%
 
 # 7. System Performance Performance Measure 7: Successful Placement from Street Outreach and Successful Placement in or Retention of Permanent Housing ----
 
-#Street Outreach Projectype = 4
-# Homeless situations -> 101,116,118
-# Institutional settings -> 206 (exclude from measure),215,207,204,205,225
-# Temporary Housing Situations -> 329 (exclude from measure), 314, 312, 313, 302, 327, 332
-# Permanent -> 426,411,421,410,435,422,423
-# Other -> 24 (Exclude from universe),8,9,99,30,17
+# **DONT FORGET** to run lines 1 - 100 in source(system_performance_measures.R)
 
 ## Metric 7a.1 ----  
 
 `%nin%` = Negate(`%in%`)
 
+{
 df_SPM.7a1_counts <- enrollment_data %>% 
   filter(ProjectType == 4,
          EntryDate <= report_end_date & (is.na(ExitDate) | ExitDate > report_start_date),
@@ -393,13 +389,22 @@ Metric.7b2.table <- data.frame(
   "C" = c("Current FY",Count_7b.2_universe,Count_7b.2_styrs.exits,Percent_7b.2_successful),
   "D" = c("% Difference",NA,NA,NA))
 
+}
 
 ## SPM 7 Final Tables ----
-View(Metric.7a1.table)
-View(Metric.7b1.table)
-View(Metric.7b2.table)
+library(kableExtra)
 
+Metric.7a1.table %>% 
+  kbl(caption = "Metric 7a.1 - Change in exits to permanent housing destination") %>% 
+  kable_styling(bootstrap_options = c("striped","hover"))
 
+Metric.7b1.table %>% 
+  kbl(caption = "Metric 7b.1 - Change in exits to permanent housing destinations") %>% 
+  kable_styling(bootstrap_options = c("striped","hover"))
+
+Metric.7b2.table %>% 
+  kbl(caption = "Metric 7b.2 - Change in exit to or retention of permanent housing ") %>% 
+  kable_styling(bootstrap_options = c("striped","hover"))
 
 
 # Draft section Don't Review ----
