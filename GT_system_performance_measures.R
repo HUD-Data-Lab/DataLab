@@ -2,6 +2,7 @@
 library(tidyverse)
 library(lubridate)
 library(readxl)
+library(kableExtra)
 
 #SPM Programming specs: https://icfonline.sharepoint.com/:w:/r/sites/NHDAP/_layouts/15/Doc.aspx?action=edit&sourcedoc=%7B4ec4f3da-89f4-4c2d-810c-1f93ecc0e60c%7D&wdOrigin=TEAMS-ELECTRON.teamsSdk.openFilePreview&wdExp=TEAMS-CONTROL&web=1
 #HMIS Glossary: https://icfonline.sharepoint.com/:w:/r/sites/NHDAP/_layouts/15/Doc.aspx?action=edit&sourcedoc=%7Bda79cae5-b933-41f0-b408-40162ade797d%7D&wdOrigin=TEAMS-ELECTRON.teamsSdk.openFilePreview&wdExp=TEAMS-CONTROL&web=1
@@ -210,7 +211,6 @@ df4 <- df4 %>%
   )) %>% group_by(PersonalID.x,EnrollmentID)
 
 
-
 df %>% 
   arrange(patient, by=admitted) %>% # Sorts by patient and sorts from earliest start date to latest
   mutate(group = discharge == lead(admitted) | # No idea why group is here. I would like to have an interval code.
@@ -223,22 +223,11 @@ df %>%
 
 # 3.2. System Performance Measure 3.2: Persons Experiencing Homelessness ----
 
-#NOTE need to check the active clients qualifiers and filters. Expected more than 1 eligible person to be counted
-
-## DF reference ----
-SPM.3.2 <- data.frame(
-  "Project Type" =c("Unduplicated Total sheltered persons","Emergency Shelter Total", "Safe Haven Total", "Transitional Housing Total"),
-  "Previous.FY" = NA,
-  "Current.FY" = c((SPM.3.2_ES.Count+SPM.3.2_SH.Count+SPM.3.2_TH.Count),SPM.3.2_ES.Count,SPM.3.2_SH.Count,SPM.3.2_TH.Count),
-  "Difference" = NA
-)
-
-SPM.3.2
-
 ## Create DF with Active client counts ----
-df_spm.3.2_base <- df_SPM.1_base
+enrollment_data
+bed_nights_in_report_ee_format
 
-df_spm.3.2_base <- df_spm.3.2_base %>% 
+df_spm.3.2_base <- enrollment_data %>% 
   mutate(M2.ES.Nbn_enrlmnt_qual = 
            ExitDate >= report_start_date,
          M2.ES.Nbn_srvc_qual =
@@ -252,27 +241,45 @@ df_spm.3.2_base <- df_spm.3.2_base %>%
            EntryDate <= report_end_date &
            (ExitDate >= report_start_date | is.na(ExitDate))
            )
+# I have the Method 1 process down, but I am still getting confused with the NbN shelter process
+
+NbN_count <- bed_nights_in_report_ee_format
+#If ExitdateAsdj >= Report Start Date | <= report_end_date | >= 
+
+enrollment_data%>% 
+  mutate(M2.ES.Nbn_enrlmnt_qual = ExitDate >= report_start_date & ExitDate <= report_end_date)
+
 # Count ES
 
 SPM.3.2_ES.Count<- df_spm.3.2_base %>% 
   filter(ProjectType == 0 | ProjectType == 1) %>% 
   filter(M1.Active.Clients | M2.Active.Clients) %>% 
-  n_distinct("PersonalID.x")
+  n_distinct(.$PersonalID)
 
 # Count Safe Haven
 SPM.3.2_SH.Count <- df_spm.3.2_base %>% 
   filter(ProjectType == 8 & M1.Active.Clients) %>% 
-  n_distinct("PersonalID.x")
+  n_distinct(.$PersonalID)
 
 # Count Th
 
 SPM.3.2_TH.Count <- df_spm.3.2_base %>% 
   filter(ProjectType == 2 & M1.Active.Clients) %>% 
-  n_distinct("PersonalID.x")
+  n_distinct(.$PersonalID)
 
-# ES project type 0 and 1
-# Safe haven project type 8
-# TH Project type = 2
+# Count universe
+
+SPM.3.2_universe_count <- SPM.3.2_ES.Count + SPM.3.2_SH.Count + SPM.3.2_TH.Count
+
+
+## Metric 3.2 table ----
+Metric.3.2.table <- data.frame(
+  "Project Type" =c("Unduplicated Total sheltered persons","Emergency Shelter Total", "Safe Haven Total", "Transitional Housing Total"),
+  "Previous.FY" = NA,
+  "Current.FY" = NA,
+  "Difference" = NA
+)
+
 
 # 7. System Performance Performance Measure 7: Successful Placement from Street Outreach and Successful Placement in or Retention of Permanent Housing ----
 
@@ -280,9 +287,9 @@ SPM.3.2_TH.Count <- df_spm.3.2_base %>%
 
 ## Metric 7a.1 ----  
 
+{
 `%nin%` = Negate(`%in%`)
 
-{
 df_SPM.7a1_counts <- enrollment_data %>% 
   filter(ProjectType == 4,
          EntryDate <= report_end_date & (is.na(ExitDate) | ExitDate > report_start_date),
@@ -292,13 +299,18 @@ df_SPM.7a1_counts <- enrollment_data %>%
   arrange(desc(EnrollmentID), .by_group = TRUE) %>% # sorts by most recently created enrollment date. This will be the tie-breaker.
   slice(which.max(ExitDate)) #Keeps the most recent exit information. If the exit dates are the same it will keep first in DF
 
+# Metric 7a1 variable calculations
+
 Count_7a.1_universe <- df_SPM.7a1_counts %>% n_distinct(.$PersonalID)
+
 Count_7a.1_temp.inst.exts <- df_SPM.7a1_counts %>% 
   filter(Destination %in% 200:399) %>% 
   n_distinct(.$PersonalID)
+
 Count_7a.1_PH.exts <- df_SPM.7a1_counts %>% 
   filter(Destination %in% 400:499) %>% 
   n_distinct(.$PersonalID)
+
 Percent_7a.1_successful <- round(((Count_7a.1_temp.inst.exts + Count_7a.1_PH.exts) / Count_7a.1_universe )*100,2)
 
 Metric.7a1.table <- data.frame(
@@ -309,6 +321,13 @@ Metric.7a1.table <- data.frame(
   "B" = c("Previous FY",NA,NA,NA,NA),
   "C" = c("Current FY",Count_7a.1_universe,Count_7a.1_temp.inst.exts,Count_7a.1_PH.exts,Percent_7a.1_successful),
   "D" = c("% Difference",NA,NA,NA,NA))
+
+# Metric 7a1 client detail
+df_7a1_clientDetail <- df_SPM.7a1_counts %>% 
+  mutate(
+    "leaver.stayer" = ifelse(is.na(ExitDate), "Stayer","Leaver" )) %>%
+  select(PersonalID,ProjectID,ProjectType,EntryDate,ExitDate,Destination,leaver.stayer)
+  
 
 
 ## Metric 7b ----
@@ -345,6 +364,9 @@ Metric.7b1.table <- data.frame(
   "C" = c("Current FY",Count_7b.1_universe,Count_7b.1_exits.PH,Percent_7b.1_successful),
   "D" = c("% Difference",NA,NA,NA))
 
+# Metric b1 client detail
+df_7b.1_counts
+
 
 ### 7b.2 Metric ----
 
@@ -356,8 +378,8 @@ df_7b.2_stayers.leavers <- df_7b_baseline %>%
   arrange(!is.na(ExitDate), desc(ExitDate), .by_group = TRUE) %>%  #Arrange with NA at top and then descending from most recent exit
   slice_head(n=1) #Keep first row of each group
 
-# There are cases of ties for is.na(ExitDate). Example client 511607 has two active PSH enrollments (Projecttype == 3) with two different move in and entry dates
-# Arrange is keeping the enrollment with the most recent entry date
+# There are cases of ties for is.na(ExitDate). Example client 511607 has two active PSH enrollments (Projecttype == 3) with two different entry dates
+# Arrange is keeping the enrollment with the most recent entry date.
 
 df_7b.2_stayer.leavers_cleaned <- df_7b.2_stayers.leavers %>% 
   filter(
@@ -389,11 +411,12 @@ Metric.7b2.table <- data.frame(
   "C" = c("Current FY",Count_7b.2_universe,Count_7b.2_styrs.exits,Percent_7b.2_successful),
   "D" = c("% Difference",NA,NA,NA))
 
+# Metric 7b2 client detail
+
+
 }
 
 ## SPM 7 Final Tables ----
-library(kableExtra)
-
 Metric.7a1.table %>% 
   kbl(caption = "Metric 7a.1 - Change in exits to permanent housing destination") %>% 
   kable_styling(bootstrap_options = c("striped","hover"))
