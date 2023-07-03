@@ -68,7 +68,8 @@ FY24_residence_types <- ResidenceUses %>%
 {
   Client <- Client %>%
     mutate(HispanicLatinaeo = case_when(
-      Ethnicity %in% c(1, 0) ~ Ethnicity
+      Ethnicity %in% c(1, 0) ~ Ethnicity,
+      TRUE ~ 0
     ),
     MidEastNAfrican = 0, 
     AdditionalRaceEthnicity = NA, 
@@ -94,11 +95,11 @@ FY24_residence_types <- ResidenceUses %>%
     )) 
   
   referral_locations <- Event %>%
+    mutate(PersonalID = as.character(PersonalID)) %>%
     left_join(Enrollment %>%
                 select(PersonalID, ProjectID, EntryDate) %>%
                 inner_join(referral_projects, by = "ProjectID"), 
-              by = "PersonalID",
-              multiple = "all") %>%
+              by = "PersonalID") %>%
     filter(Event == ProjectType & 
              EntryDate >= EventDate) %>%
     group_by(EventID) %>%
@@ -136,8 +137,12 @@ FY24_residence_types <- ResidenceUses %>%
            HousingLocation = NA,
            ServiceProvided = 0,
            ServiceOutcome = NA,
-           ReferralResult = NA,
-           ReferralResultDate = NA
+           HousingReferralResult = NA,
+           HousingReferralResultDate = NA,
+           PreventionReferralResult = NA,
+           PreventionReferralResultDate = NA,
+           ShelterReferralResult = NA,
+           ShelterReferralResultDate = NA
     ) %>%
     rename(ActivityID = AssessmentID,
            ActivityDate = AssessmentDate,
@@ -158,6 +163,8 @@ FY24_residence_types <- ResidenceUses %>%
       LocationCrisisOrPHHousing = if_else(
         is.na(LocationCrisisOrPHHousing), ProjectID, LocationCrisisOrPHHousing),
       ContactType = NA,
+      EnrollmentID = as.character(EnrollmentID),
+      PersonalID = as.character(PersonalID),
       PreventionScreening = if_else(Event %in% c(1, 16), 
                                     1, 0),
       PreventionOutcome = case_when(
@@ -194,12 +201,18 @@ FY24_residence_types <- ResidenceUses %>%
         Event %in% c(3, 4) ~ Event,
         Event == 2 ~ 5
       ),
-      ReferralResult = case_when(
-        Event %in% c(10:15, 17, 18) ~ ReferralResult
-      ),
-      ReferralResultDate = case_when(
-        Event %in% c(10:15, 17, 18) ~ ResultDate
-      )
+      # ReferralResult = case_when(
+      #   Event %in% c(10:15, 17, 18) ~ ReferralResult
+      # ),
+      # ReferralResultDate = case_when(
+      #   Event %in% c(10:15, 17, 18) ~ ResultDate
+      # ),
+      HousingReferralResult = NA,
+      HousingReferralResultDate = NA,
+      PreventionReferralResult = NA,
+      PreventionReferralResultDate = NA,
+      ShelterReferralResult = NA,
+      ShelterReferralResultDate = NA
     ) %>%
     rename(ActivityID = EventID,
            ActivityDate = EventDate) %>%
@@ -231,9 +244,13 @@ FY24_residence_types <- ResidenceUses %>%
            c_HousingLocation = as.numeric(EB_HousingLocation),
            c_ServiceProvided = EB_ServiceProvided,
            c_ServiceOutcome = EB_ServiceOutcome,
-           c_ReferralResult = EB_ReferralResult,
-           c_ReferralResultDate = EB_ReferralResultDate
-    )
+           # c_ReferralResult = EB_ReferralResult,
+           # c_ReferralResultDate = EB_ReferralResultDate,
+           ActivityID = row_number(),
+           ExportID = Export$ExportID,
+           DateCreated = coalesce(DateUpdated, ymd_hms(now()))
+    ) %>%
+    select(all_of(ceactivity_columns))
 }
 {
   ##  No mapping required (for vendors, at least)
@@ -298,17 +315,19 @@ FY24_residence_types <- ResidenceUses %>%
     left_join(FY24_residence_types,
               by = c("LivingSituation" = "Location_FY22")) %>%
     mutate(
+      CoCCode = replace_na(CoCCode, "missing"),
       LivingSituation = LivingSituation + FY24_type_numeric,
       # need to confirm mapping of "Permanent housing for formerly homeless persons"
-      LivingSituationSubsidyType = case_when(
+      RentalSubsidyType = case_when(
         LivingSituation == psh_residence ~ 440,
         LivingSituation %in% subsidized_residences ~ LivingSituation),
-      LivingSituation = if_else(!is.na(LivingSituationSubsidyType),
+      LivingSituation = if_else(!is.na(RentalSubsidyType),
                                 435, LivingSituation),
       TranslationNeeded = 0,
       PreferredLanguage = 171,
       PreferredLanguageDifferent = NA) %>%
-    rename(EnrollmentCoC = CoCCode
+    rename(EnrollmentCoC = CoCCode,
+           HOHLeaseholder = HoHLeaseholder
            # only required if loading in from DataLab.R
            # , DateCreated = enroll_DateCreated
            ) %>%
@@ -332,8 +351,8 @@ FY24_residence_types <- ResidenceUses %>%
     rename(
           # DateCreated = exit_DateCreated,
            #  only required when source database has different capitalization
-           WorkplaceViolenceThreats = WorkPlaceViolenceThreats,
-           WorkplacePromiseDifference = WorkPlacePromiseDifference) %>%
+           AskedOrForcedToExchangeForSexPastThreeMonths = AskedOrForcedToExchangeForSexPas,
+           WorkplaceViolenceThreats = WorkPlaceViolenceThreats) %>%
     select(all_of(exit_columns))
 }
 {
@@ -382,4 +401,21 @@ FY24_residence_types <- ResidenceUses %>%
   YouthEducationStatus <- YouthEducationStatus %>%
     select(all_of(youtheducationstatus_columns))
 }
+
+
+# write it all out --------------------------------------------------------
+
+df_names <- CSV_columns$File %>% unique()
+
+for(df in df_names) {
+  write.csv(
+    get(df),
+    file = paste0("output/", df, ".csv"),
+    row.names = FALSE,
+    quote = TRUE,
+    eol = "\r\n",
+    na = ""
+  )
+}
+
 
