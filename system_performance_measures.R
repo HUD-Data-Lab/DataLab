@@ -259,5 +259,36 @@ method_5_active_enrollments <- enrollment_data %>%
     
     Q5M2_C4 <- Q5M2_C2 - Q5M2_C3
   
-  ## output tables
+  ## build output tables
+  
+  ### row headers
+  Q5M1_Col_A <- list(
+    "",
+    "Universe: Person with entries into ES-EE, ES-NbN, SH, or TH during the reporting period.",
+    "Of persons above, count those who were in ES-EE, ES-NbN, SH, TH, or any PH within 24 months prior to their start during the reporting year.",
+    "Of persons above, count those who did not have entries in ES-EE, ES-NbN, SH, TH or PH in the previous 24 months. (i.e. number of persons experiencing homelessness for the first time)"
+    )
+  
+  Q5M2_Col_A <- list(
+    "",
+    "Universe: Person with entries into ES-EE, ES-NbN, SH, TH, or PH during the reporting period.",
+    "Of persons above, count those who were in ES-EE, ES-NbN, SH, TH, or any PH within 24 months prior to their start during the reporting year.",
+    "Of persons above, count those who did not have entries in ES-EE, ES-NbN, SH, TH or PH in the previous 24 months. (i.e. number of persons experiencing homelessness for the first time)"
+  )
+  
+  ### empty columns
+  Q5_Col_B <- list("Previous FY", "", "", "")
+  Q5_Col_D <- list("Difference", "", "", "")
+  
+  ### measure value columns
+  Q5M1_Col_C <- list("Current FY", Q5M1_C2, Q5M1_C3, Q5M1_C4)
+  
+  Q5M2_Col_C <- list("Current FY", Q5M2_C2, Q5M2_C3, Q5M2_C4 )
+  
+  ### table assembly
+  Q5M1_table <- data.frame(cbind(Q5M1_Col_A, Q5_Col_B, Q5M1_Col_C, Q5_Col_D)) %>% 
+    setnames(.,c("A", "B", "C", "D"))
+  
+  Q5M2_table <- data.frame(cbind(Q5M2_Col_A, Q5_Col_B, Q5M2_Col_C, Q5_Col_D)) %>% 
+    setnames(.,c("A", "B", "C", "D"))
   
