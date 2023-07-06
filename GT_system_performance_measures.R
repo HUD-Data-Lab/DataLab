@@ -222,10 +222,11 @@ df %>%
 
 
 # 3.2. System Performance Measure 3.2: Persons Experiencing Homelessness ----
+## Create DF with Active client counts
+# enrollment_data
+# bed_nights_in_report_ee_format #use this to get a count of active persons
 
-## Create DF with Active client counts ----
-enrollment_data
-bed_nights_in_report_ee_format
+# NOT CONFIDENT in the coding of Method 2 Active Clients in the creation of "df_spm.3.2_base"
 
 df_spm.3.2_base <- enrollment_data %>% 
   mutate(M2.ES.Nbn_enrlmnt_qual = 
@@ -239,46 +240,79 @@ df_spm.3.2_base <- enrollment_data %>%
          M2.Active.Clients = M2.ES.Nbn_enrlmnt_qual | M2.ES.Nbn_srvc_qual,
          M1.Active.Clients =
            EntryDate <= report_end_date &
-           (ExitDate >= report_start_date | is.na(ExitDate))
-           )
-# I have the Method 1 process down, but I am still getting confused with the NbN shelter process
-
-NbN_count <- bed_nights_in_report_ee_format
-#If ExitdateAsdj >= Report Start Date | <= report_end_date | >= 
-
-enrollment_data%>% 
-  mutate(M2.ES.Nbn_enrlmnt_qual = ExitDate >= report_start_date & ExitDate <= report_end_date)
+           (ExitDate >= report_start_date | is.na(ExitDate)),
+         ProjectType_category = case_when(
+           ProjectType == 1 & M1.Active.Clients ~ "1.2 Emergency Shelter - entry/exit",
+           ProjectType == 0 & M2.Active.Clients ~ "1.1 Emergency shelter - night-by-night",
+           ProjectType == 8 & M1.Active.Clients ~ "8.0 Safe haven",
+           ProjectType == 2 & M1.Active.Clients ~ "2.0 Transitional housing")) %>% 
+  filter(ProjectType %in% c(0,1,8,2) & (M1.Active.Clients | M2.Active.Clients))
 
 # Count ES
 
-SPM.3.2_ES.Count<- df_spm.3.2_base %>% 
-  filter(ProjectType == 0 | ProjectType == 1) %>% 
-  filter(M1.Active.Clients | M2.Active.Clients) %>% 
-  n_distinct(.$PersonalID)
+SPM.3.2_ES.EE.Count<- df_spm.3.2_base %>% 
+  filter(ProjectType == 1) %>%
+  {n_distinct(.$PersonalID)}
+
+SPM.3.2_ES.NbN.Count <- df_spm.3.2_base %>% 
+  filter(ProjectType == 0) %>% 
+  {n_distinct(.$PersonalID)}
+
+Count_3.2_ES <- SPM.3.2_ES.EE.Count + SPM.3.2_ES.NbN.Count
+
+# df.ES.client.detail <- df_spm.3.2_base %>% 
+#   filter(ProjectType == 0 | ProjectType == 1) %>% 
+#   select(ProjectType_category,PersonalID,EntryDate,ExitDate)
 
 # Count Safe Haven
 SPM.3.2_SH.Count <- df_spm.3.2_base %>% 
   filter(ProjectType == 8 & M1.Active.Clients) %>% 
-  n_distinct(.$PersonalID)
+  {n_distinct(.$PersonalID)}
+
+# df.SH.client.detail <- df_spm.3.2_base %>% 
+#   filter(ProjectType == 8)
 
 # Count Th
-
+# Client 92109 is not in the dataset. Any of the datasets (client, enrollment, enrollment.data)
 SPM.3.2_TH.Count <- df_spm.3.2_base %>% 
   filter(ProjectType == 2 & M1.Active.Clients) %>% 
-  n_distinct(.$PersonalID)
+  {n_distinct(.$PersonalID)}
+
+# df.TH.client.detail <- df_spm.3.2_base %>% 
+#   filter(ProjectType == 2) %>% 
+#   select(ProjectType_category,PersonalID,EntryDate,ExitDate)
 
 # Count universe
 
-SPM.3.2_universe_count <- SPM.3.2_ES.Count + SPM.3.2_SH.Count + SPM.3.2_TH.Count
-
+SPM.3.2_universe_count <- Count_3.2_ES + SPM.3.2_SH.Count + SPM.3.2_TH.Count
 
 ## Metric 3.2 table ----
 Metric.3.2.table <- data.frame(
   "Project Type" =c("Unduplicated Total sheltered persons","Emergency Shelter Total", "Safe Haven Total", "Transitional Housing Total"),
   "Previous.FY" = NA,
-  "Current.FY" = NA,
+  "Current.FY" = c(SPM.3.2_universe_count,Count_3.2_ES,SPM.3.2_SH.Count,SPM.3.2_TH.Count),
   "Difference" = NA
 )
+
+Metric.3.2.table %>% 
+  kbl(caption = "Metric 3.2 - Change in annual counts of persons experiencing homelessness in HMIS") %>% 
+  kable_styling(bootstrap_options = c("striped","hover"))
+
+# CSV File
+df_spm.3.2_base %>% 
+  select(ProjectType_category,ProjectType,PersonalID,EntryDate,ExitDate,M1.Active.Clients,M2.Active.Clients) %>% 
+  write_csv("3.2.Client.detail.csv")
+
+# df.ES.client.detail %>% 
+#   select(PersonalID,EntryDate,ExitDate,ProjectType,Destination,ProjectType_category) %>% 
+#   write_csv("3.2.Client.detail.ES.check.csv")
+# 
+# df.SH.client.detail %>% 
+#   select(PersonalID,EntryDate,ExitDate,ProjectType,Destination,ProjectType_category) %>% 
+#   write_csv("3.2.Client.detail.SH.check.csv")
+# 
+# df.TH.client.detail %>% 
+#   write_csv("3.2.Client.detail.TH.check.csv")
 
 
 # 7. System Performance Performance Measure 7: Successful Placement from Street Outreach and Successful Placement in or Retention of Permanent Housing ----
@@ -288,28 +322,39 @@ Metric.3.2.table <- data.frame(
 ## Metric 7a.1 ----  
 
 {
+library(kableExtra)
 `%nin%` = Negate(`%in%`)
 
-df_SPM.7a1_counts <- enrollment_data %>% 
-  filter(ProjectType == 4,
-         EntryDate <= report_end_date & (is.na(ExitDate) | ExitDate > report_start_date),
-         PersonalID %nin% enrollment_data$PersonalID[enrollment_data$ExitDate > report_end_date | is.na(enrollment_data$ExitDate)], # Exclude everyone with a ineligible exit. This should only leave people with a single enrollment or enrollments that end in the report period
-         Destination %nin% c(206,329,24)) %>% 
+df_7a1_clientDetail <- enrollment_data %>% 
+  mutate(
+    "m1_active.clients" = EntryDate <= report_end_date & (is.na(ExitDate) | ExitDate > report_start_date),
+    "exclude_enrollment" = (ExitDate > report_end_date | is.na(ExitDate)) | Destination %in% c(206,329,24), #Remove enrollments with these qualifiers
+    "leaver.stayer" = ifelse(is.na(ExitDate), "Stayer","Leaver" ),
+    "Destination_category" = case_when(
+      Destination %in% c(300:399) ~ "Temporary",
+      Destination %in% c(400:499) ~ "Permanent")) %>% 
+  filter(ProjectType ==4)
+
+df_7a1_sliced.detail <- df_7a1_clientDetail %>%
+  filter(PersonalID %nin% df_7a1_clientDetail$PersonalID[(df_7a1_clientDetail$ExitDate > report_end_date | is.na(df_7a1_clientDetail$ExitDate)) | 
+                                                           df_7a1_clientDetail$Destination %in% c(206,329,24)]) %>% 
   group_by(PersonalID) %>% 
-  arrange(desc(EnrollmentID), .by_group = TRUE) %>% # sorts by most recently created enrollment date. This will be the tie-breaker.
+  arrange(desc(EnrollmentID), .by_group = TRUE) %>%
+  mutate(rank = row_number()) %>% 
   slice(which.max(ExitDate)) #Keeps the most recent exit information. If the exit dates are the same it will keep first in DF
 
 # Metric 7a1 variable calculations
 
-Count_7a.1_universe <- df_SPM.7a1_counts %>% n_distinct(.$PersonalID)
 
-Count_7a.1_temp.inst.exts <- df_SPM.7a1_counts %>% 
-  filter(Destination %in% 200:399) %>% 
-  n_distinct(.$PersonalID)
+Count_7a.1_universe <- df_7a1_sliced.detail %>% n_distinct(.$PersonalID)
 
-Count_7a.1_PH.exts <- df_SPM.7a1_counts %>% 
-  filter(Destination %in% 400:499) %>% 
-  n_distinct(.$PersonalID)
+Count_7a.1_temp.inst.exts <- df_7a1_sliced.detail %>% 
+  filter(Destination %in% c(100:115,117:206,208:399)) %>% # Don't include 207 and 116
+  {n_distinct(.$PersonalID)}
+
+Count_7a.1_PH.exts <- df_7a1_sliced.detail %>% 
+  filter(Destination %in% c(400:499)) %>% 
+  {n_distinct(.$PersonalID)}
 
 Percent_7a.1_successful <- round(((Count_7a.1_temp.inst.exts + Count_7a.1_PH.exts) / Count_7a.1_universe )*100,2)
 
@@ -322,37 +367,46 @@ Metric.7a1.table <- data.frame(
   "C" = c("Current FY",Count_7a.1_universe,Count_7a.1_temp.inst.exts,Count_7a.1_PH.exts,Percent_7a.1_successful),
   "D" = c("% Difference",NA,NA,NA,NA))
 
-# Metric 7a1 client detail
-df_7a1_clientDetail <- df_SPM.7a1_counts %>% 
-  mutate(
-    "leaver.stayer" = ifelse(is.na(ExitDate), "Stayer","Leaver" )) %>%
-  select(PersonalID,ProjectID,ProjectType,EntryDate,ExitDate,Destination,leaver.stayer)
-  
-
 
 ## Metric 7b ----
 
+
 df_7b_baseline <- enrollment_data %>% 
   filter(ProjectType %in% c(0,1,2,3,8,9,10,13), #leaving SO out of this. Could be duplicates between 7a and 7b
-         EntryDate <= report_end_date & (is.na(ExitDate) | ExitDate > report_start_date), #includes stayers for metric 7b.2
-         Destination %nin% c(206,329,24))
+         EntryDate <= report_end_date & (is.na(ExitDate) | ExitDate >= report_start_date) #includes stayers for metric 7b.2 | added >= report_start_date to allow for people exiting on start date to be included in report
+  ) %>% 
+  group_by(HouseholdID) %>%
+  mutate(HoH_HMID = suppressWarnings(min(case_when(
+    RelationshipToHoH == 1 ~ MoveInDate), na.rm = TRUE)),
+    MoveInDate = case_when(ExitDate < HoH_HMID ~ NA, 
+                           EntryDate > HoH_HMID ~ EntryDate, 
+                           TRUE ~ HoH_HMID ))
  
 ### 7b.1 Metric ----
 
-df_7b.1_counts <- df_7b_baseline %>% 
-  mutate("spm.7b.leaver_qual" = ProjectType %in% c(3,9,10) & MoveInDate <= report_end_date) %>% 
-  filter(PersonalID %nin% df_7b_baseline$PersonalID[df_7b_baseline$ExitDate > report_end_date | is.na(df_7b_baseline$ExitDate)], # Exclude everyone with a ineligible exit or still active. This should only leave people with a single enrollment that ends in the report period
-    spm.7b.leaver_qual == FALSE) %>% 
+df_7b.1_client.detail <- df_7b_baseline %>% 
+  mutate("spm.7b.leaver_qual" = ProjectType %in% c(3,9,10) & MoveInDate <= report_end_date,
+         "leaver.stayer" = ifelse(is.na(ExitDate), "Stayer","Leaver"),
+         "Destination_category" = case_when(
+           Destination %in% c(300:399) ~ "Temporary",
+           Destination %in% c(400:499) ~ "Permanent")) %>%
+  filter(PersonalID %nin% df_7b_baseline$PersonalID[df_7b_baseline$ProjectType %in% c(3,9,10) 
+                                                    & df_7b_baseline$MoveInDate <= report_end_date],
+         PersonalID %nin% df_7b_baseline$PersonalID[df_7b_baseline$Destination %in% c(206,225,215,24)])
+
+df_7b.1_detail.slice <- df_7b.1_client.detail %>% 
+  filter(PersonalID %nin% df_7b.1_client.detail$PersonalID[df_7b.1_client.detail$ExitDate > report_end_date | 
+                                                             is.na(df_7b.1_client.detail$ExitDate)]) %>%  # Exclude everyone with a ineligible exit or still active. This should only leave people with a single enrollment that ends in the report period
   group_by(PersonalID) %>% 
   arrange(desc(EnrollmentID), .by_group = TRUE) %>% # sorts by most recently created enrollment date. This could be the spot for a tie-breaker.
   slice(which.max(ExitDate))
 
-Count_7b.1_universe <- n_distinct(df_7b.1_counts$PersonalID)
-  
-Count_7b.1_exits.PH <- df_7b.1_counts %>% 
-  filter(Destination %in% 400:499) %>% 
+Count_7b.1_universe <- n_distinct(df_7b.1_detail.slice$PersonalID)
+
+Count_7b.1_exits.PH <- df_7b.1_detail.slice %>% 
+  filter(Destination %in% c(400:499)) %>% 
   n_distinct(.$PersonalID)
-  
+
 Percent_7b.1_successful <- round((Count_7b.1_exits.PH / Count_7b.1_universe)*100,2)
 
 Metric.7b1.table <- data.frame(
@@ -364,12 +418,58 @@ Metric.7b1.table <- data.frame(
   "C" = c("Current FY",Count_7b.1_universe,Count_7b.1_exits.PH,Percent_7b.1_successful),
   "D" = c("% Difference",NA,NA,NA))
 
-# Metric b1 client detail
-df_7b.1_counts
+
 
 
 ### 7b.2 Metric ----
 
+df_7b.2.stayers.leavers <- df_7b_baseline %>% 
+  mutate("spm.7b.2_leaver_qual" =  EntryDate <= report_end_date & ExitDate <= report_end_date,
+         "spm.7b.2_stayer_qual"= EntryDate <= report_end_date & (is.na(ExitDate) | ExitDate > report_end_date),
+         "Destination_category" = case_when(
+           Destination %in% c(300:399) ~ "Temporary",
+           Destination %in% c(400:499) ~ "Permanent")) %>% 
+  filter(ProjectType %in% c(3,9,10) & (spm.7b.2_stayer_qual | spm.7b.2_leaver_qual)) %>% 
+  group_by(PersonalID) %>% 
+  arrange(!is.na(ExitDate), desc(ExitDate), .by_group = TRUE) %>%  #Arrange with NA at top and then descending from most recent exit
+  slice_head(n=1) #Keep first row of each group
+
+# There are cases of ties for is.na(ExitDate). Example client 511607 has two active PSH enrollments (Projecttype == 3) with two different entry dates
+# Arrange is keeping the enrollment with the most recent entry date.
+
+df_7b.2_client_detail <- df_7b.2.stayers.leavers %>% 
+  filter(
+    PersonalID %nin% df_7b.2.stayers.leavers$PersonalID[df_7b.2.stayers.leavers$spm.7b.2_stayer_qual & (df_7b.2.stayers.leavers$MoveInDate > report_end_date | is.na(df_7b.2.stayers.leavers$MoveInDate))],
+    PersonalID %nin% df_7b.2.stayers.leavers$PersonalID[df_7b.2.stayers.leavers$spm.7b.2_leaver_qual & is.na(df_7b.2.stayers.leavers$MoveInDate)],
+    PersonalID %nin% df_7b.2.stayers.leavers$PersonalID[df_7b.2.stayers.leavers$Destination %in% c(206,225,215,24)]
+  )
+
+
+Count_7b.2_universe <- n_distinct(df_7b.2_client_detail$PersonalID)
+
+Count_7b.2.PH_dest <- df_7b.2_client_detail %>% #this only has those with an exit date in report range
+  filter(Destination %in% c(400:499)) %>% 
+  n_distinct(.$PersonalID)
+
+Count_7b.2_stayers <- df_7b.2_client_detail %>% 
+  filter(spm.7b.2_stayer_qual) %>% 
+  n_distinct(.$PersonalID)
+
+Count_7b.2_styrs.exits <- Count_7b.2.PH_dest + Count_7b.2_stayers
+
+Percent_7b.2_successful <- round((Count_7b.2_styrs.exits/Count_7b.2_universe)*100,2)
+
+Metric.7b2.table <- data.frame(
+  "A" =c(" ",
+         "Universe: Persons in all PH projects except PH-RRH who exited after moving into housing, or who moved into housing and remained in the PH project",
+         "Of persons above, those who remained in applicable PH projects and those who exited to permanent housing destinations",
+         "% Successful exits/retention"),
+  "B" = c("Previous FY",NA,NA,NA),
+  "C" = c("Current FY",Count_7b.2_universe,Count_7b.2_styrs.exits,Percent_7b.2_successful),
+  "D" = c("% Difference",NA,NA,NA))
+
+
+###
 df_7b.2_stayers.leavers <- df_7b_baseline %>% 
   mutate("spm.7b.2_leaver_qual" =  EntryDate <= report_end_date & ExitDate <= report_end_date,
          "spm.7b.2_stayer_qual"= EntryDate <= report_end_date & (is.na(ExitDate) | ExitDate > report_end_date)) %>% 
@@ -411,9 +511,6 @@ Metric.7b2.table <- data.frame(
   "C" = c("Current FY",Count_7b.2_universe,Count_7b.2_styrs.exits,Percent_7b.2_successful),
   "D" = c("% Difference",NA,NA,NA))
 
-# Metric 7b2 client detail
-
-
 }
 
 ## SPM 7 Final Tables ----
@@ -429,6 +526,19 @@ Metric.7b2.table %>%
   kbl(caption = "Metric 7b.2 - Change in exit to or retention of permanent housing ") %>% 
   kable_styling(bootstrap_options = c("striped","hover"))
 
+
+## Client detail CSV files ----
+df_7a1_sliced.detail %>% 
+  select(PersonalID,EntryDate,ExitDate,ProjectType,leaver.stayer,Destination,Destination_category) %>% 
+  write_csv("7a1.Client.detail.csv")
+
+df_7b.1_detail.slice %>% 
+  select(PersonalID,EntryDate,ExitDate,ProjectType,leaver.stayer,Destination,Destination_category) %>% 
+  write_csv("7b1.Client.detail.csv")
+
+df_7b.2_detail %>% 
+  select(PersonalID,EntryDate,ExitDate,ProjectType,Destination,Destination_category) %>% 
+  write_csv("7b2.Client.detail.csv")
 
 # Draft section Don't Review ----
 
