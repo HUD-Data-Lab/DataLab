@@ -40,7 +40,7 @@ df_entryExit <- df_entryExit %>%
   rename(PersonalID = PersonalID.x)
 
 # 1. System Performance Measure 1: Length of Time Persons Remain Homeless ----
-## Step 1: Create DF  ----
+
 #Select active clients across all projects of relevant types in the CoC who have a Bednight in the report range. Use Method 5: Active Clients
 # NOTE: NbN only applies to Nbn. Use Service date to create Dummy enrollemnts to allow entrydate to be used consistently through
 
@@ -90,7 +90,7 @@ df_SPM.1_base <- df_SPM.1.join %>%
 #These are the qualifier variables
   
   
-### Keep all relevant bed nights ----
+### Keep all relevant bed nights
 df_SPM.1.bednht <- df_SPM.1_base %>% 
   select(EnrollmentID, PersonalID.x,ProjectID,ProjectType,
          EntryDate,TypeProvided,DateProvided,
@@ -100,7 +100,7 @@ df_SPM.1.bednht <- df_SPM.1_base %>%
   filter(DateProvided >= EntryDate & DateProvided <= report_end_date)
 
 
-### Gwen Recommendation. Does the same thing, but based on Boolean logic (returns TURE or FALSE) ----
+### Gwen Recommendation. Does the same thing, but based on Boolean logic (returns TURE or FALSE)
 
 df_SPM.1_gwen_rec <- df_SPM.1.join %>% 
   # Create a filter variable for Method 5 of Active Clients. Refer to HMIS Glossary for description
@@ -120,7 +120,7 @@ df_SPM.1_gwen_rec <- df_SPM.1.join %>%
            (M5_bdnt_qual | 
               M5_ptype_qual))  # Active clients following Method 5 outlined in the Glossary
 
-## Step 2: Negate bed nights of overlapping HMIS records ----
+## Step 2: Negate bed nights of overlapping HMIS records
 
 
 df_negateTest <- df_SPM.1.bednht %>% # Filter to keep relevant project data
@@ -149,7 +149,7 @@ df_episodes.PH.RRH <- df_negateTest %>%
   summarise(EntryDate = first(EntryDate), ExitDate = last(ExitDate)) %>% 
   arrange(PersonalID.x, by=EntryDate)
   
-### Negate test ----  
+### Negate test
 
 Patient_episodes<- tribble(
   ~patient, ~admitted, ~discharge,
@@ -187,7 +187,7 @@ df_overlap %>%
   mutate(difftime = Entry.date - lag(Entry.date, default = first(Entry.date)),
          expected2 = cumsum(difftime >= 30) + 1)
 
-### Step 1: Create episodes ----
+### Step 1: Create episodes
 
 
 df4 <- df3
@@ -605,7 +605,7 @@ df_SPM.7.exits <- df_SPM.7.exits %>%
   group_by(PersonalID) %>% 
   slice(which.max(ExitDate))  # Why not slice_max()? // this keeps the latest exit for all duplicates. There should be no duplicates after this
 
-### New Idea Counts ----
+### New Idea Counts
 
 SPM.7a.1_counts <- df_SPM.7.exits %>% #creates a summary table with the counts for SPM.7a.1
   filter(ProjectType == 4) %>% 
@@ -617,7 +617,7 @@ SPM.7b.1_counts <- df_SPM.7.exits %>% #creates a summary table with the counts f
   group_by(Destination_Names) %>% 
   summarise(n=n())
 
-### New Idea Duplicate check ----
+### New Idea Duplicate check
 
 spm.7a1_persons <- df_SPM.7.exits %>%
   filter(ProjectType == 4) %>%
