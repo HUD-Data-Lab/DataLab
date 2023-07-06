@@ -7,7 +7,9 @@ library(kableExtra)
 #SPM Programming specs: https://icfonline.sharepoint.com/:w:/r/sites/NHDAP/_layouts/15/Doc.aspx?action=edit&sourcedoc=%7B4ec4f3da-89f4-4c2d-810c-1f93ecc0e60c%7D&wdOrigin=TEAMS-ELECTRON.teamsSdk.openFilePreview&wdExp=TEAMS-CONTROL&web=1
 #HMIS Glossary: https://icfonline.sharepoint.com/:w:/r/sites/NHDAP/_layouts/15/Doc.aspx?action=edit&sourcedoc=%7Bda79cae5-b933-41f0-b408-40162ade797d%7D&wdOrigin=TEAMS-ELECTRON.teamsSdk.openFilePreview&wdExp=TEAMS-CONTROL&web=1
 
-#Run lines 1 - 102 in source(system_performance_measures.R)
+#DON'T Forget to Run lines 1 - 102 in source(system_performance_measures.R)
+
+# 1. System Performance Measure 1: Length of Time Persons Remain Homeless ----
 
 #Create table to fill values in as we complete them.
 SPM.1a <- data.frame(
@@ -38,8 +40,6 @@ df_entryExit <- Client %>%
 
 df_entryExit <- df_entryExit %>% 
   rename(PersonalID = PersonalID.x)
-
-# 1. System Performance Measure 1: Length of Time Persons Remain Homeless ----
 
 #Select active clients across all projects of relevant types in the CoC who have a Bednight in the report range. Use Method 5: Active Clients
 # NOTE: NbN only applies to Nbn. Use Service date to create Dummy enrollemnts to allow entrydate to be used consistently through
@@ -221,6 +221,7 @@ df %>%
 
 
 
+
 # 3.2. System Performance Measure 3.2: Persons Experiencing Homelessness ----
 ## Create DF with Active client counts
 # enrollment_data
@@ -294,11 +295,14 @@ Metric.3.2.table <- data.frame(
   "Difference" = NA
 )
 
+## SPM 3.2 Final Table ----
+
 Metric.3.2.table %>% 
   kbl(caption = "Metric 3.2 - Change in annual counts of persons experiencing homelessness in HMIS") %>% 
   kable_styling(bootstrap_options = c("striped","hover"))
 
-# CSV File
+## Client Detail CSV File ----
+
 df_spm.3.2_base %>% 
   select(ProjectType_category,ProjectType,PersonalID,EntryDate,ExitDate,M1.Active.Clients,M2.Active.Clients) %>% 
   write_csv("3.2.Client.detail.csv")
@@ -417,8 +421,6 @@ Metric.7b1.table <- data.frame(
   "B" = c("Previous FY",NA,NA,NA),
   "C" = c("Current FY",Count_7b.1_universe,Count_7b.1_exits.PH,Percent_7b.1_successful),
   "D" = c("% Difference",NA,NA,NA))
-
-
 
 
 ### 7b.2 Metric ----
