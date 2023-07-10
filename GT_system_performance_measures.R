@@ -229,45 +229,72 @@ df %>%
 
 # NOT CONFIDENT in the coding of Method 2 Active Clients in the creation of "df_spm.3.2_base"
 
-df_spm.3.2_base <- enrollment_data %>% 
-  mutate(M2.ES.Nbn_enrlmnt_qual = 
-           ExitDate >= report_start_date,
-         M2.ES.Nbn_srvc_qual =
-           EntryDate <= report_end_date &
-           (is.na(ExitDate) | ExitDate > report_end_date) &
-           EntryDate >= report_start_date &
-           EntryDate <= report_end_date &
-           EntryDate >= report_end_date,
-         M2.Active.Clients = M2.ES.Nbn_enrlmnt_qual | M2.ES.Nbn_srvc_qual,
-         M1.Active.Clients =
-           EntryDate <= report_end_date &
-           (ExitDate >= report_start_date | is.na(ExitDate)),
-         ProjectType_category = case_when(
-           ProjectType == 1 & M1.Active.Clients ~ "1.2 Emergency Shelter - entry/exit",
-           ProjectType == 0 & M2.Active.Clients ~ "1.1 Emergency shelter - night-by-night",
-           ProjectType == 8 & M1.Active.Clients ~ "8.0 Safe haven",
-           ProjectType == 2 & M1.Active.Clients ~ "2.0 Transitional housing")) %>% 
-  filter(ProjectType %in% c(0,1,8,2) & (M1.Active.Clients | M2.Active.Clients))
+# df_spm.3.2_base <- enrollment_data %>% 
+#   mutate(M2.ES.Nbn_enrlmnt_qual = 
+#            ExitDate >= report_start_date,
+#          M2.ES.Nbn_srvc_qual =
+#            EntryDate <= report_end_date &
+#            (is.na(ExitDate) | ExitDate > report_end_date) &
+#            EntryDate >= report_start_date &
+#            EntryDate <= report_end_date &
+#            EntryDate >= report_end_date, #What are you?
+#          M2.Active.Clients = M2.ES.Nbn_enrlmnt_qual | M2.ES.Nbn_srvc_qual,
+#          M1.Active.Clients =
+#            EntryDate <= report_end_date &
+#            (ExitDate >= report_start_date | is.na(ExitDate)),
+#          ProjectType_category = case_when(
+#            ProjectType == 1 & M1.Active.Clients ~ "1.2 Emergency Shelter - entry/exit",
+#            ProjectType == 0 & M2.Active.Clients ~ "1.1 Emergency shelter - night-by-night",
+#            ProjectType == 8 & M1.Active.Clients ~ "8.0 Safe haven",
+#            ProjectType == 2 & M1.Active.Clients ~ "2.0 Transitional housing")) %>% 
+#   filter(ProjectType %in% c(0,1,8,2) & (M1.Active.Clients | M2.Active.Clients))
 
-# Count ES
+# Try out method 5.
 
-SPM.3.2_ES.EE.Count<- df_spm.3.2_base %>% 
-  filter(ProjectType == 1) %>%
+# Re-do method 2
+
+Method_2_active_enrollments <- bed_nights_in_report %>% 
+  filter(ExitDate >= report_start_date & ExitDate<= report_end_date|
+           (EntryDate <= report_end_date &
+           (ExitDate > report_end_date | is.na(ExitDate))&
+           DateProvided >= report_start_date &
+           DateProvided <= report_end_date &
+           DateProvided >= EntryDate)) %>% 
+  select(EnrollmentID,PersonalID,DateProvided,RecordType,EntryDate,ExitDate)
+  
+
+df_spm.3.2_u <- Method_2_active_enrollments %>% 
+  filter(
+    ProjectType %in% c(0,1,2,8) &
+    EntryDate <= report_end_date &
+           (is.na(ExitDate) | ExitDate > report_start_date) |
+           ((ProjectType == 1 &
+                EnrollmentID %in% universe$EnrollmentID))
+           )
+
+
+
+# Count ES (Combine to single count)
+# 
+# SPM.3.2_ES.EE.Count<- df_spm.3.2_base %>% 
+#   filter(ProjectType == 1) %>%
+#   {n_distinct(.$PersonalID)}
+# 
+# SPM.3.2_ES.NbN.Count <- df_spm.3.2_base %>% 
+#   filter(ProjectType == 0) %>% 
+#   {n_distinct(.$PersonalID)}
+
+Count_3.2_ES <- df_spm.3.2_u %>% 
+  filter(ProjectType == 0 | ProjectType == 1) %>% 
   {n_distinct(.$PersonalID)}
-
-SPM.3.2_ES.NbN.Count <- df_spm.3.2_base %>% 
-  filter(ProjectType == 0) %>% 
-  {n_distinct(.$PersonalID)}
-
-Count_3.2_ES <- SPM.3.2_ES.EE.Count + SPM.3.2_ES.NbN.Count
 
 # df.ES.client.detail <- df_spm.3.2_base %>% 
 #   filter(ProjectType == 0 | ProjectType == 1) %>% 
 #   select(ProjectType_category,PersonalID,EntryDate,ExitDate)
 
 # Count Safe Haven
-SPM.3.2_SH.Count <- df_spm.3.2_base %>% 
-  filter(ProjectType == 8 & M1.Active.Clients) %>% 
+SPM.3.2_SH.Count <- df_spm.3.2_u %>% 
+  filter(ProjectType == 8) %>% 
   {n_distinct(.$PersonalID)}
 
 # df.SH.client.detail <- df_spm.3.2_base %>% 
@@ -275,8 +302,8 @@ SPM.3.2_SH.Count <- df_spm.3.2_base %>%
 
 # Count Th
 # Client 92109 is not in the dataset. Any of the datasets (client, enrollment, enrollment.data)
-SPM.3.2_TH.Count <- df_spm.3.2_base %>% 
-  filter(ProjectType == 2 & M1.Active.Clients) %>% 
+SPM.3.2_TH.Count <- df_spm.3.2_u %>% 
+  filter(ProjectType == 2) %>% 
   {n_distinct(.$PersonalID)}
 
 # df.TH.client.detail <- df_spm.3.2_base %>% 
@@ -285,7 +312,7 @@ SPM.3.2_TH.Count <- df_spm.3.2_base %>%
 
 # Count universe
 
-SPM.3.2_universe_count <- Count_3.2_ES + SPM.3.2_SH.Count + SPM.3.2_TH.Count
+SPM.3.2_universe_count <- n_distinct(df_spm.3.2_u$PersonalID)
 
 ## Metric 3.2 table ----
 Metric.3.2.table <- data.frame(
@@ -392,7 +419,7 @@ df_7b.1_client.detail <- df_7b_baseline %>%
   mutate("spm.7b.leaver_qual" = ProjectType %in% c(3,9,10) & MoveInDate <= report_end_date,
          "leaver.stayer" = ifelse(is.na(ExitDate), "Stayer","Leaver"),
          "Destination_category" = case_when(
-           Destination %in% c(300:399) ~ "Temporary",
+           Destination %in% c(300:399) ~ "Temporary", #check 200 series
            Destination %in% c(400:499) ~ "Permanent")) %>%
   filter(PersonalID %nin% df_7b_baseline$PersonalID[df_7b_baseline$ProjectType %in% c(3,9,10) 
                                                     & df_7b_baseline$MoveInDate <= report_end_date],
