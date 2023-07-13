@@ -1,9 +1,29 @@
-library(readxl)
-library(janitor)
-library(data.table)
-library(lubridate)
-library(tidyverse)
-library(archive)
+# install and/or load packages
+if(!require(readxl)) {
+  install.packages("readxl"); 
+  library(readxl)
+}
+if(!require(janitor)) {
+  install.packages("janitor"); 
+  library(janitor)
+}
+
+if(!require(data.table)) {
+  install.packages("data.table"); 
+  library(data.table)
+}
+if(!require(lubridate)) {
+  install.packages("lubridate"); 
+  library(lubridate)
+}
+if(!require(tidyverse)) {
+  install.packages("tidyverse"); 
+  library(tidyverse)
+}
+if(!require(archive)) {
+  install.packages("archive"); 
+  library(archive)
+}
 
 set.seed(2022)
 
