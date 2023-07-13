@@ -104,3 +104,12 @@ method_5_active_enrollments <- enrollment_data %>%
                (ProjectType %in% c(0, 2, 3, 8, 9, 10, 13))
            )
   )
+
+items_to_keep <- c("items_to_keep", ls())
+
+source(paste0(getwd(), "/System Performance Measures/system_performance_measures_1.R"))
+source(paste0(getwd(), "/System Performance Measures/system_performance_measures_3.R"))
+source(paste0(getwd(), "/System Performance Measures/system_performance_measures_5.R"))
+source(paste0(getwd(), "/System Performance Measures/system_performance_measures_7.R"))
+
+
