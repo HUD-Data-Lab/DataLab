@@ -36,27 +36,17 @@
 #            ProjectType == 2 & M1.Active.Clients ~ "2.0 Transitional housing")) %>% 
 #   filter(ProjectType %in% c(0,1,8,2) & (M1.Active.Clients | M2.Active.Clients))
 
-# Try out method 5.
-
-# Re-do method 2
-
-Method_2_active_enrollments <- bed_nights_in_report %>% 
-  filter(ExitDate >= report_start_date & ExitDate<= report_end_date|
-           (EntryDate <= report_end_date &
-              (ExitDate > report_end_date | is.na(ExitDate))&
-              DateProvided >= report_start_date &
-              DateProvided <= report_end_date &
-              DateProvided >= EntryDate)) %>% 
-  select(EnrollmentID,PersonalID,DateProvided,RecordType,EntryDate,ExitDate)
+# Try out method 5.active_enrollments
 
 
-df_spm.3.2_u <- Method_2_active_enrollments %>% 
+df_spm.3.2_u <- active_enrollments %>% 
   filter(
+    Method2 &
     ProjectType %in% c(0,1,2,8) &
       EntryDate <= report_end_date &
-      (is.na(ExitDate) | ExitDate > report_start_date) |
-      ((ProjectType == 1 &
-          EnrollmentID %in% universe$EnrollmentID))
+      (is.na(ExitDate) | ExitDate > report_start_date) #|
+      # ((ProjectType == 1 &
+      #     EnrollmentID %in% universe$EnrollmentID))
   )
 
 
@@ -117,9 +107,9 @@ Metric.3.2.table %>%
 
 ## Client Detail CSV File ----
 
-df_spm.3.2_base %>% 
-  select(ProjectType_category,ProjectType,PersonalID,EntryDate,ExitDate,M1.Active.Clients,M2.Active.Clients) %>% 
-  write_csv("3.2.Client.detail.csv")
+# df_spm.3.2_base %>% 
+#   select(ProjectType_category,ProjectType,PersonalID,EntryDate,ExitDate,M1.Active.Clients,M2.Active.Clients) %>% 
+#   write_csv("3.2.Client.detail.csv")
 
 # df.ES.client.detail %>% 
 #   select(PersonalID,EntryDate,ExitDate,ProjectType,Destination,ProjectType_category) %>% 

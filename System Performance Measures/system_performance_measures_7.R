@@ -11,14 +11,9 @@
 
 # 7. System Performance Performance Measure 7: Successful Placement from Street Outreach and Successful Placement in or Retention of Permanent Housing ----
 
-# **DONT FORGET** to run lines 1 - 100 in source(system_performance_measures.R)
-
 ## Metric 7a.1 ----  
 
 {
-  library(kableExtra)
-  `%nin%` = Negate(`%in%`)
-  
   df_7a1_clientDetail <- enrollment_data %>% 
     mutate(
       "m1_active.clients" = EntryDate <= report_end_date & (is.na(ExitDate) | ExitDate > report_start_date),
@@ -228,38 +223,38 @@ df_7b.1_detail.slice %>%
   select(PersonalID,EntryDate,ExitDate,ProjectType,leaver.stayer,Destination,Destination_category) %>% 
   write_csv("7b1.Client.detail.csv")
 
-df_7b.2_detail %>% 
-  select(PersonalID,EntryDate,ExitDate,ProjectType,Destination,Destination_category) %>% 
-  write_csv("7b2.Client.detail.csv")
+# df_7b.2_detail %>% 
+#   select(PersonalID,EntryDate,ExitDate,ProjectType,Destination,Destination_category) %>% 
+#   write_csv("7b2.Client.detail.csv")
 
 # Draft section Don't Review ----
 
-# CHECK Compare universe client lists to check for duplicates
-spm.7a1_persons <- df_SPM.7a.1.exits[,2]
-spm7.b1_persons <- df_SPM.7b.1.exits[,2]
-
-Duplicates <- rbind(spm.7a1_persons,spm7.b1_persons)
-
-df_dupCount <- Duplicates %>% 
-  group_by(PersonalID) %>% 
-  summarise(n=n()) %>%
-  arrange(desc(n)) %>%
-  filter(n > 1)
-#107 duplicates in both universe lists. There should be no overlap between each universe df
-
-df_dupCount
-df_dupCount_list <- df_dupCount$PersonalID
-
-df_sppm_duplicates <- df_SPM.7.baseline %>% 
-  filter(PersonalID %in% df_dupCount_list) %>% 
-  select(EnrollmentID,PersonalID, EntryDate, ExitDate,ProjectType)
-
-df_sppm_duplicates <- df_sppm_duplicates %>% 
-  mutate(SPM.7_in_report_range = ExitDate<report_end_date & ExitDate>report_start_date) %>% 
-  arrange(PersonalID,by=ExitDate)
-
-DF_duplicates_test <- df_SPM.7.baseline %>% 
-  filter(PersonalID == 416498)
+# # CHECK Compare universe client lists to check for duplicates
+# spm.7a1_persons <- df_SPM.7a.1.exits[,2]
+# spm7.b1_persons <- df_SPM.7b.1.exits[,2]
+# 
+# Duplicates <- rbind(spm.7a1_persons,spm7.b1_persons)
+# 
+# df_dupCount <- Duplicates %>% 
+#   group_by(PersonalID) %>% 
+#   summarise(n=n()) %>%
+#   arrange(desc(n)) %>%
+#   filter(n > 1)
+# #107 duplicates in both universe lists. There should be no overlap between each universe df
+# 
+# df_dupCount
+# df_dupCount_list <- df_dupCount$PersonalID
+# 
+# df_sppm_duplicates <- df_SPM.7.baseline %>% 
+#   filter(PersonalID %in% df_dupCount_list) %>% 
+#   select(EnrollmentID,PersonalID, EntryDate, ExitDate,ProjectType)
+# 
+# df_sppm_duplicates <- df_sppm_duplicates %>% 
+#   mutate(SPM.7_in_report_range = ExitDate<report_end_date & ExitDate>report_start_date) %>% 
+#   arrange(PersonalID,by=ExitDate)
+# 
+# DF_duplicates_test <- df_SPM.7.baseline %>% 
+#   filter(PersonalID == 416498)
 
 
 # New idea: Arrange and slice the baseline to keep the most recent exit for all projects types ( still trying to think through NbN)
@@ -288,8 +283,6 @@ df_SPM.7.exits <- df_SPM.7.M1.active %>%
 
 df_SPM.7_list <- unique(df_SPM.7.exits$No_exit_list) #Use the T/F from No_exit_list to create the list
 df_SPM.7_list <- df_SPM.7_list[!is.na(df_SPM.7_list)] # Remove the NA
-
-`%nin%` = Negate(`%in%`)
 
 df_SPM.7.exits <- df_SPM.7.exits %>% 
   filter(PersonalID %nin% df_SPM.7_list, # Exclude everyone with a ineligible exit. This should only leave people with a single enrollment or enrollments that end in the report period

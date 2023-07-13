@@ -182,40 +182,40 @@ Patient_episodes %>%
 
 # got this from [https://stackoverflow.com/questions/60459164/creating-episodes-for-groups-based-on-date-sequence]
 # Not using this code chunk
-df_overlap %>%
-  group_by(Personalid) %>%
-  mutate(difftime = Entry.date - lag(Entry.date, default = first(Entry.date)),
-         expected2 = cumsum(difftime >= 30) + 1)
+# df_overlap %>%
+#   group_by(Personalid) %>%
+#   mutate(difftime = Entry.date - lag(Entry.date, default = first(Entry.date)),
+#          expected2 = cumsum(difftime >= 30) + 1)
 
 ### Step 1: Create episodes
 
 
-df4 <- df3
-
-df4 <- df4 %>% 
-  mutate(ProjectType_name = case_when(
-    ProjectType %in% 0 ~ "ES EE",
-    ProjectType %in% 1 ~ "ES NbN",
-    ProjectType %in% 2 ~ "TH",
-    ProjectType %in% 3 ~ "PH-PSH",
-    ProjectType %in% 4 ~ "SO",
-    ProjectType %in% 6 ~ "SSO",
-    ProjectType %in% 7 ~ "Other",
-    ProjectType %in% 8 ~ "Safe Haven",
-    ProjectType %in% 9 ~ "PH-Housing only",
-    ProjectType %in% 10 ~ "PH-Housing w Services",
-    ProjectType %in% 11 ~ "Day Shelter",
-    ProjectType %in% 12 ~ "Homeless Prevention",
-    ProjectType %in% 13 ~ "PH-RRH",
-    ProjectType %in% 14 ~ "CE"
-  )) %>% group_by(PersonalID.x,EnrollmentID)
-
-
-df %>% 
-  arrange(patient, by=admitted) %>% # Sorts by patient and sorts from earliest start date to latest
-  mutate(group = discharge == lead(admitted) | # No idea why group is here. I would like to have an interval code.
-           admitted == lag(discharge)) %>%  
-  group_by(patient, group) %>%
-  summarise(admitted = first(admitted), discharge = last(discharge)) %>% # key part of the code. This pulls the dates based on the sort
-  arrange(patient, by=admitted)
+# df4 <- df3
+# 
+# df4 <- df4 %>% 
+#   mutate(ProjectType_name = case_when(
+#     ProjectType %in% 0 ~ "ES EE",
+#     ProjectType %in% 1 ~ "ES NbN",
+#     ProjectType %in% 2 ~ "TH",
+#     ProjectType %in% 3 ~ "PH-PSH",
+#     ProjectType %in% 4 ~ "SO",
+#     ProjectType %in% 6 ~ "SSO",
+#     ProjectType %in% 7 ~ "Other",
+#     ProjectType %in% 8 ~ "Safe Haven",
+#     ProjectType %in% 9 ~ "PH-Housing only",
+#     ProjectType %in% 10 ~ "PH-Housing w Services",
+#     ProjectType %in% 11 ~ "Day Shelter",
+#     ProjectType %in% 12 ~ "Homeless Prevention",
+#     ProjectType %in% 13 ~ "PH-RRH",
+#     ProjectType %in% 14 ~ "CE"
+#   )) %>% group_by(PersonalID.x,EnrollmentID)
+# 
+# 
+# df %>% 
+#   arrange(patient, by=admitted) %>% # Sorts by patient and sorts from earliest start date to latest
+#   mutate(group = discharge == lead(admitted) | # No idea why group is here. I would like to have an interval code.
+#            admitted == lag(discharge)) %>%  
+#   group_by(patient, group) %>%
+#   summarise(admitted = first(admitted), discharge = last(discharge)) %>% # key part of the code. This pulls the dates based on the sort
+#   arrange(patient, by=admitted)
 

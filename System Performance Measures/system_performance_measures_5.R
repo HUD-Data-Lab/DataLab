@@ -23,8 +23,9 @@
 ## define report range universes ----
 
 ### 5.1 (ES, SH, TH, PH) ----
-Q5M1_report <- method_5_active_enrollments %>%
-  filter(ProjectType %in% c(0,1,2,8) & 
+Q5M1_report <- active_enrollments %>%
+  filter(Method5 &
+           ProjectType %in% c(0,1,2,8) & 
            EntryDate >= report_start_date ) %>%
   arrange(PersonalID, EntryDate, EnrollmentID) %>% 
   group_by(PersonalID) %>%
@@ -38,8 +39,9 @@ Q5M1_report <- method_5_active_enrollments %>%
 
 
 ### 5.2 (ES, SH, TH, PH) ----
-Q5M2_report <- method_5_active_enrollments %>%
-  filter(ProjectType %in% c(0,1,2,8,3,9,10,13) &
+Q5M2_report <- active_enrollments %>%
+  filter(Method5 &
+           ProjectType %in% c(0,1,2,8,3,9,10,13) &
            EntryDate >= report_start_date) %>%
   arrange(PersonalID, EntryDate, EnrollmentID) %>%
   group_by(PersonalID) %>%
@@ -55,6 +57,9 @@ Q5M2_report <- method_5_active_enrollments %>%
 
 ### base lookback_u ----
 Q5_lookback_u <- enrollment_data %>%
+  mutate(Method5_ExitDate = if_else(
+    is.na(ExitDate) | ExitDate >= report_end_date,
+    report_end_date, ExitDate %m-% days(1))) %>%
   filter(EntryDate < report_start_date &
            (
              (ProjectType == 1 &

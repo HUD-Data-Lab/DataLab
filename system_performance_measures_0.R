@@ -61,6 +61,7 @@ enrollment_data <- Enrollment %>%
               select(ProjectID, ProjectType),
             by = "ProjectID")
 
+##  next three lines are only for testing purposes
 NbN_projects <- c(1212, 1210)
 source("create_NbN_stays.R")
 Project$ProjectType[Project$ProjectID %in% NbN_projects] <- 1
@@ -68,12 +69,16 @@ Project$ProjectType[Project$ProjectID %in% NbN_projects] <- 1
 all_bed_nights <- Services %>%
   inner_join(enrollment_data %>%
                filter(ProjectType == 1) %>%
-               select(EnrollmentID, EntryDate, ExitDate),
+               inner_join(Project %>%
+                            select(ProjectID, OperatingStartDate),
+                          by = "ProjectID") %>%
+               select(EnrollmentID, EntryDate, ExitDate, OperatingStartDate),
              by = "EnrollmentID") %>%
   filter(RecordType == 200 & 
            TypeProvided == 200 &
            DateProvided >= EntryDate &
            DateProvided <= report_end_date &
+           DateProvided >= OperatingStartDate,
            # removed because specs call this an error in data entry
            # which--correcting for data quality is a whole other thing
            (is.na(ExitDate) |
@@ -89,21 +94,26 @@ bed_nights_in_report_ee_format <- bed_nights_in_report %>%
             by = "EnrollmentID") %>%
   mutate(EnrollmentID = paste("S_", ServicesID),
          EntryDate = DateProvided,
-         ExitDateAdj = DateProvided) %>%
-  select(EnrollmentID, PersonalID, EntryDate, ExitDateAdj,
+         ExitDate = DateProvided) %>%
+  select(EnrollmentID, PersonalID, EntryDate, ExitDate,
          ProjectID, ProjectType)
 
-method_5_active_enrollments <- enrollment_data %>%
-  filter(EntryDate <= report_end_date &
-           (is.na(ExitDate) |
-              ExitDate > report_start_date) &
-           (
-             (ProjectType == 1 &
-                EnrollmentID %in% bed_nights_in_report$EnrollmentID)
-             |
-               (ProjectType %in% c(0, 2, 3, 8, 9, 10, 13))
-           )
-  )
+active_enrollments <- enrollment_data %>%
+  mutate(
+    Method1 = EntryDate <= report_end_date &
+      (is.na(ExitDate) |
+         ExitDate >= report_start_date),
+    Method2 = (ExitDate >= report_start_date &
+                 ExitDate <= report_end_date) | 
+      (Method1 &
+         EnrollmentID %in% bed_nights_in_report$EnrollmentID
+       # don't need to check bed night date against project 
+       # start at this point because it's done in `all_bed_nights`
+       ),
+    Method5 = Method1 &
+      # don't need to check project type because that's done in `all_bed_nights`
+      (EnrollmentID %in% bed_nights_in_report$EnrollmentID |
+         ProjectType %in% c(0, 2, 3, 8, 9, 10, 13)))
 
 items_to_keep <- c("items_to_keep", ls())
 
