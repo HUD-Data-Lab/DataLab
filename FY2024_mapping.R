@@ -87,10 +87,10 @@ FY24_residence_types <- ResidenceUses %>%
     filter(ProjectType %in% c(0, 1, 2, 3, 9, 10, 13)) %>%
     mutate(ProjectType = case_when(
       ProjectID %in% Funder$ProjectID[Funder$Funder == 44] ~ 12,
-      ProjectType %in% c(0, 1) ~ 10,
+      ProjectType %in% c(9, 10) ~ 15, 
+      ProjectType %in% c(0, 1) ~ 10, 
       ProjectType == 2 ~ 11,
       ProjectType == 3 ~ 14,
-      ProjectType %in% c(9, 10) ~ 15,
       TRUE ~ ProjectType
     )) 
   
