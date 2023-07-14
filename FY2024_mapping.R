@@ -268,7 +268,6 @@ FY24_residence_types <- ResidenceUses %>%
 {
   AssessmentResults <- AssessmentResults %>%
     select(all_of(assessmentresults_columns))
-  
 }
 {
   Event <- Event %>%
