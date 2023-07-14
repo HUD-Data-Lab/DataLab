@@ -1,26 +1,14 @@
-
 HMIS Test Kit 2.0/
-
 .Rproj.user/
-
 .RData
-
 .Rhistory
-
 *.zip
-
 Unzipped BoS Data/
-
 *.csv
-
 local_functions.R
-
 *.7z
-
 CE_APR_Markdown.docx
-
 desktop.ini
-
 hold.R
-
-.Rproj
+*.Rproj
+Data Lab.Rproj
