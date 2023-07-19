@@ -312,7 +312,7 @@ FY24_residence_types <- ResidenceUses %>%
            # only required if loading in from DataLab.R
            # , DateCreated = enroll_DateCreated
            ) %>%
-    select(all_of(enrollment_columns))
+    select(all_of(enrollment_columns[enrollment_columns %nin% c("WorkPlaceViolenceThreats")]))
 }
 {
   # Responses in Appendix A--Living Situation Option List reconfigured
@@ -329,12 +329,12 @@ FY24_residence_types <- ResidenceUses %>%
       Destination = if_else(!is.na(DestinationSubsidyType),
                             435, Destination)) %>%
     # only required if loading in from DataLab.R
-    rename(
+   # rename(
           # DateCreated = exit_DateCreated,
            #  only required when source database has different capitalization
-           WorkplaceViolenceThreats = WorkPlaceViolenceThreats,
-           WorkplacePromiseDifference = WorkPlacePromiseDifference) %>%
-    select(all_of(exit_columns))
+    #       WorkplaceViolenceThreats = WorkPlaceViolenceThreats,
+     #      WorkplacePromiseDifference = WorkPlacePromiseDifference) %>%
+    select(all_of(exit_columns[exit_columns %nin% c("WorkPlaceViolenceThreats")]))
 }
 {
   Export <- Export %>%

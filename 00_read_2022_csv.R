@@ -9,7 +9,7 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
-kit_type <- "new_kit"
+kit_type <- "old_kit" # can switch from new_kit to old_kit
 combining_files <- kit_type == "old_kit"
 
 source("datalab_functions.R")
