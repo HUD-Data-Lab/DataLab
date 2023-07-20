@@ -57,7 +57,7 @@ Q5M2_report <- active_enrollments %>%
 
 ### base lookback_u ----
 Q5_lookback_u <- enrollment_data %>%
-  mutate(Adjusted_ExitDate = if_else(
+  mutate(Method5_ExitDate = if_else(
     is.na(ExitDate) | ExitDate >= report_end_date,
     report_end_date, ExitDate %m-% days(1))) %>%
   filter(EntryDate < report_start_date &
@@ -72,21 +72,21 @@ Q5_lookback_u <- enrollment_data %>%
 ### 5.1 lookback ----
 Q5M1_lookback <- Q5_lookback_u %>%
   filter(PersonalID %in% Q5M1_report$PersonalID ) %>%
-  arrange(PersonalID, desc(Adjusted_ExitDate), desc(EnrollmentID)) %>%
+  arrange(PersonalID, desc(Method5_ExitDate), desc(EnrollmentID)) %>%
   group_by(PersonalID) %>% 
   filter(row_number()==1) %>%
   ungroup() %>%
-  rename( "lookback_lastactivedate" = "Adjusted_ExitDate") %>%
+  rename( "lookback_lastactivedate" = "Method5_ExitDate") %>%
   select(PersonalID, lookback_lastactivedate)
 
 ### 5.2 lookback ----
 Q5M2_lookback <- Q5_lookback_u %>%
   filter( PersonalID %in% Q5M2_report$PersonalID ) %>%
-  arrange(PersonalID, desc(Adjusted_ExitDate), desc(EnrollmentID)) %>%
+  arrange(PersonalID, desc(Method5_ExitDate), desc(EnrollmentID)) %>%
   group_by(PersonalID) %>% 
   filter(row_number()==1) %>%
   ungroup() %>%
-  rename( "lookback_lastactivedate" = "Adjusted_ExitDate") %>%
+  rename( "lookback_lastactivedate" = "Method5_ExitDate") %>%
   select(PersonalID, lookback_lastactivedate)
 
 ## calculations ----
