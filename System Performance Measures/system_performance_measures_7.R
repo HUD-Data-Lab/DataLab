@@ -20,7 +20,7 @@
       "exclude_enrollment" = (ExitDate > report_end_date | is.na(ExitDate)) | Destination %in% c(206,329,24), 
       "leaver.stayer" = ifelse(is.na(ExitDate) | ExitDate>report_end_date , "Stayer","Leaver" ),
       "Destination_category" = case_when(
-        Destination %in% c(300:399) ~ "Temporary",
+        Destination %in% c(200:399) ~ "Temporary or Institutional",
         Destination %in% c(400:499) ~ "Permanent"))
   
   df_7a1_sliced.LatestExit <- df_7a1_clientDetail %>%

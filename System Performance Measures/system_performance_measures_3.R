@@ -10,11 +10,6 @@
 # <https://www.gnu.org/licenses/>. 
 
 # 3.2. System Performance Measure 3.2: Persons Experiencing Homelessness ----
-## Create DF with Active client counts
-# enrollment_data
-# bed_nights_in_report_ee_format #use this to get a count of active persons
-
-# NOT CONFIDENT in the coding of Method 2 Active Clients in the creation of "df_spm.3.2_base"
 
 # df_spm.3.2_base <- enrollment_data %>% 
 #   mutate(M2.ES.Nbn_enrlmnt_qual = 
@@ -36,7 +31,6 @@
 #            ProjectType == 2 & M1.Active.Clients ~ "2.0 Transitional housing")) %>% 
 #   filter(ProjectType %in% c(0,1,8,2) & (M1.Active.Clients | M2.Active.Clients))
 
-# Try out method 5.active_enrollments
 
 # df_spm.3.2_u <- active_enrollments %>% 
 #   filter(
