@@ -12,7 +12,6 @@
 # 7. System Performance Performance Measure 7: Successful Placement from Street Outreach and Successful Placement in or Retention of Permanent Housing ----
 
 ## Metric 7a.1 ----  
- 
 {
   df_7a1_clientDetail <- enrollment_data %>% 
     filter(ProjectType == 4) %>% 
@@ -69,10 +68,10 @@
     ) %>% 
     group_by(HouseholdID) %>%
     mutate(
-      HoH_HMID = suppressWarnings(min(case_when(RelationshipToHoH == 1 ~ MoveInDate), na.rm = TRUE)), #Removed this because it was returning "inf"
+      HoH_HMID = suppressWarnings(min(case_when(RelationshipToHoH == 1 ~ MoveInDate), na.rm = TRUE)),
       MoveInDate = case_when(ExitDate < HoH_HMID ~ NA, 
                              EntryDate > HoH_HMID ~ EntryDate, 
-                             TRUE ~ HoH_HMID )) %>% #what does this do?
+                             TRUE ~ HoH_HMID )) %>% # What does this do?
     ungroup()
   
   ### 7b.1 Metric ----
@@ -137,7 +136,7 @@
     filter(PersonalID %in% df_7b.2.stayers.leavers$PersonalID[df_7b.2.stayers.leavers$ExitDate > report_end_date | is.na(df_7b.2.stayers.leavers$ExitDate)]) %>% # keeps all clients who are a stayer.)
     group_by(PersonalID) %>% 
     arrange(!is.na(ExitDate), desc(EnrollmentID), .by_group = TRUE) %>%  #Arrange with NA at top and then descending from most recently created enrollment ID
-    slice(which.max(EntryDate))# %>% #keeps the most recent exit enrollment
+    slice(which.max(EntryDate))# %>% #keeps the most recent entry date
   
   df_7b.2_leaverLatestStay_u <- df_7b.2.stayers.leavers %>% 
     filter(PersonalID %nin% df_7b.2.stayers.leavers$PersonalID[df_7b.2.stayers.leavers$ExitDate > report_end_date | is.na(df_7b.2.stayers.leavers$ExitDate)]) %>% # removes all clients who are a stayer.

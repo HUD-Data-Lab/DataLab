@@ -97,5 +97,5 @@ Metric.3.2.table %>%
 ## Client Detail CSV File ----
 
 df_spm.3.2_u %>%
-  select(ProjectType,PersonalID,EntryDate,ExitDate) %>%
+  select(PersonalID,ProjectType,EntryDate,MoveInDate,ExitDate,Method1,Method2,Method5) %>%
   write_csv("3.2.Client.detail.csv")
