@@ -13,8 +13,10 @@ if (kit_type == "old_kit") {
   
   relevant_CoC <- "XX-500"
 
-  report_start_date <- ymd(Export[1,]$ExportStartDate)
-  report_end_date <- ymd(Export[1,]$ExportEndDate)
+  # report_start_date <- ymd(Export[1,]$ExportStartDate)
+  # report_end_date <- ymd(Export[1,]$ExportEndDate)
+  report_start_date <- ymd("2020-10-1")
+  report_end_date <- ymd("2021-9-30")
   
 } else if (kit_type == "new_kit") {
   

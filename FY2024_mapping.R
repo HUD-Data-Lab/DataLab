@@ -106,134 +106,134 @@ FY24_residence_types <- ResidenceUses %>%
     slice(1L) %>%
     ungroup()
   
-  CEActivity_AB <- Assessment %>%
-    filter(year(AssessmentDate) == 2022) %>%
-    mutate(PreventionScreening = 0,
-           PreventionOutcome = NA,
-           PreventionLocation = NA,
-           ShelterScreening = if_else(
-             # If FY22 4.19.04 = 1, then FY24 4.21.04 = 1
-             AssessmentLevel == 1, 1, 0),
-           ShelterOutcome = case_when(
-             # If FY22 4.19.04 = 1 AND 4.19.07 = 1, then FY24 4.21.04C = 6
-             AssessmentLevel == 1 &
-               PrioritizationStatus == 1 ~ 6,
-             # If FY22 4.19.04 = 1 AND 4.19.07 = 2, then FY24 4.21.04C = 8
-             AssessmentLevel == 1 &
-               PrioritizationStatus == 2 ~ 8),
-           ShelterLocation = if_else(
-             ShelterOutcome %in% c(1, 3), 99, NA),
-           HousingScreening = if_else(
-             # If FY22 4.19.04 = 2, then FY24 4.21.05 = 1
-             AssessmentLevel == 2, 1, 0),
-           HousingOutcome = case_when(
-             # If FY22 4.19.04 = 2 AND 4.19.07 = 1, then FY24 4.21.05E = 9
-             AssessmentLevel == 2 &
-               PrioritizationStatus == 1 ~ 9,
-             # If FY22 4.19.04 = 2 AND 4.19.07 = 2, then FY24 4.21.05E = 13
-             AssessmentLevel == 2 &
-               PrioritizationStatus == 2 ~ 13),
-           HousingLocation = NA,
-           ServiceProvided = 0,
-           ServiceOutcome = NA,
-           ReferralResult = NA,
-           ReferralResultDate = NA
-    ) %>%
-    rename(ActivityID = AssessmentID,
-           ActivityDate = AssessmentDate,
-           # If FY22 4.19.03 = 1, then FY24 4.21.02 = 1
-           # If FY22 4.19.03 = 2, then FY24 4.21.02 = 2
-           # If FY22 4.19.03 = 3, then FY24 4.21.02 = 3
-           ContactType = AssessmentType) %>%
-    # filter(!is.na(ContactType)) %>%
-    select(all_of(ceactivity_columns))
-  
-  
-  CEActivity_EB <- Event %>%
-    filter(year(EventDate) == 2022) %>%
-    left_join(referral_locations %>%
-                select(EventID, ProjectID),
-              by = "EventID") %>%
-    mutate(
-      LocationCrisisOrPHHousing = if_else(
-        is.na(LocationCrisisOrPHHousing), ProjectID, LocationCrisisOrPHHousing),
-      ContactType = NA,
-      PreventionScreening = if_else(Event %in% c(1, 16), 
-                                    1, 0),
-      PreventionOutcome = case_when(
-        Event == 1 ~ 1,
-        Event == 16 ~ 4
-      ),
-      PreventionLocation = case_when(
-        Event == 1 ~ LocationCrisisOrPHHousing),
-      ShelterScreening = if_else(Event == 10, 
-                                 1, 0),
-      ShelterOutcome = case_when(
-        Event == 10 ~ 3
-      ),
-      ShelterLocation = case_when(
-        Event == 10 ~ LocationCrisisOrPHHousing),
-      HousingScreening = if_else(Event %in% c(8, 9, 11:15, 17, 18), 
-                                 1, 0),
-      HousingOutcome = case_when(
-        Event == 8 ~ 11,
-        Event == 9 ~ 10,
-        Event == 11 ~ 2,
-        Event == 12 ~ 3,
-        Event == 13 ~ 4,
-        Event == 14 ~ 5,
-        Event %in% c(15, 17) ~ 6,
-        Event == 18 ~ 7
-      ),
-      HousingLocation = case_when(
-        Event %in% c(11, 12, 13, 14, 15) &
-          LocationCrisisOrPHHousing %in% Project$ProjectID ~ LocationCrisisOrPHHousing),
-      ServiceProvided = if_else(Event %in% c(2, 3, 4), 
-                                2, 0),
-      ServiceOutcome = case_when(
-        Event %in% c(3, 4) ~ Event,
-        Event == 2 ~ 5
-      ),
-      ReferralResult = case_when(
-        Event %in% c(10:15, 17, 18) ~ ReferralResult
-      ),
-      ReferralResultDate = case_when(
-        Event %in% c(10:15, 17, 18) ~ ResultDate
-      )
-    ) %>%
-    rename(ActivityID = EventID,
-           ActivityDate = EventDate) %>%
-    select(all_of(ceactivity_columns))
-  
-  CEActivity <- CEActivity_AB %>%
-    select(-ActivityID) %>%
-    full_join(CEActivity_EB %>%
-                `colnames<-`(c(paste0("EB_", colnames(CEActivity_EB)))) %>%
-                select(-EB_ActivityID),
-              by = c("EnrollmentID" = "EB_EnrollmentID", 
-                     "PersonalID" = "EB_PersonalID",
-                     "ActivityDate" = "EB_ActivityDate"),
-              multiple = "all") %>%
-    mutate(c_PreventionScreening = if_else(PreventionScreening == 1 |
-                                             EB_PreventionScreening == 1, 
-                                           1, 0),
-           c_PreventionOutcome = EB_PreventionOutcome,
-           c_PreventionLocation = EB_PreventionLocation,
-           c_ShelterScreening = if_else(ShelterScreening == 1 |
-                                          EB_ShelterScreening == 1, 
-                                        1, 0),
-           c_ShelterOutcome = if_else(is.na(EB_ShelterOutcome), ShelterOutcome, EB_ShelterOutcome),
-           c_ShelterLocation = as.numeric(EB_ShelterLocation),
-           c_HousingScreening = if_else(HousingScreening == 1 |
-                                          EB_HousingScreening == 1, 
-                                        1, 0),
-           c_HousingOutcome = if_else(is.na(EB_HousingOutcome), HousingOutcome, EB_HousingOutcome),
-           c_HousingLocation = as.numeric(EB_HousingLocation),
-           c_ServiceProvided = EB_ServiceProvided,
-           c_ServiceOutcome = EB_ServiceOutcome,
-           c_ReferralResult = EB_ReferralResult,
-           c_ReferralResultDate = EB_ReferralResultDate
-    )
+  # CEActivity_AB <- Assessment %>%
+  #   filter(year(AssessmentDate) == 2022) %>%
+  #   mutate(PreventionScreening = 0,
+  #          PreventionOutcome = NA,
+  #          PreventionLocation = NA,
+  #          ShelterScreening = if_else(
+  #            # If FY22 4.19.04 = 1, then FY24 4.21.04 = 1
+  #            AssessmentLevel == 1, 1, 0),
+  #          ShelterOutcome = case_when(
+  #            # If FY22 4.19.04 = 1 AND 4.19.07 = 1, then FY24 4.21.04C = 6
+  #            AssessmentLevel == 1 &
+  #              PrioritizationStatus == 1 ~ 6,
+  #            # If FY22 4.19.04 = 1 AND 4.19.07 = 2, then FY24 4.21.04C = 8
+  #            AssessmentLevel == 1 &
+  #              PrioritizationStatus == 2 ~ 8),
+  #          ShelterLocation = if_else(
+  #            ShelterOutcome %in% c(1, 3), 99, NA),
+  #          HousingScreening = if_else(
+  #            # If FY22 4.19.04 = 2, then FY24 4.21.05 = 1
+  #            AssessmentLevel == 2, 1, 0),
+  #          HousingOutcome = case_when(
+  #            # If FY22 4.19.04 = 2 AND 4.19.07 = 1, then FY24 4.21.05E = 9
+  #            AssessmentLevel == 2 &
+  #              PrioritizationStatus == 1 ~ 9,
+  #            # If FY22 4.19.04 = 2 AND 4.19.07 = 2, then FY24 4.21.05E = 13
+  #            AssessmentLevel == 2 &
+  #              PrioritizationStatus == 2 ~ 13),
+  #          HousingLocation = NA,
+  #          ServiceProvided = 0,
+  #          ServiceOutcome = NA,
+  #          ReferralResult = NA,
+  #          ReferralResultDate = NA
+  #   ) %>%
+  #   rename(ActivityID = AssessmentID,
+  #          ActivityDate = AssessmentDate,
+  #          # If FY22 4.19.03 = 1, then FY24 4.21.02 = 1
+  #          # If FY22 4.19.03 = 2, then FY24 4.21.02 = 2
+  #          # If FY22 4.19.03 = 3, then FY24 4.21.02 = 3
+  #          ContactType = AssessmentType) %>%
+  #   # filter(!is.na(ContactType)) %>%
+  #   select(all_of(ceactivity_columns))
+  # 
+  # 
+  # CEActivity_EB <- Event %>%
+  #   filter(year(EventDate) == 2022) %>%
+  #   left_join(referral_locations %>%
+  #               select(EventID, ProjectID),
+  #             by = "EventID") %>%
+  #   mutate(
+  #     LocationCrisisOrPHHousing = if_else(
+  #       is.na(LocationCrisisOrPHHousing), ProjectID, LocationCrisisOrPHHousing),
+  #     ContactType = NA,
+  #     PreventionScreening = if_else(Event %in% c(1, 16), 
+  #                                   1, 0),
+  #     PreventionOutcome = case_when(
+  #       Event == 1 ~ 1,
+  #       Event == 16 ~ 4
+  #     ),
+  #     PreventionLocation = case_when(
+  #       Event == 1 ~ LocationCrisisOrPHHousing),
+  #     ShelterScreening = if_else(Event == 10, 
+  #                                1, 0),
+  #     ShelterOutcome = case_when(
+  #       Event == 10 ~ 3
+  #     ),
+  #     ShelterLocation = case_when(
+  #       Event == 10 ~ LocationCrisisOrPHHousing),
+  #     HousingScreening = if_else(Event %in% c(8, 9, 11:15, 17, 18), 
+  #                                1, 0),
+  #     HousingOutcome = case_when(
+  #       Event == 8 ~ 11,
+  #       Event == 9 ~ 10,
+  #       Event == 11 ~ 2,
+  #       Event == 12 ~ 3,
+  #       Event == 13 ~ 4,
+  #       Event == 14 ~ 5,
+  #       Event %in% c(15, 17) ~ 6,
+  #       Event == 18 ~ 7
+  #     ),
+  #     HousingLocation = case_when(
+  #       Event %in% c(11, 12, 13, 14, 15) &
+  #         LocationCrisisOrPHHousing %in% Project$ProjectID ~ LocationCrisisOrPHHousing),
+  #     ServiceProvided = if_else(Event %in% c(2, 3, 4), 
+  #                               2, 0),
+  #     ServiceOutcome = case_when(
+  #       Event %in% c(3, 4) ~ Event,
+  #       Event == 2 ~ 5
+  #     ),
+  #     ReferralResult = case_when(
+  #       Event %in% c(10:15, 17, 18) ~ ReferralResult
+  #     ),
+  #     ReferralResultDate = case_when(
+  #       Event %in% c(10:15, 17, 18) ~ ResultDate
+  #     )
+  #   ) %>%
+  #   rename(ActivityID = EventID,
+  #          ActivityDate = EventDate) %>%
+  #   select(all_of(ceactivity_columns))
+  # 
+  # CEActivity <- CEActivity_AB %>%
+  #   select(-ActivityID) %>%
+  #   full_join(CEActivity_EB %>%
+  #               `colnames<-`(c(paste0("EB_", colnames(CEActivity_EB)))) %>%
+  #               select(-EB_ActivityID),
+  #             by = c("EnrollmentID" = "EB_EnrollmentID", 
+  #                    "PersonalID" = "EB_PersonalID",
+  #                    "ActivityDate" = "EB_ActivityDate"),
+  #             multiple = "all") %>%
+  #   mutate(c_PreventionScreening = if_else(PreventionScreening == 1 |
+  #                                            EB_PreventionScreening == 1, 
+  #                                          1, 0),
+  #          c_PreventionOutcome = EB_PreventionOutcome,
+  #          c_PreventionLocation = EB_PreventionLocation,
+  #          c_ShelterScreening = if_else(ShelterScreening == 1 |
+  #                                         EB_ShelterScreening == 1, 
+  #                                       1, 0),
+  #          c_ShelterOutcome = if_else(is.na(EB_ShelterOutcome), ShelterOutcome, EB_ShelterOutcome),
+  #          c_ShelterLocation = as.numeric(EB_ShelterLocation),
+  #          c_HousingScreening = if_else(HousingScreening == 1 |
+  #                                         EB_HousingScreening == 1, 
+  #                                       1, 0),
+  #          c_HousingOutcome = if_else(is.na(EB_HousingOutcome), HousingOutcome, EB_HousingOutcome),
+  #          c_HousingLocation = as.numeric(EB_HousingLocation),
+  #          c_ServiceProvided = EB_ServiceProvided,
+  #          c_ServiceOutcome = EB_ServiceOutcome,
+  #          c_ReferralResult = EB_ReferralResult,
+  #          c_ReferralResultDate = EB_ReferralResultDate
+  #   )
 }
 {
   ##  No mapping required (for vendors, at least)
@@ -329,11 +329,11 @@ FY24_residence_types <- ResidenceUses %>%
       Destination = if_else(!is.na(DestinationSubsidyType),
                             435, Destination)) %>%
     # only required if loading in from DataLab.R
-    rename(
-          # DateCreated = exit_DateCreated,
-           #  only required when source database has different capitalization
-           WorkplaceViolenceThreats = WorkPlaceViolenceThreats,
-           WorkplacePromiseDifference = WorkPlacePromiseDifference) %>%
+    # rename(
+    #       # DateCreated = exit_DateCreated,
+    #        #  only required when source database has different capitalization
+    #        WorkplaceViolenceThreats = WorkPlaceViolenceThreats,
+    #        WorkplacePromiseDifference = WorkPlacePromiseDifference) %>%
     select(all_of(exit_columns))
 }
 {

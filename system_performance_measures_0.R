@@ -52,6 +52,16 @@ for (csv in c("Exit", "IncomeBenefits")) {
            filter(EnrollmentID %in% Enrollment$EnrollmentID))
 }
 
+hmids <- Enrollment %>%
+  filter(RelationshipToHoH == 1 &
+           ProjectID %in% Project$ProjectID[Project$ProjectType %in% c(3, 9, 10, 13)]) %>%
+  group_by(HouseholdID) %>%
+  arrange(EntryDate) %>%
+  slice(1L) %>%
+  ungroup() %>%
+  select(HouseholdID, MoveInDate) %>%
+  rename(HoH_HMID = MoveInDate)
+
 enrollment_data <- Enrollment %>%
   select(all_of(colnames(Enrollment)[1:18])) %>%
   left_join(Exit %>%
@@ -59,7 +69,24 @@ enrollment_data <- Enrollment %>%
             by = "EnrollmentID") %>%
   left_join(Project %>%
               select(ProjectID, ProjectType),
-            by = "ProjectID")
+            by = "ProjectID") %>%
+  left_join(Client %>%
+              select(PersonalID, DOB),
+            by = "PersonalID") %>%
+  left_join(hmids,
+            by = "HouseholdID") %>%
+  mutate(MoveInDateAdj = case_when(
+    !is.na(HoH_HMID) &
+      HoH_HMID >= DOB &
+      HoH_HMID >= EntryDate &
+      (HoH_HMID <= ExitDate |
+         is.na(ExitDate)) ~ HoH_HMID,
+    !is.na(HoH_HMID) &
+      (HoH_HMID <= ExitDate |
+         is.na(ExitDate)) ~ EntryDate
+  ))
+
+test <- 
 
 ##  next three lines are only for testing purposes
 NbN_projects <- c(1212, 1210)
@@ -86,6 +113,7 @@ all_bed_nights <- Services %>%
 
 bed_nights_in_report <- all_bed_nights %>%
   filter(DateProvided >= report_start_date)
+
 
 # need to review this logic...
 bed_nights_in_report_ee_format <- bed_nights_in_report %>%
