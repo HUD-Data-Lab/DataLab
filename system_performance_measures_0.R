@@ -66,7 +66,7 @@ NbN_projects <- c(1212, 1210)
 source("create_NbN_stays.R")
 Project$ProjectType[Project$ProjectID %in% NbN_projects] <- 1
 
-all_bed_nights <- Services %>%
+SPM_bed_nights <- Services %>%
   inner_join(enrollment_data %>%
                filter(ProjectType == 1) %>%
                inner_join(Project %>%
@@ -84,7 +84,7 @@ all_bed_nights <- Services %>%
            (is.na(ExitDate) |
               DateProvided < ExitDate))
 
-bed_nights_in_report <- all_bed_nights %>%
+bed_nights_in_report <- SPM_bed_nights %>%
   filter(DateProvided >= report_start_date)
 
 # need to review this logic...
@@ -108,10 +108,10 @@ active_enrollments <- enrollment_data %>%
       (Method1 &
          EnrollmentID %in% bed_nights_in_report$EnrollmentID
        # don't need to check bed night date against project 
-       # start at this point because it's done in `all_bed_nights`
+       # start at this point because it's done in `SPM_bed_nights`
        ),
     Method5 = Method1 &
-      # don't need to check project type because that's done in `all_bed_nights`
+      # don't need to check project type because that's done in `SPM_bed_nights`
       (EnrollmentID %in% bed_nights_in_report$EnrollmentID |
          ProjectType %in% c(0, 2, 3, 8, 9, 10, 13)))
 
