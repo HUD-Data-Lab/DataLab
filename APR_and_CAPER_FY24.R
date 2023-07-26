@@ -15,15 +15,17 @@ generate_new_kits <- TRUE
 {
   source("DataLab.R")
   
-  # used for building
+  # used for building and testing APR on specifc projects or groups of projects
   {
     project_list <- c(
       # 1362#,	#"DataLab - ES-EE ESG I",
       # 93#,	#"DataLab - ES-NbN ESG",
       # 1409#,	"DataLab - HP ESG",
       # 780#,	#"DataLab - PSH CoC I",
-      1428,	#"DataLab - RRH CoC I",
-      1495#,	#"DataLab - RRH CoC II",
+      #1428,	#"DataLab - RRH CoC I", #Commented out because Project ID did not exist
+     # 1495#,	#"DataLab - RRH CoC II", #Commented out because project ID did not exist
+      1554, #DataLab - RRH CoC I", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
+      1555 #, #"DataLab - RRH CoC II", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
       # 1060#,	#"DataLab - RRH ESG I",
       # 1647#,	#"DataLab - SO CoC",
       # 1419,	#"DataLab - SO ESG",
@@ -33,51 +35,52 @@ generate_new_kits <- TRUE
     )
   }
   
-  # used for running all reports
+  # used for running all reports for all projects
   {
-    full_project_list <- c(Project$ProjectID[Project$ProjectID %in% Funder$ProjectID[Funder$Funder %in% 1:11]])
-    full_project_list <- full_project_list[full_project_list %nin% c(1647, 340)]
+    full_project_list <- c(Project$ProjectID[Project$ProjectID %in% Funder$ProjectID[Funder$Funder %in% 1:11]]) # Funding source HUD-CoC or HUD-ESG
+    full_project_list <- full_project_list[full_project_list %nin% c(1647, 340)] #Copied from old test kit, but those are invalid funding sources for those project types. This shouldn't exist.
   }
   
-  items_to_keep <- c("items_to_keep", ls())
+  items_to_keep <- c("items_to_keep", ls()) #Keep all functions and objects created up to this point. Why is this here? What is the purpose of this?
+  
+  # removes exits for prevention projects for Q23c of the APR/CAPER,
+  # remove upon finalization of guidance
+  Exit <- Exit %>%
+    filter(EnrollmentID %nin% Enrollment$EnrollmentID[Enrollment$ProjectID %in% Project$ProjectID[Project$ProjectType == 12]]) %>% # Remove all enrollment Ids for project id == 12
+    rename(exit_DateCreated = DateCreated)
+  
+  Enrollment <- Enrollment %>%
+    rename(enroll_DateCreated = DateCreated)
   
   # loop for running all
-  for(project_id in full_project_list) {
-    project_list <- c(project_id)
+  for(project_id in full_project_list) { #SIDE NOTE --> Need a crash course on loop logic
+    project_list <- c(project_id) #Why is project ID 1546 when in project list I only have 1554 and 1555? When I run the loop it gives me a bunch of warnings No loop it is fine.
     
     # run all table creation logic, including questions
     {
-      # removes exits for prevention projects for Q23c of the APR/CAPER,
-      # remove upon finalization of guidance
-      Exit <- Exit %>%
-        filter(EnrollmentID %nin% Enrollment$EnrollmentID[Enrollment$ProjectID %in% Project$ProjectID[Project$ProjectType == 12]]) %>%
-        rename(exit_DateCreated = DateCreated)
       
-      Enrollment <- Enrollment %>%
-        rename(enroll_DateCreated = DateCreated)
-      
-      all_program_enrollments <- Enrollment %>%
-        filter(ProjectID %in% project_list) %>%
+      all_program_enrollments <- Enrollment %>% 
+        filter(ProjectID %in% project_list) %>% #filter by projectID in Project list.
         left_join(Project %>%
                     select(ProjectID, ProjectType, ProjectName),
                   by = "ProjectID") %>%
         left_join(Exit %>%
-                    select(-PersonalID),
+                    select(-PersonalID), # Are we removing personalID to avoid the duplication problem? (i.e., PersonalID.X and PersonalID.Y)
                   by = "EnrollmentID")
       
       recent_program_enrollment <- all_program_enrollments %>%
         group_by(PersonalID) %>%
-        arrange(desc(EntryDate)) %>%
-        slice(1L) %>%
+        arrange(desc(EntryDate)) %>% 
+        slice(1L) %>% #what does 1L do?
         ungroup() 
       
       # get additional client information (age for reporting)
-      client_plus <- add_client_info(recent_program_enrollment) 
+      client_plus <- add_client_info(recent_program_enrollment)  #View(add_client_info) Getting a warning about mac(age, na.rm=TRUE) is returning -inf
       
-      annual_assessment_dates <- Enrollment %>%
+      annual_assessment_dates <- Enrollment %>% #What is this trying to get?
         group_by(HouseholdID) %>%
-        mutate(start_for_annual = max(EntryDate[RelationshipToHoH == 1]),
-               years_in_project = trunc((start_for_annual %--% report_end_date) / years(1))) %>%
+        mutate(start_for_annual = max(EntryDate[RelationshipToHoH == 1]), #Max entry date for each head of household
+               years_in_project = trunc((start_for_annual %--% report_end_date) / years(1))) %>% # What does %--% do?
         filter(years_in_project > 0) %>%
         mutate(annual_due = start_for_annual %m+% years(years_in_project)) %>%
         select(HouseholdID, annual_due) %>%
@@ -95,21 +98,21 @@ generate_new_kits <- TRUE
       {
         Q4a_detail <- "See Q5a_detail.csv"
         
-        Q4a <- program_information_table(project_list,
+        Q4a <- program_information_table(project_list, #View(program_information_table)
                                          recent_program_enrollment)
         }
       
       # Q5
       # Q5a
       {
-        recent_program_enrollment_dq <- recent_program_enrollment %>%
-          filter(ProjectType != 4 |
-                   (!is.na(DateOfEngagement) &
+        recent_program_enrollment_dq <- recent_program_enrollment %>% #recent program enrollment created on line 91
+          filter(ProjectType != 4 |     # This removes enrollments that are street outreach project type
+                   (!is.na(DateOfEngagement) & # Or date of engagement is not NA and date of engagement <= report end date.
                       DateOfEngagement <= report_end_date))
         
         Q5a_detail <- recent_program_enrollment %>%
-          add_length_of_time_groups(., EntryDate,
-                                    ifnull(ExitDate, ymd(report_end_date) + days(1)),
+          add_length_of_time_groups(., EntryDate, #View(add_length_of_time_groups)
+                                    ifnull(ExitDate, ymd(report_end_date) + days(1)), 
                                     "APR") %>%
           select(c(all_of(standard_detail_columns),
                    all_of(demographic_detail_columns),
@@ -2250,6 +2253,14 @@ generate_new_kits <- TRUE
         dir.create(folder_name)
       }
       
+      if (!dir.exists("created_files")) {
+        dir.create("created_files")
+      }
+      
+      if (!dir.exists("created_files_2")) {
+        dir.create("created_files_2")
+      }
+      
       if (!dir.exists(paste0(folder_name, "/HMIS CSVs"))) {
         dir.create(paste0(folder_name, "/HMIS CSVs"))
       }
@@ -2341,7 +2352,7 @@ generate_new_kits <- TRUE
       }
     }
     
-    rm(list = ls()[ls() %nin% items_to_keep])
+    rm(list = ls()[ls() %nin% items_to_keep]) 
     
   }
 }
