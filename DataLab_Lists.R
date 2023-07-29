@@ -219,8 +219,8 @@ EventTypes <- read_excel("SupplementalTables.xlsx",
 
 
 # ------------------------------------------------------------------------------
-# ------------------------------ Race Columns --------------------------------
-# ------------------------------------------------------------------------------
+# ------------------------------ Race Columns -------------------------------- #Look into expand.grid for another way to do this: 
+# ------------------------------------------------------------------------------#https://stackoverflow.com/questions/18705153/generate-list-of-all-possible-combinations-of-elements-of-vector
 # used in:
 #   APR/CAPER
 
@@ -232,23 +232,23 @@ race_columns <- c(AmIndAKNative = "American Indian, Alaska Native, or Indigenous
                   NativeHIPacific = "Native Hawaiian or Pacific Islander", 
                   White = "White")
 
-race_columns <- setNames(names(race_columns), race_columns)
+race_columns <- setNames(names(race_columns), race_columns) #This adds the full variable names to the race_columns (you can call unname to show full variable name)
 
 
 # ------------------------------------------------------------------------------
-# ----------------------------- Gender List ------------------------------------
+# ----------------------------- Gender List ------------------------------------ #Is this supposed to be race list?
 # ------------------------------------------------------------------------------
 # used in:
 #   APR/CAPER - Q12a
 
-race_list <- unname(race_columns)
-race_name_list <- names(race_columns)
+race_list <- unname(race_columns)  #Saves the list with the abbreviated variable name (i.e., AmIndAKNative)
+race_name_list <- names(race_columns) # saves the list with the full variable name (i.e., American Indian, Alaska Native, or Indigenous)
 
-possible_race_combos <- outer(race_list, race_list, paste, sep = '/')
-possible_race_name_combos <- outer(race_name_list, race_name_list, paste, sep = ' & ')
+possible_race_combos <- outer(race_list, race_list, paste, sep = '/') #Creates the potential race combos between two races (i.e., Asian/White)
+possible_race_name_combos <- outer(race_name_list, race_name_list, paste, sep = ' & ') #creates race combos with full names
 
-for (combo in 1:6) {
-  race_list <- c(race_list, possible_race_combos[combo, (combo + 1):7])
+for (combo in 1:6) { #what is this loop doing?
+  race_list <- c(race_list, possible_race_combos[combo, (combo + 1):7]) #What is this doing? 
   race_name_list <- c(race_name_list, possible_race_name_combos[combo, (combo + 1):7])
 }
 
@@ -263,6 +263,9 @@ for (col in unname(race_columns)) {
     mutate(!!col := if_else(str_detect(race_list, col),
                             1, 0))
 }
+
+#Why do we keep naming and then un-naming the variables?
+
 
 # ------------------------------------------------------------------------------
 # ------------------------ Simple Age Group List -------------------------------

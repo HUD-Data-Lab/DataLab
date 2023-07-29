@@ -15,7 +15,7 @@ generate_new_kits <- TRUE
 {
   source("DataLab.R")
   
-  # used for building and testing APR on specifc projects or groups of projects
+  # used for building and testing APR on specifc projects or groups of projects. To run full test kit use full_project_list
   {
     project_list <- c(
       # 1362#,	#"DataLab - ES-EE ESG I",
@@ -35,11 +35,13 @@ generate_new_kits <- TRUE
     )
   }
   
-  # used for running all reports for all projects
+  # used for running all reports for all projects. Use project_list for running specific projects.
   {
     full_project_list <- c(Project$ProjectID[Project$ProjectID %in% Funder$ProjectID[Funder$Funder %in% 1:11]]) # Funding source HUD-CoC or HUD-ESG
     full_project_list <- full_project_list[full_project_list %nin% c(1647, 340)] #Copied from old test kit, but those are invalid funding sources for those project types. This shouldn't exist.
-  }
+    #project_list <- full_project_list #if you want to run full test kit undo the comment for this line
+  
+    }
   
   items_to_keep <- c("items_to_keep", ls()) #Keep all functions and objects created up to this point. Why is this here? What is the purpose of this?
   
@@ -98,7 +100,7 @@ generate_new_kits <- TRUE
       {
         Q4a_detail <- "See Q5a_detail.csv"
         
-        Q4a <- program_information_table(project_list, #View(program_information_table)
+        Q4a <- program_information_table(project_list, #View(program_information_table) #Should RRH Subtype and CES Access be 0=No? or leave as NA?
                                          recent_program_enrollment)
         }
       
@@ -106,16 +108,16 @@ generate_new_kits <- TRUE
       # Q5a
       {
         recent_program_enrollment_dq <- recent_program_enrollment %>% #recent program enrollment created on line 91
-          filter(ProjectType != 4 |     # This removes enrollments that are street outreach project type
-                   (!is.na(DateOfEngagement) & # Or date of engagement is not NA and date of engagement <= report end date.
-                      DateOfEngagement <= report_end_date))
+          filter(ProjectType != 4 |     # This removes enrollments that are street outreach project type or
+                   (!is.na(DateOfEngagement) & # if date of engagement is not NA
+                      DateOfEngagement <= report_end_date)) # date of engagement <= report end date.
         
         Q5a_detail <- recent_program_enrollment %>%
           add_length_of_time_groups(., EntryDate, #View(add_length_of_time_groups)
-                                    ifnull(ExitDate, ymd(report_end_date) + days(1)), 
+                                    ifnull(ExitDate, ymd(report_end_date) + days(1)),  #For end date use ExitDate, unless null then use report_end_date
                                     "APR") %>%
-          select(c(all_of(standard_detail_columns),
-                   all_of(demographic_detail_columns),
+          select(c(all_of(standard_detail_columns), #standard_detail_columns are created in DataLab_Lists.R
+                   all_of(demographic_detail_columns), 
                           number_of_days)) %>%
           mutate(IncludedInDQ = EnrollmentID %in% recent_program_enrollment_dq$EnrollmentID) 
         
@@ -128,8 +130,8 @@ generate_new_kits <- TRUE
       # Q6
       # Q6a
       {
-        Q6a_data <- create_dq_Q1(recent_program_enrollment_dq)
-        Q6a <- Q6a_data[[1]]
+        Q6a_data <- create_dq_Q1(recent_program_enrollment_dq) #create_dq_Q1 in datalab_functions.R line 1311. 
+        Q6a <- Q6a_data[[1]] 
         Q6a_detail <- Q6a_data[[2]]
       }
       
@@ -870,8 +872,8 @@ generate_new_kits <- TRUE
         
         Q12a <- Q7c_detail %>%
           ifnull(., 0) %>%
-          left_join(race_info,
-                    by = all_of(unname(race_columns))) %>%
+          left_join(race_info, #Race_info created from DataLab_lists.R line 261
+                    by = all_of(unname(race_columns))) %>% 
           mutate(across(
             all_of(unname(race_columns)),
             ~ as.numeric(.)),

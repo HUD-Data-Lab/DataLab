@@ -398,6 +398,7 @@ pivot_existing_only <- function(data, group_name, client_label) {
 }
 
 # used in Q22 questions
+# used in Q5
 add_length_of_time_groups <- function(data, start_date, end_date, report_type, #Are these all the arguments needed for this function?
                                       in_project = TRUE) { #what is in_project?
   start_date <- enquo(start_date) #What is enquo and why are we using it for the date variables?
@@ -424,7 +425,7 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type, #
                  as.integer(trunc((!!start_date %--% !!end_date) / days(1))))) #what does !! do? What is this doing? 
   } else {
     time_groups <- data %>%
-      mutate(number_of_days = as.integer(trunc((!!start_date %--% !!end_date) / days(1))))
+      mutate(number_of_days = as.integer(trunc((!!start_date %--% !!end_date) / days(1)))) #If not a nbn shelter use this calculation for number_of_days
   }
   
   time_groups <- time_groups %>%
@@ -448,7 +449,7 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type, #
   if(report_type == "APR") {
     time_groups <- time_groups %>%
       mutate(number_of_days_group = case_when(
-        between(number_of_days, 0, 30) ~ "30 days or less",
+        between(number_of_days, 0, 30) ~ "30 days or less", # Q22 for APR changes days categories. This modifies the categories for the APR 
         TRUE ~ number_of_days_group))
   } else if(report_type == "days_prior_to_housing") {
     time_groups <- time_groups %>%
@@ -1217,24 +1218,27 @@ add_client_info <- function(filtered_enrollments) { #Create function to add clie
 program_information_table <- function(project_list, filtered_enrollments) {
   
   Project %>%
-    filter(ProjectID %in% project_list) %>%
-    select(OrganizationID, ProjectName, ProjectID, ProjectType,
+    filter(ProjectID %in% project_list) %>% 
+    select(OrganizationID, ProjectName, ProjectID, ProjectType,RRHSubType,
            ResidentialAffiliation) %>%
     left_join(Organization %>%
                 select(OrganizationID, OrganizationName,
                        VictimServiceProvider), 
               by = "OrganizationID") %>%
+    left_join(CEParticipation %>% #Added CEParticiaption to match FY2024 APR/CAPER specs
+                select(ProjectID,AccessPoint),
+              by="ProjectID") %>% 
     left_join(Affiliation %>%
                 select(ProjectID, ResProjectID) %>%
                 group_by(ProjectID) %>%
-                summarise(affiliated_with = toString(ResProjectID)) %>%
+                summarise(affiliated_with = toString(ResProjectID)) %>%  #What is this doing? why group_by and summarise during the join?
                 ungroup(),
               by = "ProjectID") %>%
     left_join(ProjectCoC %>%
-                select(ProjectID, CoCCode, Geocode) %>%
+                select(ProjectID, CoCCode, Geocode) %>% 
                 group_by(ProjectID) %>%
                 summarise(coc_codes = toString(CoCCode),
-                          geocodes = toString(Geocode)) %>%
+                          geocodes = toString(Geocode)) %>% 
                 ungroup(),
               by = "ProjectID") %>%
     left_join(filtered_enrollments %>%
@@ -1247,7 +1251,7 @@ program_information_table <- function(project_list, filtered_enrollments) {
            report_start_date = report_start_date,
            report_end_date = report_end_date) %>%
     select(OrganizationName, OrganizationID, ProjectName, ProjectID,
-           ProjectType ,ResidentialAffiliation, affiliated_with, 
+           ProjectType,RRHSubType,AccessPoint,ResidentialAffiliation, affiliated_with, #Included RRHSubType,AccessPoint here
            coc_codes, geocodes, VictimServiceProvider,
            software_name, report_start_date, report_end_date,
            active_clients, active_households) %>%
@@ -1305,7 +1309,7 @@ get_household_info <- function(filtered_enrollments,
 
 
 # create first DQ table in glossary
-create_dq_Q1 <- function(filtered_enrollments) {
+create_dq_Q1 <- function(filtered_enrollments) {  #This outputs a list. Isn't this DQ2?
   DQ1_data <- filtered_enrollments %>%
     inner_join(Client %>%
                  select(-ExportID), by = "PersonalID")
