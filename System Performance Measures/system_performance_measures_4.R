@@ -53,6 +53,7 @@ M4_stayers <- M4_enrollment_u %>%
   group_by(PersonalID) %>%
   filter(row_number()==1) %>%
   mutate(
+    # max of report start & entry added in case report run for more than a year range.
     age = floor(age_calc( DOB, max( report_start_date, EntryDate), units = "years"))
   ) %>%
   ungroup() %>% 
@@ -86,8 +87,6 @@ M4_leavers <- M4_enrollment_u %>%
 
 #### QUESTIONS
   ## How to pull in info before lookback_stop_date for old records?
-  ## Specs are garbled for step "g" under stayers. But I'm assuming intention
-    ## is to identify the AA *previous* to the most recent AA. *LEFT COMMENT*
   ## How to handle >0 amount but "No" for income source?
 
 #### datalab functions referenced
@@ -104,14 +103,96 @@ M4_leavers <- M4_enrollment_u %>%
 # SocSecRetirement, Pension, ChildSupport,
 # Alimony, OtherIncomeSource), ~ ifnull(., 0))
 
-# stayer income
+### get stayer income records + validate ----
+
+# list of source Y/N columns
+source_yn_cols <- c(
+  "Earned",
+  "Unemployment",
+  "SSI",
+  "SSDI",
+  "VADisabilityService",
+  "VADisabilityNonService",
+  "PrivateDisability",
+  "WorkersComp",
+  "TANF",
+  "GA",
+  "SocSecRetirement",
+  "Pension",
+  "ChildSupport",
+  "Alimony",
+  "OtherIncomeSource"
+)
+
+
+# list of source amount columns
+source_amount_cols <- c(
+  "EarnedAmount",
+  "UnemploymentAmount",
+  "SSIAmount",
+  "SSDIAmount",
+  "VADisabilityServiceAmount",
+  "VADisabilityNonServiceAmount",
+  "PrivateDisabilityAmount",
+  "WorkersCompAmount",
+  "TANFAmount",
+  "GAAmount",
+  "SocSecRetirementAmount",
+  "PensionAmount",
+  "ChildSupportAmount",
+  "AlimonyAmount",
+  "OtherIncomeAmount"
+)
 
 stayer_income <- IncomeBenefits %>%
   filter(
     EnrollmentID %in% M4_stayers$EnrollmentID
-  )
+  ) 
 
-stayer_income_entry <- stayer_income %>% filter(DataCollectionStage == 1)
+### THIS SECTION is incomplete. It's meant to...
+### 1) Apply the total income logic rules from Glossary
+### 2) Finish with a reduction in the total number of required columns.
+
+# %>% 
+  # Replacing Source Amount with NA when not "Yes" for Souce YN
+# %>%  
+  
+  # Income source totals
+  # rowwise() %>%
+  # mutate(
+  #   sum_source_income_amounts = sum(
+  #     c(
+  #       EarnedAmount,
+  #       UnemploymentAmount,
+  #       SSIAmount,
+  #       SSDIAmount,
+  #       VADisabilityServiceAmount,
+  #       VADisabilityNonServiceAmount,
+  #       PrivateDisabilityAmount,
+  #       WorkersCompAmount,
+  #       TANFAmount,
+  #       GAAmount,
+  #       SocSecRetirementAmount,
+  #       PensionAmount,
+  #       ChildSupportAmount,
+  #       AlimonyAmount,
+  #       OtherIncomeAmount
+  #       ),
+  #     na.rm = TRUE 
+  #   )
+  #     
+  #   ) %>% 
+  # ungroup() %>% 
+  # mutate(
+  #   effective_monthly_income = 
+  #     case_when(
+  #       TotalMonthlyIncome > 0 ~ TotalMonthlyIncome, 
+  #       sum_source_income_amounts > 0 ~ sum_source_income_amounts
+  #       
+  #     )
+  # )
+
+stayer_income_entry <- stayer_income %>% filter(DataCollectionStage == 1) 
 
 stayer_income_annuals <- stayer_income %>% 
   filter(DataCollectionStage == 5) %>%
@@ -138,7 +219,8 @@ stayer_income_annuals <- stayer_income %>%
     ## there weren't any cases in Iowa BoS test data, but still think should account
       ## for this possibility
   arrange(EnrollmentID, desc(related_anniversary_date), desc(InformationDate), desc(IncomeBenefitsID)) %>%
-  select( EnrollmentID,related_anniversary_date, InformationDate, IncomeBenefitsID) %>%
+  # Used below select step for QA
+  #select( EnrollmentID,related_anniversary_date, InformationDate, IncomeBenefitsID) %>%
   group_by(EnrollmentID, related_anniversary_date) %>% 
   filter(row_number() == 1) %>% 
   ungroup() %>%
@@ -148,17 +230,31 @@ stayer_income_annuals <- stayer_income %>%
   ) %>%
   ungroup()
 
+### stayer start and endpoint incomes ----
+stayer_end_incomes <- stayer_income_annuals %>%
+  group_by(EnrollmentID) %>%
+  filter(row_number() == 1)
 
-### ISSUE -- Need to determine if NULL Income/Benefit records are to be removed 
-  ### and if this should be done prior to other filter steps.
 
-    ## OLD VERSION -- going back 30 days in all cases should be OK
-    # years_entry_to_aa = function(x){
-    #   x = floor(age_calc( EntryDate, InformationDate, units = "years"))
-    #   if(x < 1) {
-    #     floor(age_calc( EntryDate %m-% days(30), InformationDate, units = "years"))
-    #   } else {x}
-    # }
+# stayer_start_incomes <- 
+#   union(
+#     x = stayer_income_annuals, 
+#     y = stayer_income_entry)
+### FINISH -- arrange, group, and slice for 2nd row ###
+
+
+# Total income logic:
+## 1) [Total Monthly Income] is auto-calculated (HOW WOULD WE KNOW??? No NULLs?)
+## 2) [Total montly income] > $0
+## 3) SUM([Source Income]) -- THIS IS MY BROAD-LEANING INTERPRETATION OF GLOSSARY
+## 4) If "No" for [Income from Any Source] then $0
+## 5) If non-null $0 or negative value for [Total Monthly Income] and Yes or NULL
+## for [Income from Any Source] then $0
+## 6 / 7) DKR/NULL -- in my interpretation, results in "Missing" in either case.
+
+
+
+
   
 
 
