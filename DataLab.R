@@ -167,3 +167,4 @@ chronicity_data <- chronic_household %>%
             by = "EnrollmentID") %>%
   mutate(chronic = if_else(is.na(new_chronic), chronic, as.character(new_chronic))) %>%
   select(-new_chronic)
+

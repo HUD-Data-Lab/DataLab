@@ -328,12 +328,12 @@ FY24_residence_types <- ResidenceUses %>%
         Destination %in% subsidized_residences ~ Destination),
       Destination = if_else(!is.na(DestinationSubsidyType),
                             435, Destination)) %>%
-    # only required if loading in from DataLab.R
-   # rename(
-          # DateCreated = exit_DateCreated,
-           #  only required when source database has different capitalization
-    #       WorkplaceViolenceThreats = WorkPlaceViolenceThreats,
-     #      WorkplacePromiseDifference = WorkPlacePromiseDifference) %>%
+     #only required if loading in from DataLab.R
+    #rename(
+     #      DateCreated = exit_DateCreated,
+      #       #only required when source database has different capitalization
+       #    WorkplaceViolenceThreats = WorkPlaceViolenceThreats,
+        #   WorkplacePromiseDifference = WorkPlacePromiseDifference) %>%
     select(all_of(exit_columns[exit_columns %nin% c("WorkPlaceViolenceThreats")]))
 }
 {

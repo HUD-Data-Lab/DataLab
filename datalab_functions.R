@@ -1016,7 +1016,7 @@ set_hud_format <- function(data_for_csv) {
                TRUE ~ get(first_col_name)))
   
   new_header <- names(data_for_csv)[2:length(data_for_csv)]
-  new_header[new_header == "Client.Does.Not.Know.or.Refused"] <- "Client Doesn't Know/Refused"
+  new_header[new_header == "Client.Does.Not.Know.or.Refused"] <- "Client Doesn't Know/Refused" # Flagging this for follow-up: FY2024 removed refused ----
   
   data_for_csv %>%
     `colnames<-`(c("", gsub(".", " ", new_header, fixed = TRUE)))
@@ -1168,7 +1168,7 @@ add_client_info <- function(filtered_enrollments) { #Create function to add clie
     filter(HouseholdID %in% filtered_enrollments$HouseholdID) %>% #select household IDs from either all program enrollments or DF selected
     mutate(date_for_age = (if_else( 
       EntryDate <= report_start_date,
-      report_start_date, # Return Report Start date of true
+      report_start_date, # Return Report Start date if true
       EntryDate))) %>% # Return Entry Date if False
     # select(PersonalID, date_for_age, HouseholdID, RelationshipToHoH) %>%
     # distinct() %>%
@@ -1261,7 +1261,7 @@ program_information_table <- function(project_list, filtered_enrollments) {
                    "Affiliated with a residential project",
                    "Project IDs of affiliations", "CoC Number", 
                    "Geocode", "Victim Service Provider",
-                   "HMIS Software Name", "Report Start Date",
+                   "HMIS Software Name and Version Number", "Report Start Date",
                    "Report End Date", "Total Active Clients",
                    "Total Active Households"))
 }
@@ -1309,7 +1309,7 @@ get_household_info <- function(filtered_enrollments,
 
 
 # create first DQ table in glossary
-create_dq_Q1 <- function(filtered_enrollments) {  #This outputs a list. Isn't this DQ2?
+create_dq_Q1 <- function(filtered_enrollments) {  #Isn't this DQ2?
   DQ1_data <- filtered_enrollments %>%
     inner_join(Client %>%
                  select(-ExportID), by = "PersonalID")
@@ -1413,7 +1413,7 @@ create_dq_Q1 <- function(filtered_enrollments) {  #This outputs a list. Isn't th
   elements <- list("Name", "SSN", "DOB", "Race", "Gender")
   
   for (element in elements) {
-    table <- get(paste0("DQ1_", tolower(element))) 
+    table <- get(paste0("DQ1_", tolower(element))) #this loop creates the table for the data-elements
     
     detail_title <- paste0(element, "_DQ")
     DQ1_detail <- DQ1_detail %>%
@@ -1460,7 +1460,7 @@ create_dq_Q1 <- function(filtered_enrollments) {  #This outputs a list. Isn't th
     add_row(DataElement = "Overall Score", 
             `Client.Does.Not.Know.or.Refused` = 0, Information.Missing = 0, Data.Issues = 0, 
             Total = nrow(unique(error_clients))) %>%
-    mutate(ErrorRate = decimal_format(Total / Q5a$Count.of.Clients.for.DQ[1], 4))
+    mutate("% of Issue Rate" = decimal_format(Total / Q5a$Count.of.Clients.for.DQ[1], 4)) #changed from ErrorRate to"% of Issue Rate"
   
   DQ1[DQ1$DataElement == "Overall Score", c("Client.Does.Not.Know.or.Refused",
                                             "Information.Missing")] <- NA
