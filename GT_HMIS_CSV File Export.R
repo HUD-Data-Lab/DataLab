@@ -16,6 +16,19 @@ source("DataLab.R")
 source("datalab_functions.R")
 source("DataLab_Lists.R")
 
+
+#Align datasets to FY 2024 column names
+
+{
+  IncomeBenefits <- IncomeBenefits %>%
+    rename(VHAServices = VHAServicesHA, #FY24 specs have this as "VHAServices". Removed "HA" here.
+           NoVHAReason = NoVHAReasonHA) %>% #FY24 specs have this as "NoVHAReason". Removed here.
+    select(all_of(incomebenefits_columns))
+}
+
+CSV_File_name <- names(hmis_csvs)
+
+
 folder_name <- paste("HUD CSV Export", format(Sys.Date(), "%m.%d.%y")) #Creates a new folder with current date
 
 if (!dir.exists(folder_name)) {
@@ -28,7 +41,7 @@ if (!dir.exists(paste0(folder_name, "/HMIS CSVs"))) {
 
 general_wd <- getwd()
 setwd(paste0(general_wd, "/", folder_name))
-CSV_File_name <- names(hmis_csvs)
+
 
 for (theFilename in CSV_File_name) {
   to_write <- get(theFilename)

@@ -352,8 +352,8 @@ FY24_residence_types <- ResidenceUses %>%
 }
 {
   IncomeBenefits <- IncomeBenefits %>%
-    rename(VHAServicesHA = VAMedicalServices,
-           NoVHAReasonHA = NoVAMedReason) %>%
+    rename(VHAServicesHA = VAMedicalServices, #FY24 specs have this as "VHAServices". Should we remove "HA"?
+           NoVHAReasonHA = NoVAMedReason) %>% #FY24 specs have this as "NoVHAReason". Should we remove "HA"? 
     select(all_of(incomebenefits_columns))
 }
 {
