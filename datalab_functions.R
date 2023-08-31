@@ -1,11 +1,11 @@
 # install and/or load packages
 if(!require(readxl)) {
   install.packages("readxl"); 
-  library(readxl)
 }
+  library(readxl)
 if(!require(janitor)) {
-  install.packages("janitor"); 
   library(janitor)
+  install.packages("janitor"); 
 }
 
 if(!require(data.table)) {

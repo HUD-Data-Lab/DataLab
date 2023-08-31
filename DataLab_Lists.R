@@ -144,6 +144,9 @@ valid_cocs <- c(
 # used in:
 #   APR/CAPER - 
 
+library(tidyverse)
+library(readxl)
+
 ResidenceUses <- read_excel("SupplementalTables.xlsx",
                             sheet = "ResidenceUses",
                             col_types = c("numeric", "numeric", "text", "text", 
