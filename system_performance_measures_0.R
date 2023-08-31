@@ -17,7 +17,9 @@ library(kableExtra)
 #SPM Programming specs: https://icfonline.sharepoint.com/:w:/r/sites/NHDAP/_layouts/15/Doc.aspx?action=edit&sourcedoc=%7B4ec4f3da-89f4-4c2d-810c-1f93ecc0e60c%7D&wdOrigin=TEAMS-ELECTRON.teamsSdk.openFilePreview&wdExp=TEAMS-CONTROL&web=1
 #HMIS Glossary: https://icfonline.sharepoint.com/:w:/r/sites/NHDAP/_layouts/15/Doc.aspx?action=edit&sourcedoc=%7Bda79cae5-b933-41f0-b408-40162ade797d%7D&wdOrigin=TEAMS-ELECTRON.teamsSdk.openFilePreview&wdExp=TEAMS-CONTROL&web=1
 
-lookback_stop_date <- ymd("2014-10-1")
+# lookback_stop_date <- ymd("2014-10-1")
+lookback_stop_date <- ymd("2012-10-1")
+file.choose()
 
 system_performance_measures <- TRUE
 
@@ -75,18 +77,23 @@ enrollment_data <- Enrollment %>%
             by = "PersonalID") %>%
   left_join(hmids,
             by = "HouseholdID") %>%
-  mutate(MoveInDateAdj = case_when(
-    !is.na(HoH_HMID) &
-      HoH_HMID >= DOB &
-      HoH_HMID >= EntryDate &
-      (HoH_HMID <= ExitDate |
-         is.na(ExitDate)) ~ HoH_HMID,
-    !is.na(HoH_HMID) &
-      (HoH_HMID <= ExitDate |
-         is.na(ExitDate)) ~ EntryDate
-  ))
+  mutate(
+    MoveInDateAdj = case_when(
+      !is.na(HoH_HMID) &
+        HoH_HMID >= DOB &
+        HoH_HMID >= EntryDate &
+        (HoH_HMID <= ExitDate |
+           is.na(ExitDate)) ~ HoH_HMID,
+      !is.na(HoH_HMID) &
+        (HoH_HMID <= ExitDate |
+           is.na(ExitDate)) ~ EntryDate),
+    lh_at_entry = ProjectType %in% c(0, 1, 4, 8) |
+      (ProjectType %in% c(2, 3, 9, 10, 13) &
+         (LivingSituation %in% 100:199 |
+            (LivingSituation %in% c(0:99, 200:499) &
+               LOSUnderThreshold == 1 &
+               PreviousStreetESSH == 1))))
 
-test <- 
 
 ##  next three lines are only for testing purposes
 NbN_projects <- c(1212, 1210)
