@@ -10,5 +10,7 @@ local_functions.R
 CE_APR_Markdown.docx
 desktop.ini
 hold.R
-Data Lab.Rproj
 *.Rproj
+Data Lab.Rproj
+/GT test scripts
+*.docx

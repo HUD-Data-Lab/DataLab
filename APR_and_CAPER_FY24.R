@@ -15,15 +15,17 @@ generate_new_kits <- TRUE
 {
   source("DataLab.R")
   
-  # used for building
+  # used for building and testing APR on specifc projects or groups of projects. To run full test kit use full_project_list
   {
     project_list <- c(
       # 1362#,	#"DataLab - ES-EE ESG I",
       # 93#,	#"DataLab - ES-NbN ESG",
       # 1409#,	"DataLab - HP ESG",
       # 780#,	#"DataLab - PSH CoC I",
-      1428,	#"DataLab - RRH CoC I",
-      1495#,	#"DataLab - RRH CoC II",
+      #1428,	#"DataLab - RRH CoC I", #Commented out because Project ID did not exist
+     # 1495#,	#"DataLab - RRH CoC II", #Commented out because project ID did not exist
+      1554, #DataLab - RRH CoC I", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
+      1555 #, #"DataLab - RRH CoC II", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
       # 1060#,	#"DataLab - RRH ESG I",
       # 1647#,	#"DataLab - SO CoC",
       # 1419,	#"DataLab - SO ESG",
@@ -33,51 +35,54 @@ generate_new_kits <- TRUE
     )
   }
   
-  # used for running all reports
+  # used for running all reports for all projects. Use project_list for running specific projects.
   {
-    full_project_list <- c(Project$ProjectID[Project$ProjectID %in% Funder$ProjectID[Funder$Funder %in% 1:11]])
-    full_project_list <- full_project_list[full_project_list %nin% c(1647, 340)]
-  }
+    full_project_list <- c(Project$ProjectID[Project$ProjectID %in% Funder$ProjectID[Funder$Funder %in% 1:11]]) # Funding source HUD-CoC or HUD-ESG
+    full_project_list <- full_project_list[full_project_list %nin% c(1647, 340)] #Copied from old test kit, but those are invalid funding sources for those project types. This shouldn't exist.
+    #project_list <- full_project_list #if you want to run full test kit undo the comment for this line
   
-  items_to_keep <- c("items_to_keep", ls())
+    }
+  
+  items_to_keep <- c("items_to_keep", ls()) #Keep all functions and objects created up to this point. Why is this here? What is the purpose of this?
+  
+  # removes exits for prevention projects for Q23c of the APR/CAPER,
+  # remove upon finalization of guidance
+  Exit <- Exit %>%
+    filter(EnrollmentID %nin% Enrollment$EnrollmentID[Enrollment$ProjectID %in% Project$ProjectID[Project$ProjectType == 12]]) %>% # Remove all enrollment Ids for project id == 12
+    rename(exit_DateCreated = DateCreated)
+  
+  Enrollment <- Enrollment %>%
+    rename(enroll_DateCreated = DateCreated)
   
   # loop for running all
   for(project_id in full_project_list) {
-    project_list <- c(project_id)
+    project_list <- c(project_id) 
     
     # run all table creation logic, including questions
     {
-      # removes exits for prevention projects for Q23c of the APR/CAPER,
-      # remove upon finalization of guidance
-      Exit <- Exit %>%
-        filter(EnrollmentID %nin% Enrollment$EnrollmentID[Enrollment$ProjectID %in% Project$ProjectID[Project$ProjectType == 12]]) %>%
-        rename(exit_DateCreated = DateCreated)
       
-      Enrollment <- Enrollment %>%
-        rename(enroll_DateCreated = DateCreated)
-      
-      all_program_enrollments <- Enrollment %>%
-        filter(ProjectID %in% project_list) %>%
+      all_program_enrollments <- Enrollment %>% 
+        filter(ProjectID %in% project_list) %>% #filter by projectID in Project list.
         left_join(Project %>%
                     select(ProjectID, ProjectType, ProjectName),
                   by = "ProjectID") %>%
         left_join(Exit %>%
-                    select(-PersonalID),
+                    select(-PersonalID), # Are we removing personalID to avoid the duplication problem? (i.e., PersonalID.X and PersonalID.Y)
                   by = "EnrollmentID")
       
       recent_program_enrollment <- all_program_enrollments %>%
         group_by(PersonalID) %>%
-        arrange(desc(EntryDate)) %>%
-        slice(1L) %>%
+        arrange(desc(EntryDate)) %>% #arrange by most recent entry date  
+        slice(1L) %>% #what does 1L do?
         ungroup() 
       
       # get additional client information (age for reporting)
-      client_plus <- add_client_info(recent_program_enrollment) 
+      client_plus <- add_client_info(recent_program_enrollment)  #View(add_client_info) Getting a warning about mac(age, na.rm=TRUE) is returning -inf
       
-      annual_assessment_dates <- Enrollment %>%
+      annual_assessment_dates <- Enrollment %>% #What is this trying to get?
         group_by(HouseholdID) %>%
-        mutate(start_for_annual = max(EntryDate[RelationshipToHoH == 1]),
-               years_in_project = trunc((start_for_annual %--% report_end_date) / years(1))) %>%
+        mutate(start_for_annual = max(EntryDate[RelationshipToHoH == 1]), #Max entry date for each head of household
+               years_in_project = trunc((start_for_annual %--% report_end_date) / years(1))) %>% # What does %--% do?
         filter(years_in_project > 0) %>%
         mutate(annual_due = start_for_annual %m+% years(years_in_project)) %>%
         select(HouseholdID, annual_due) %>%
@@ -95,28 +100,28 @@ generate_new_kits <- TRUE
       {
         Q4a_detail <- "See Q5a_detail.csv"
         
-        Q4a <- program_information_table(project_list,
+        Q4a <- program_information_table(project_list, #View(program_information_table) #Should RRH Subtype and CES Access be 0=No? or leave as NA?
                                          recent_program_enrollment)
         }
       
       # Q5
       # Q5a
       {
-        recent_program_enrollment_dq <- recent_program_enrollment %>%
-          filter(ProjectType != 4 |
-                   (!is.na(DateOfEngagement) &
-                      DateOfEngagement <= report_end_date))
+        recent_program_enrollment_dq <- recent_program_enrollment %>% #recent program enrollment created on line 91
+          filter(ProjectType != 4 |     # This removes enrollments that are street outreach project type or
+                   (!is.na(DateOfEngagement) & # if date of engagement is not NA
+                      DateOfEngagement <= report_end_date)) # date of engagement <= report end date.
         
         Q5a_detail <- recent_program_enrollment %>%
-          add_length_of_time_groups(., EntryDate,
-                                    ifnull(ExitDate, ymd(report_end_date) + days(1)),
+          add_length_of_time_groups(., EntryDate, #View(add_length_of_time_groups)
+                                    ifnull(ExitDate, ymd(report_end_date) + days(1)),  #For end date use ExitDate, unless null then use report_end_date
                                     "APR") %>%
-          select(c(all_of(standard_detail_columns),
+          select(c(all_of(standard_detail_columns), #standard_detail_columns are created in DataLab_Lists.R
                    all_of(demographic_detail_columns),
                           number_of_days)) %>%
-          mutate(IncludedInDQ = EnrollmentID %in% recent_program_enrollment_dq$EnrollmentID) 
+          mutate(IncludedInDQ = EnrollmentID %in% recent_program_enrollment_dq$EnrollmentID)
         
-        Q5a <- create_summary_table(recent_program_enrollment_dq, "Count.of.Clients.for.DQ") %>%
+        Q5a <- create_summary_table(recent_program_enrollment_dq, "Count.of.Clients.for.DQ") %>% #View(create_summary_table)
           left_join(create_summary_table(recent_program_enrollment, "Count.of.Clients"), 
                     by = "Group")
       }
@@ -125,15 +130,15 @@ generate_new_kits <- TRUE
       # Q6
       # Q6a
       {
-        Q6a_data <- create_dq_Q1(recent_program_enrollment_dq)
-        Q6a <- Q6a_data[[1]]
+        Q6a_data <- create_dq_Q1(recent_program_enrollment_dq) #View(create_dq_Q1) in datalab_functions.R line 1311. 
+        Q6a <- Q6a_data[[1]]  #where does the race variable come from? 
         Q6a_detail <- Q6a_data[[2]]
       }
       
       # Q6b 
       {
         
-        Q6b_earlier_enrollment <- recent_program_enrollment_dq %>%
+        Q6b_earlier_enrollment <- recent_program_enrollment_dq %>% #use the DQ dataframe 
           left_join(Enrollment %>%
                       left_join(Exit %>%
                                   select(EnrollmentID, ExitDate),
@@ -168,7 +173,7 @@ generate_new_kits <- TRUE
                       (DisabilityType %in% c(5, 7, 9, 10) &
                          IndefiniteAndImpairs == 1)))
         
-        Q6b_detail <- recent_program_enrollment_dq %>%
+        Q6b_detail <- recent_program_enrollment_dq %>% 
           left_join(EnrollmentCoC %>%
                       filter(DataCollectionStage == 1) %>%
                       select(EnrollmentID, CoCCode),
@@ -180,7 +185,7 @@ generate_new_kits <- TRUE
                  Disability_Check = EnrollmentID %in% recent_disability_check$EnrollmentID)
         
         Q6b <- Q6b_detail %>%
-          mutate(Veteran.Status.3.07 = (VeteranStatus %in% c(8, 9, 99) &
+          mutate(Veteran.Status.3.07 = (VeteranStatus %in% c(8, 9, 99) & 
                                           age_group == "Adults") |
                    (age_group == "Children" &
                       VeteranStatus == 1),
@@ -191,7 +196,7 @@ generate_new_kits <- TRUE
                  Client.Location.3.16 = RelationshipToHoH == 1 & !CoC_Valid,
                  Disabling.Condition.3.08 = DisablingCondition %in% c(8, 9, 99) |
                    is.na(DisablingCondition) |
-                   (DisablingCondition == 0 & Disability_Check)) %>%
+                   (DisablingCondition == 0 & Disability_Check)) %>% #This creates the values
           summarise(Veteran.Status.3.07 = n_distinct(PersonalID[Veteran.Status.3.07], 
                                                      na.rm = TRUE),
                     Project.Start.Date.3.10 = n_distinct(PersonalID[Project.Start.Date.3.10], 
@@ -203,14 +208,14 @@ generate_new_kits <- TRUE
                     Disabling.Condition.3.08 = n_distinct(PersonalID[Disabling.Condition.3.08], 
                                                           na.rm = TRUE),
           ) %>% 
-          mutate(rowname = "Error.Count") %>% 
+          mutate(rowname = "Error.Count") %>%  #This is creating the columns for the new table based on the values
           pivot_longer(!rowname, names_to = "Group", values_to = "values") %>% 
           pivot_wider(names_from = "rowname", values_from = "values") %>%
           mutate(Percent.of.Error.Count = decimal_format(
             case_when(
               Group == "Veteran.Status.3.07" ~ Error.Count / Q5a$Count.of.Clients.for.DQ[2],
               Group == "Client.Location.3.16" ~ Error.Count / (Q5a$Count.of.Clients.for.DQ[14] + Q5a$Count.of.Clients.for.DQ[15]),
-              TRUE ~ Error.Count / Q5a$Count.of.Clients.for.DQ[1]), 4)
+              TRUE ~ Error.Count / Q5a$Count.of.Clients.for.DQ[1]), 4) #Refer to DQ check on Q5a
           )
         
       }
@@ -222,7 +227,7 @@ generate_new_kits <- TRUE
                           VADisabilityService, VADisabilityNonService,
                           PrivateDisability, WorkersComp, TANF, GA,
                           SocSecRetirement, Pension, ChildSupport,
-                          Alimony, OtherIncomeSource), ~ ifnull(., 0)),
+                          Alimony, OtherIncomeSource), ~ ifnull(., 0)), #what does ~ifnull(.,0) do? This is saying that ifnull replace with 0.
                  number_of_sources = 
                    (Earned == 1) + (Unemployment == 1) +
                    (SSI == 1) + (SSDI == 1) +
@@ -303,7 +308,7 @@ generate_new_kits <- TRUE
         Q6c <- Q6c_detail %>%
           summarise(Destination.3.12 = n_distinct(PersonalID[Destination.3.12], 
                                                   na.rm = TRUE),
-                    Income.and.Sources.4.02.at.Start = n_distinct(PersonalID[Income.and.Sources.4.02.at.Start], 
+                    Income.and.Sources.4.02.at.Start = n_distinct(PersonalID[Income.and.Sources.4.02.at.Start], #What does this do? It is referencing itself.
                                                                   na.rm = TRUE),
                     Income.and.Sources.4.02.at.Annual.Assessment = n_distinct(PersonalID[Income.and.Sources.4.02.at.Annual.Assessment],
                                                                               na.rm = TRUE),
@@ -327,10 +332,10 @@ generate_new_kits <- TRUE
       {
         Entering.into.project.type <- c("ES.SH.Street.Outreach", "TH", "PH.all")
         
-        Q6d_detail <- recent_program_enrollment_dq %>%
-          filter(EntryDate >= mdy("10/1/2016") &
+        Q6d_detail <- recent_program_enrollment_dq %>% 
+          filter(EntryDate >= mdy("10/1/2016") & #Just making a note that this date is hard coded ----
                    ProjectType %in% c(0, 1, 2, 3, 4, 8, 9, 10, 13)) %>%
-          keep_adults_and_hoh_only() %>%
+          keep_adults_and_hoh_only() %>% #View(keep_adults_and_hoh_only)
           select(c("ProjectType", all_of(standard_detail_columns), 
                    all_of(lot_homeless_detail_columns))) %>%
           mutate(Entering.into.project.type = case_when(
@@ -410,7 +415,7 @@ generate_new_kits <- TRUE
             Percent.of.records.unable.to.calculate, 4))
         
         
-        Q6d[Q6d$Entering.into.project.type == "ES.SH.Street.Outreach", 
+        Q6d[Q6d$Entering.into.project.type == "ES.SH.Street.Outreach",  #What is this section doing? It doesn't seem to be writing back into Q6d.
             c("Missing.time.in.institution.3.917.2",
               "Missing.time.in.housing.3.917.2")] <- NA
       }
@@ -580,7 +585,7 @@ generate_new_kits <- TRUE
         }
       }
       
-      # Q7c
+      # Q7c Is this still incuded in the repoer? It seems like we removed it. ----
       {
         Q7c_detail <- recent_program_enrollment %>%
           select(all_of(standard_detail_columns), age_group, HoH_HMID) %>%
@@ -607,7 +612,7 @@ generate_new_kits <- TRUE
       
       # Q8a
       {
-        Q8a_data <- households_served_table(recent_program_enrollment)
+        Q8a_data <- households_served_table(recent_program_enrollment) #View(households_served_table)
         Q8a <- Q8a_data[[1]]
         Q8a_detail <- Q8a_data[[2]]
       }
@@ -780,7 +785,7 @@ generate_new_kits <- TRUE
           select(-With.Only.Children)
       }
       
-      # Q10b
+      # Q10b RETIRED ----
       {
         Q10b_detail <- recent_program_enrollment %>%
           filter(age_group == "Children") %>%
@@ -794,10 +799,10 @@ generate_new_kits <- TRUE
           select(-Without.Children)
       }
       
-      # Q10c
+      # Q10c RETIRED ----
       {
         Q10c_detail <- recent_program_enrollment %>%
-          filter(age_group %in% c("Client.Does.Not.Know.or.Refused", "Data.Not.Collected")) %>%
+          filter(age_group %in% c("Client.Does.Not.Know.or.Prefers.Not.to.Answer", "Data.Not.Collected")) %>%
           select(all_of(standard_detail_columns)) %>%
           left_join(Client %>%
                       select(PersonalID, all_of(names(gender_columns)), GenderNone),
@@ -840,7 +845,7 @@ generate_new_kits <- TRUE
                     Age.18.to.24 = n_distinct(PersonalID[Q10d_age_group == "18-24"], na.rm = TRUE),
                     Age.25.to.61 = n_distinct(PersonalID[Q10d_age_group == "25-61"], na.rm = TRUE),
                     Age.62.and.over = n_distinct(PersonalID[Q10d_age_group == "62+"], na.rm = TRUE),
-                    Client.Does.Not.Know.or.Refused = n_distinct(PersonalID[Q10d_age_group == "Client.Does.Not.Know.or.Declined"], na.rm = TRUE),
+                    Client.Does.Not.Know.or.Prefers.Not.to.Answer = n_distinct(PersonalID[Q10d_age_group == "Client.Does.Not.Know.or.Declined"], na.rm = TRUE),
                     Data.Not.Collected = n_distinct(PersonalID[Q10d_age_group == "Data.Not.Collected"], na.rm = TRUE)) %>%
           ifnull(., 0) %>%
           arrange(order) %>%
@@ -867,8 +872,8 @@ generate_new_kits <- TRUE
         
         Q12a <- Q7c_detail %>%
           ifnull(., 0) %>%
-          left_join(race_info,
-                    by = all_of(unname(race_columns))) %>%
+          left_join(race_info, #Race_info created from DataLab_lists.R line 261
+                    by = all_of(unname(race_columns))) %>% 
           mutate(across(
             all_of(unname(race_columns)),
             ~ as.numeric(.)),
@@ -1013,7 +1018,7 @@ generate_new_kits <- TRUE
           select(all_of(standard_detail_columns), DomesticViolenceSurvivor) %>%
           mutate(dv_experience = case_when(DomesticViolenceSurvivor == 1 ~ "Yes",
                                            DomesticViolenceSurvivor == 0 ~ "No",
-                                           DomesticViolenceSurvivor %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+                                           DomesticViolenceSurvivor %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
                                            TRUE ~ "Data.Not.Collected")) 
         
         Q14a <- Q14a_detail %>%
@@ -1021,7 +1026,7 @@ generate_new_kits <- TRUE
           adorn_totals("row")
       }
       
-      # Q14b
+      # Q14b Updated question. New question: Most Recent experience of domestic violence, sexual assault, dating violence, stalking, human trafficking ----
       {
         Q14b_detail <- Q14 %>%
           select(all_of(standard_detail_columns), DomesticViolenceSurvivor,
@@ -1029,7 +1034,7 @@ generate_new_kits <- TRUE
           filter(DomesticViolenceSurvivor == 1) %>%
           mutate(currently_fleeing = case_when(CurrentlyFleeing == 1 ~ "Yes",
                                                CurrentlyFleeing == 0 ~ "No",
-                                               CurrentlyFleeing %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+                                               CurrentlyFleeing %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
                                                TRUE ~ "Data.Not.Collected")) 
         Q14b <- Q14b_detail %>%
           return_household_groups(., currently_fleeing, y_n_dkr_dnc_list) %>%
@@ -1045,7 +1050,7 @@ generate_new_kits <- TRUE
           select(all_of(standard_detail_columns), LivingSituation)
         
         Q15 <- Q15_detail %>%
-          create_prior_residence_groups(.)
+          create_prior_residence_groups(.) 
       }
       
       
@@ -1373,7 +1378,7 @@ generate_new_kits <- TRUE
           assign(paste0(period, "_benefit_counts"), data)
         }
         
-        benefit_count <- c("No sources", "One or more source(s)", "Client.Does.Not.Know.or.Refused",
+        benefit_count <- c("No sources", "One or more source(s)", "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
                            "Not collected/annual assessment not due")
         
         Q20b <- as.data.frame(benefit_count) %>%
@@ -1436,7 +1441,7 @@ generate_new_kits <- TRUE
               insurance_count == 0 ~ 
                 case_when(
                   InsuranceFromAnySource %in% c(1, 0) ~ "No health insurance",
-                  InsuranceFromAnySource %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+                  InsuranceFromAnySource %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
                   TRUE ~ "Data.Not.Collected"),
               insurance_count == 1 ~ "One source of insurance",
               TRUE ~ "More than one source of insurance")) %>%
@@ -1448,7 +1453,7 @@ generate_new_kits <- TRUE
         }
         
         full_insurance_list <- c(InsuranceTypes$OfficialInsuranceName, 
-                                 c("No health insurance", "Client.Does.Not.Know.or.Refused", "Data.Not.Collected", 
+                                 c("No health insurance", "Client.Does.Not.Know.or.Prefers.Not.to.Answer", "Data.Not.Collected", 
                                    "Annual assessment not required", 
                                    "One source of insurance",
                                    "More than one source of insurance"))
@@ -1864,7 +1869,7 @@ generate_new_kits <- TRUE
           mutate(category = case_when(
             chronic == "Y" ~ chronic_categories[1],
             chronic == "N" ~ chronic_categories[2],
-            chronic == "Client.Does.Not.Know.or.Refused" ~ chronic_categories[3],
+            chronic == "Client.Does.Not.Know.or.Prefers.Not.to.Answer" ~ chronic_categories[3],
             TRUE ~ chronic_categories[4])) 
         
         Q26a_detail <- Q26b_detail %>%
@@ -2250,6 +2255,14 @@ generate_new_kits <- TRUE
         dir.create(folder_name)
       }
       
+      if (!dir.exists("created_files")) {
+        dir.create("created_files")
+      }
+      
+      if (!dir.exists("created_files_2")) {
+        dir.create("created_files_2")
+      }
+      
       if (!dir.exists(paste0(folder_name, "/HMIS CSVs"))) {
         dir.create(paste0(folder_name, "/HMIS CSVs"))
       }
@@ -2341,8 +2354,8 @@ generate_new_kits <- TRUE
       }
     }
     
-    rm(list = ls()[ls() %nin% items_to_keep])
+    rm(list = ls()[ls() %nin% items_to_keep]) 
     
   }
-}
+d}
 

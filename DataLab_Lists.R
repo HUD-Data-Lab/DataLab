@@ -8,17 +8,19 @@ hmis_csvs <- list(Affiliation = "cccTTcTc",
                   Assessment = "cccDciiiTTcTc", 
                   AssessmentQuestions = "ccccciccTTcTc", 
                   AssessmentResults = "ccccccTTcTc",
+                  CEParticipation = "c", #Are these randomly generated? Added CEParticipation here as part of the csv lists that are needed for FY24
                   Client = "ccccciciDiiiiiiiiiiiiiciiiiiiiiiiiiiTTcTc", 
                   CurrentLivingSituation = "cccDiciiiiicTTcTc", 
                   Disabilities = "cccDiiiiiiiiiiiTTcTc", 
                   EmploymentEducation = "cccDiiiiiiTTcTc",
                   Enrollment = "cccDciiiiiDiiiDDDiiiicccciiiDiiiiciiiiiiiiiiiiciiiiiiiiiiiiiiiiiiiiTTcTc", 
-                  EnrollmentCoC = "cccccDciTTcTc", 
+                  #EnrollmentCoC = "cccccDciTTcTc",  #This was removed for the FY2024 CSV specs
                   Event = "cccDiiiciDTTcTc",
                   Exit = "cccDiciiiiiiiiiiiiiiiiiiiiiiiiiDiiiiiiTTcTc",
                   Export = "ciccccciiTTTccciii", 
                   Funder = "cciccDDTTcTc", 
-                  HealthAndDV = "cccDiiiiiiiDiiiiiTTcTc", 
+                  HealthAndDV = "cccDiiiiiiiDiiiiiTTcTc",
+                  HMISParticipation = "c", #Are these randomly generated? Added HMISParticipation here as part of the csv lists that are needed for FY24
                   IncomeBenefits = "cccDididididididididididididididididciiiiiiiciiiiiiiiiiiiiiiiiiiiciiiiiiiiTTcTc", 
                   Inventory = "ccciiiiiiiiiiiiDDTTcTc", 
                   Organization = "ccncTTcTn", 
@@ -222,8 +224,8 @@ EventTypes <- read_excel("SupplementalTables.xlsx",
 
 
 # ------------------------------------------------------------------------------
-# ------------------------------ Race Columns --------------------------------
-# ------------------------------------------------------------------------------
+# ------------------------------ Race Columns -------------------------------- #Look into expand.grid for another way to do this: 
+# ------------------------------------------------------------------------------#https://stackoverflow.com/questions/18705153/generate-list-of-all-possible-combinations-of-elements-of-vector
 # used in:
 #   APR/CAPER
 
@@ -235,23 +237,23 @@ race_columns <- c(AmIndAKNative = "American Indian, Alaska Native, or Indigenous
                   NativeHIPacific = "Native Hawaiian or Pacific Islander", 
                   White = "White")
 
-race_columns <- setNames(names(race_columns), race_columns)
+race_columns <- setNames(names(race_columns), race_columns) #This adds the full variable names to the race_columns (you can call unname to show full variable name)
 
 
 # ------------------------------------------------------------------------------
-# ----------------------------- Gender List ------------------------------------
+# ----------------------------- Race List --------------------------------------
 # ------------------------------------------------------------------------------
 # used in:
 #   APR/CAPER - Q12a
 
-race_list <- unname(race_columns)
-race_name_list <- names(race_columns)
+race_list <- unname(race_columns)  #Saves the list with the abbreviated variable name (i.e., AmIndAKNative)
+race_name_list <- names(race_columns) # saves the list with the full variable name (i.e., American Indian, Alaska Native, or Indigenous)
 
-possible_race_combos <- outer(race_list, race_list, paste, sep = '/')
-possible_race_name_combos <- outer(race_name_list, race_name_list, paste, sep = ' & ')
+possible_race_combos <- outer(race_list, race_list, paste, sep = '/') #Creates the potential race combos between two races (i.e., Asian/White)
+possible_race_name_combos <- outer(race_name_list, race_name_list, paste, sep = ' & ') #creates race combos with full names
 
-for (combo in 1:6) {
-  race_list <- c(race_list, possible_race_combos[combo, (combo + 1):7])
+for (combo in 1:6) { #what is this loop doing?
+  race_list <- c(race_list, possible_race_combos[combo, (combo + 1):7]) #What is this doing? 
   race_name_list <- c(race_name_list, possible_race_name_combos[combo, (combo + 1):7])
 }
 
@@ -267,13 +269,16 @@ for (col in unname(race_columns)) {
                             1, 0))
 }
 
+#Why do we keep naming and then un-naming the variables?
+
+
 # ------------------------------------------------------------------------------
 # ------------------------ Simple Age Group List -------------------------------
 # ------------------------------------------------------------------------------
 # used in:
 #   APR/CAPER - Q7a
 
-age_groups <- c("Adults", "Children", "Client.Does.Not.Know.or.Refused", "Data.Not.Collected")
+age_groups <- c("Adults", "Children", "Client.Does.Not.Know.or.Prefers.Not.to.Answer", "Data.Not.Collected")
 
 
 # ------------------------------------------------------------------------------
@@ -284,7 +289,7 @@ age_groups <- c("Adults", "Children", "Client.Does.Not.Know.or.Refused", "Data.N
 
 detailed_age_group_list = c("Under 5", "5-12", "13-17", "18-24", "25-34",
                             "35-44", "45-54", "55-61", "62+", 
-                            "Client.Does.Not.Know.or.Refused", "Data.Not.Collected")
+                            "Client.Does.Not.Know.or.Prefers.Not.to.Answer", "Data.Not.Collected")
 
 
 # ------------------------------------------------------------------------------
@@ -307,7 +312,7 @@ disability_list <- c("Mental Health Disorder", "Alcohol Use Disorder",
 
 disability_count_group_list <- c("None", "One Condition", "Two Conditions",
                                  "Three Or More Conditions", "Unknown",
-                                 "Client.Does.Not.Know.or.Refused", "Data.Not.Collected")
+                                 "Client.Does.Not.Know.or.Prefers.Not.to.Answer", "Data.Not.Collected")
 
 # ------------------------------------------------------------------------------
 # ---------------------------- HUD List 1.8 ------------------------------------
@@ -315,7 +320,7 @@ disability_count_group_list <- c("None", "One Condition", "Two Conditions",
 # used in:
 #   APR/CAPER - Q14a
 
-y_n_dkr_dnc_list <- c("Yes", "No", "Client.Does.Not.Know.or.Refused", "Data.Not.Collected")
+y_n_dkr_dnc_list <- c("Yes", "No", "Client.Does.Not.Know.or.Prefers.Not.to.Answer", "Data.Not.Collected")
 
 
 # ------------------------------------------------------------------------------
@@ -392,7 +397,7 @@ chronic_categories <- c("Chronically Homeless",
 income_amount_categories <- c("No Income", "$1 - $150", "$151 - $250", 
                        "$251 - $500", "$501 - $1,000", 
                        "$1,001 - $1,500", "$1,501 - $2,000", 
-                       "$2,001+", "Client.Does.Not.Know.or.Refused", "Data.Not.Collected")
+                       "$2,001+", "Client.Does.Not.Know.or.Prefers.Not.to.Answer", "Data.Not.Collected")
 
 
 # ------------------------------------------------------------------------------
@@ -413,7 +418,7 @@ annual_income_amount_categories <- c(income_amount_categories, "No Annual Requir
 income_type_categories <- c("Adults with Only Earned Income (i.e., Employment Income)", 
                        "Adults with Only Other Income", 
                        "Adults with Both Earned and Other Income",
-                       "Adults with No Income", "Client.Does.Not.Know.or.Refused", 
+                       "Adults with No Income", "Client.Does.Not.Know.or.Prefers.Not.to.Answer", 
                        "Missing Income Information")
 
 

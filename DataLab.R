@@ -32,7 +32,7 @@ Enrollment <- Enrollment %>%
                                                  Exit$ExitDate <= report_end_date] |
            EnrollmentID %in% bed_nights_in_report$EnrollmentID)
 
-disability_table <- Disabilities %>%
+disability_table <- Disabilities %>% 
   filter(DisabilityResponse == 1 |
            (DisabilityType == 10 &
               DisabilityResponse %in% c(2, 3))) %>%
@@ -167,3 +167,4 @@ chronicity_data <- chronic_household %>%
             by = "EnrollmentID") %>%
   mutate(chronic = if_else(is.na(new_chronic), chronic, as.character(new_chronic))) %>%
   select(-new_chronic)
+

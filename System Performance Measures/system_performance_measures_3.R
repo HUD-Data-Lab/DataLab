@@ -10,11 +10,6 @@
 # <https://www.gnu.org/licenses/>. 
 
 # 3.2. System Performance Measure 3.2: Persons Experiencing Homelessness ----
-## Create DF with Active client counts
-# enrollment_data
-# bed_nights_in_report_ee_format #use this to get a count of active persons
-
-# NOT CONFIDENT in the coding of Method 2 Active Clients in the creation of "df_spm.3.2_base"
 
 # df_spm.3.2_base <- enrollment_data %>% 
 #   mutate(M2.ES.Nbn_enrlmnt_qual = 
@@ -36,56 +31,44 @@
 #            ProjectType == 2 & M1.Active.Clients ~ "2.0 Transitional housing")) %>% 
 #   filter(ProjectType %in% c(0,1,8,2) & (M1.Active.Clients | M2.Active.Clients))
 
-# Try out method 5.active_enrollments
+
+# df_spm.3.2_u <- active_enrollments %>% 
+#   filter(
+#     Method2 &
+#     ProjectType %in% c(0,1,2,8) &
+#       EntryDate <= report_end_date &
+#       (is.na(ExitDate) | ExitDate > report_start_date) #|
+#       # ((ProjectType == 1 &
+#       #     EnrollmentID %in% universe$EnrollmentID))
+#   )
 
 
 df_spm.3.2_u <- active_enrollments %>% 
   filter(
-    Method2 &
-    ProjectType %in% c(0,1,2,8) &
-      EntryDate <= report_end_date &
-      (is.na(ExitDate) | ExitDate > report_start_date) #|
-      # ((ProjectType == 1 &
-      #     EnrollmentID %in% universe$EnrollmentID))
+    (Method2 & ProjectType %in% c(1)) | (Method1 & ProjectType %in% c(0,2,8))
+    #   EntryDate <= report_end_date &
+    #   (is.na(ExitDate) | ExitDate > report_start_date) #|
+    # # ((ProjectType == 1 &
+    # #     EnrollmentID %in% universe$EnrollmentID))
   )
 
 
-
 # Count ES (Combine to single count)
-# 
-# SPM.3.2_ES.EE.Count<- df_spm.3.2_base %>% 
-#   filter(ProjectType == 1) %>%
-#   {n_distinct(.$PersonalID)}
-# 
-# SPM.3.2_ES.NbN.Count <- df_spm.3.2_base %>% 
-#   filter(ProjectType == 0) %>% 
-#   {n_distinct(.$PersonalID)}
 
 Count_3.2_ES <- df_spm.3.2_u %>% 
   filter(ProjectType == 0 | ProjectType == 1) %>% 
   {n_distinct(.$PersonalID)}
-
-# df.ES.client.detail <- df_spm.3.2_base %>% 
-#   filter(ProjectType == 0 | ProjectType == 1) %>% 
-#   select(ProjectType_category,PersonalID,EntryDate,ExitDate)
 
 # Count Safe Haven
 SPM.3.2_SH.Count <- df_spm.3.2_u %>% 
   filter(ProjectType == 8) %>% 
   {n_distinct(.$PersonalID)}
 
-# df.SH.client.detail <- df_spm.3.2_base %>% 
-#   filter(ProjectType == 8)
-
 # Count Th
 # Client 92109 is not in the dataset. Any of the datasets (client, enrollment, enrollment.data)
 SPM.3.2_TH.Count <- df_spm.3.2_u %>% 
   filter(ProjectType == 2) %>% 
   {n_distinct(.$PersonalID)}
-
-# df.TH.client.detail <- df_spm.3.2_base %>% 
-#   filter(ProjectType == 2) %>% 
-#   select(ProjectType_category,PersonalID,EntryDate,ExitDate)
 
 # Count universe
 
@@ -107,17 +90,6 @@ Metric.3.2.table %>%
 
 ## Client Detail CSV File ----
 
-# df_spm.3.2_base %>% 
-#   select(ProjectType_category,ProjectType,PersonalID,EntryDate,ExitDate,M1.Active.Clients,M2.Active.Clients) %>% 
-#   write_csv("3.2.Client.detail.csv")
-
-# df.ES.client.detail %>% 
-#   select(PersonalID,EntryDate,ExitDate,ProjectType,Destination,ProjectType_category) %>% 
-#   write_csv("3.2.Client.detail.ES.check.csv")
-# 
-# df.SH.client.detail %>% 
-#   select(PersonalID,EntryDate,ExitDate,ProjectType,Destination,ProjectType_category) %>% 
-#   write_csv("3.2.Client.detail.SH.check.csv")
-# 
-# df.TH.client.detail %>% 
-#   write_csv("3.2.Client.detail.TH.check.csv")
+df_spm.3.2_u %>%
+  select(PersonalID,ProjectType,EntryDate,MoveInDate,ExitDate,Method1,Method2,Method5) %>%
+  write_csv("3.2.Client.detail.csv")

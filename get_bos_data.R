@@ -17,12 +17,12 @@ unhashed_data <- file.choose()
 
 for (file in names(hmis_csvs)){
   
-  data <- read_csv(archive_read(unhashed_data, paste0(file, ".csv")), 
+  data <- read_csv(archive_read(unhashed_data, paste0(file, ".csv")),
                    col_types = get(file, hmis_csvs)) 
   
   if ("CoCCode" %in% colnames(data)) {
     data <- data %>%
-      mutate(CoCCode = gsub("IA", "XX", CoCCode))
+      mutate(CoCCode = gsub("IA", "XX", CoCCode)) 
   }
   
   if ("UserID" %in% colnames(data)) {

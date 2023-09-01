@@ -418,19 +418,20 @@ pivot_existing_only <- function(data, group_name, client_label) {
 }
 
 # used in Q22 questions
-add_length_of_time_groups <- function(data, start_date, end_date, report_type,
-                                      in_project = TRUE) {
-  start_date <- enquo(start_date) 
+# used in Q5
+add_length_of_time_groups <- function(data, start_date, end_date, report_type, #Are these all the arguments needed for this function?
+                                      in_project = TRUE) { #what is in_project?
+  start_date <- enquo(start_date) #What is enquo and why are we using it for the date variables?
   end_date <- enquo(end_date) 
   
-  if(in_project) {
+  if(in_project) { 
     nbn_data <- data %>%
-      filter(ProjectID %in% Project$ProjectID[Project$ProjectType == 1]) %>%
-      left_join(all_bed_nights, 
+      filter(ProjectID %in% Project$ProjectID[Project$ProjectType == 1]) %>% 
+      left_join(all_bed_nights, # The all_bed_nights object for SPM is different from all_bed_nights in DataLab.R.
                 by = "EnrollmentID",
                 multiple = "all") %>%
       group_by(EnrollmentID) %>%
-      summarise(nbn_number_of_days = n_distinct(na.omit(ymd(DateProvided)), 
+      summarise(nbn_number_of_days = n_distinct(na.omit(ymd(DateProvided)), #Count distinct number of days that are not NA. What is the difference between na.omit and na.rm?
                                                 na.rm = TRUE)) %>%
       ungroup() %>%
       select(EnrollmentID, nbn_number_of_days)
@@ -439,12 +440,12 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type,
       left_join(nbn_data, by = "EnrollmentID") %>%
       mutate(number_of_days = 
                if_else(
-                 ProjectID %in% Project$ProjectID[Project$ProjectType == 1],
-                 nbn_number_of_days,
-                 as.integer(trunc((!!start_date %--% !!end_date) / days(1)))))
+                 ProjectID %in% Project$ProjectID[Project$ProjectType == 1], #Identify project IDs that are a nbn shelter
+                 nbn_number_of_days, #If true return number of days
+                 as.integer(trunc((!!start_date %--% !!end_date) / days(1))))) #what does !! do? What is this doing? 
   } else {
     time_groups <- data %>%
-      mutate(number_of_days = as.integer(trunc((!!start_date %--% !!end_date) / days(1))))
+      mutate(number_of_days = as.integer(trunc((!!start_date %--% !!end_date) / days(1)))) #If not a nbn shelter use this calculation for number_of_days
   }
   
   time_groups <- time_groups %>%
@@ -468,7 +469,7 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type,
   if(report_type == "APR") {
     time_groups <- time_groups %>%
       mutate(number_of_days_group = case_when(
-        between(number_of_days, 0, 30) ~ "30 days or less",
+        between(number_of_days, 0, 30) ~ "30 days or less", # Q22 for APR changes days categories. This modifies the categories for the APR 
         TRUE ~ number_of_days_group))
   } else if(report_type == "days_prior_to_housing") {
     time_groups <- time_groups %>%
@@ -1035,7 +1036,7 @@ set_hud_format <- function(data_for_csv) {
                TRUE ~ get(first_col_name)))
   
   new_header <- names(data_for_csv)[2:length(data_for_csv)]
-  new_header[new_header == "Client.Does.Not.Know.or.Refused"] <- "Client Doesn't Know/Refused"
+  new_header[new_header == "Client.Does.Not.Know.or.Refused"] <- "Client Doesn't Know/Refused" # Flagging this for follow-up: FY2024 removed refused ----
   
   data_for_csv %>%
     `colnames<-`(c("", gsub(".", " ", new_header, fixed = TRUE)))
@@ -1175,24 +1176,24 @@ create_time_prior_to_housing <- function(filtered_enrollments) {
 }
 
 # get additional client info
-add_client_info <- function(filtered_enrollments) {
+add_client_info <- function(filtered_enrollments) { #Create function to add client info
   
-  if(exists("all_program_enrollments")) {
+  if(exists("all_program_enrollments")) {      #all_program_enrollments object created on line 61 of APS_and_CAPER_FY24.
     enrollments_to_use <- all_program_enrollments
   } else {
-    enrollments_to_use <- filtered_enrollments
+    enrollments_to_use <- filtered_enrollments #filtered enrollments is the DF we use for the function (i.e., add_client_info(DF_example))
   }
   
   enrollments_to_use %>%
-    filter(HouseholdID %in% filtered_enrollments$HouseholdID) %>%
-    mutate(date_for_age = (if_else(
+    filter(HouseholdID %in% filtered_enrollments$HouseholdID) %>% #select household IDs from either all program enrollments or DF selected
+    mutate(date_for_age = (if_else( 
       EntryDate <= report_start_date,
-      report_start_date,
-      EntryDate))) %>%
+      report_start_date, # Return Report Start date if true
+      EntryDate))) %>% # Return Entry Date if False
     # select(PersonalID, date_for_age, HouseholdID, RelationshipToHoH) %>%
     # distinct() %>%
-    inner_join(Client, by = "PersonalID") %>%
-    mutate(age = trunc((DOB %--% date_for_age) / years(1)),
+    inner_join(Client, by = "PersonalID") %>%  #Why inner_join? Doesn't inner join only keep the observations enrollments_to_use that match in Client?
+    mutate(age = trunc((DOB %--% date_for_age) / years(1)), #Where is DOB created? What is %--% date_for_age? Did you just format the 1 to be a 1 year?
            detailed_age_group = case_when(age < 5 ~ "Under 5",
                                           age <= 12 ~ "5-12",
                                           age <= 17 ~ "13-17",
@@ -1207,13 +1208,13 @@ add_client_info <- function(filtered_enrollments) {
                                           TRUE ~ "Data.Not.Collected"), 
            age_group = case_when(age >= 18 ~ "Adults",
                                  age < 18 ~ "Children",
-                                 TRUE ~ detailed_age_group),
+                                 TRUE ~ detailed_age_group), #What does TRUE do?
            new_veteran_status = if_else(
-             age_group == "Children", as.integer(0), VeteranStatus)) %>%
+             age_group == "Children", as.integer(0), VeteranStatus)) %>% #If "Children" return 0 otherwise Veteran Status
     # get a second opinion on when to apply the household type calcs
-    group_by(HouseholdID) %>%
-    mutate(oldest_age = max(age, na.rm = TRUE),
-           youth_household = if_else(oldest_age <= 24 &
+    group_by(HouseholdID) %>% 
+    mutate(oldest_age = max(age, na.rm = TRUE), # I think this is returning the -inf error.
+           youth_household = if_else(oldest_age <= 24 & 
                                        oldest_age >= 0, 1, 0),
            youth = if_else(youth_household & age >= 12, 1, 0),
            has_children = max(
@@ -1237,24 +1238,27 @@ add_client_info <- function(filtered_enrollments) {
 program_information_table <- function(project_list, filtered_enrollments) {
   
   Project %>%
-    filter(ProjectID %in% project_list) %>%
-    select(OrganizationID, ProjectName, ProjectID, ProjectType,
+    filter(ProjectID %in% project_list) %>% 
+    select(OrganizationID, ProjectName, ProjectID, ProjectType,RRHSubType,
            ResidentialAffiliation) %>%
     left_join(Organization %>%
                 select(OrganizationID, OrganizationName,
                        VictimServiceProvider), 
               by = "OrganizationID") %>%
+    left_join(CEParticipation %>% #Added CEParticiaption to match FY2024 APR/CAPER specs
+                select(ProjectID,AccessPoint),
+              by="ProjectID") %>% 
     left_join(Affiliation %>%
                 select(ProjectID, ResProjectID) %>%
                 group_by(ProjectID) %>%
-                summarise(affiliated_with = toString(ResProjectID)) %>%
+                summarise(affiliated_with = toString(ResProjectID)) %>%  #What is this doing? why group_by and summarise during the join?
                 ungroup(),
               by = "ProjectID") %>%
     left_join(ProjectCoC %>%
-                select(ProjectID, CoCCode, Geocode) %>%
+                select(ProjectID, CoCCode, Geocode) %>% 
                 group_by(ProjectID) %>%
                 summarise(coc_codes = toString(CoCCode),
-                          geocodes = toString(Geocode)) %>%
+                          geocodes = toString(Geocode)) %>% 
                 ungroup(),
               by = "ProjectID") %>%
     left_join(filtered_enrollments %>%
@@ -1267,17 +1271,17 @@ program_information_table <- function(project_list, filtered_enrollments) {
            report_start_date = report_start_date,
            report_end_date = report_end_date) %>%
     select(OrganizationName, OrganizationID, ProjectName, ProjectID,
-           ProjectType, ResidentialAffiliation, affiliated_with, 
+           ProjectType,RRHSubType,AccessPoint,ResidentialAffiliation, affiliated_with, #Included RRHSubType,AccessPoint here
            coc_codes, geocodes, VictimServiceProvider,
            software_name, report_start_date, report_end_date,
            active_clients, active_households) %>%
     `colnames<-`(c("Organization Name", "Organization ID",
                    "Project Name", "Project ID",
-                   "HMIS Project Type",
+                   "HMIS Project Type", "RRH Subtype", "Coordinated Entry Access Point", # I added two columns to match changes to the APR_CAPER Specs
                    "Affiliated with a residential project",
                    "Project IDs of affiliations", "CoC Number", 
                    "Geocode", "Victim Service Provider",
-                   "HMIS Software Name", "Report Start Date",
+                   "HMIS Software Name and Version Number", "Report Start Date",
                    "Report End Date", "Total Active Clients",
                    "Total Active Households"))
 }
@@ -1325,7 +1329,7 @@ get_household_info <- function(filtered_enrollments,
 
 
 # create first DQ table in glossary
-create_dq_Q1 <- function(filtered_enrollments) {
+create_dq_Q1 <- function(filtered_enrollments) {  #Isn't this DQ2?
   DQ1_data <- filtered_enrollments %>%
     inner_join(Client %>%
                  select(-ExportID), by = "PersonalID")
@@ -1429,7 +1433,7 @@ create_dq_Q1 <- function(filtered_enrollments) {
   elements <- list("Name", "SSN", "DOB", "Race", "Gender")
   
   for (element in elements) {
-    table <- get(paste0("DQ1_", tolower(element))) 
+    table <- get(paste0("DQ1_", tolower(element))) #this loop creates the table for the data-elements
     
     detail_title <- paste0(element, "_DQ")
     DQ1_detail <- DQ1_detail %>%
@@ -1476,7 +1480,7 @@ create_dq_Q1 <- function(filtered_enrollments) {
     add_row(DataElement = "Overall Score", 
             `Client.Does.Not.Know.or.Refused` = 0, Information.Missing = 0, Data.Issues = 0, 
             Total = nrow(unique(error_clients))) %>%
-    mutate(ErrorRate = decimal_format(Total / Q5a$Count.of.Clients.for.DQ[1], 4))
+    mutate("% of Issue Rate" = decimal_format(Total / Q5a$Count.of.Clients.for.DQ[1], 4)) #changed from ErrorRate to"% of Issue Rate"
   
   DQ1[DQ1$DataElement == "Overall Score", c("Client.Does.Not.Know.or.Refused",
                                             "Information.Missing")] <- NA
