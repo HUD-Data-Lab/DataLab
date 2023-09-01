@@ -25,7 +25,8 @@ for (file in names(hmis_csvs)){
   
   if ("CoCCode" %in% colnames(data)) {
     data <- data %>%
-      mutate(CoCCode = gsub("IA", "XX", CoCCode))
+      mutate(CoCCode = case_when(
+        grepl("[[:digit:]]", CoCCode) ~ gsub("[[:alpha:]]", "X", CoCCode)))
   }
   
   if ("UserID" %in% colnames(data)) {
@@ -238,7 +239,7 @@ ProjectCoC <- trunc_userid(ProjectCoC) %>%
          State = "XX",
          ZIP = fake_zip,
          Geocode = fake_geocode,
-         Address2 = NULL) %>%
+         Address2 = NA) %>%
   select(-c(OrganizationID, org_city, fake_zip, fake_geocode))
 
 ProjectCoC$Address1 <- paste(stri_rand_strings(nrow(ProjectCoC), 3, pattern = "[1-9]"),
@@ -247,7 +248,10 @@ ProjectCoC$Address1 <- paste(stri_rand_strings(nrow(ProjectCoC), 3, pattern = "[
 
 
 Enrollment <- trunc_userid(Enrollment) %>%
-  filter(EnrollmentID %in% activity_information$EnrollmentID)
+  filter(EnrollmentID %in% activity_information$EnrollmentID) %>%
+  mutate(LastPermanentStreet = NA,
+         LastPermanentCity = NA,
+         LastPermanentZIP = NA)
 
 Funder <- trunc_userid(Funder) %>%
   filter(ProjectID %in% Project$ProjectID) %>%
@@ -256,7 +260,8 @@ Funder <- trunc_userid(Funder) %>%
   mutate(Funder_1 = case_when(
       ProjectID_1 == 1615 ~ as.integer(4),
       ProjectID_1 == 1647 ~ as.integer(11),
-      TRUE ~ Funder_1)) %>%
+      TRUE ~ Funder_1),
+      OtherFunder_1 = NA) %>%
   `colnames<-`(colnames(Funder))
 
 Funder$GrantID <- stri_rand_strings(nrow(Funder), 6, pattern = "[A-Z]")
@@ -269,9 +274,8 @@ Client <- trunc_userid(Client) %>%
 
 User <- User %>%
   mutate(UserID = substr(UserID, 1, 2),
-         # UserFirstName = sample(words_for_names$word, nrow(User)),
-         UserFirstName = randomNames(nrow(User), which.names="last"),
-         UserLastName = randomNames(nrow(User), which.names="first")
+         UserFirstName = sample(words_for_names$word, nrow(User)),
+         UserLastName = sample(words_for_names$word, nrow(User))
   ) 
 
 User$UserPhone <- r_phone_numbers(nrow(User))
@@ -289,9 +293,13 @@ Assessment <- trunc_userid(Assessment) %>%
   mutate(AssessmentLocation = ProjectID) %>%
   select(-ProjectID)
 
+IncomeBenefits <- trunc_userid(IncomeBenefits) %>%
+  filter(EnrollmentID %in% Enrollment$EnrollmentID) %>%
+  mutate(OtherBenefitsSourceIdentify = NA)
+
 for (simple_table in c("Exit", "Disabilities", "EmploymentEducation",
                        "EnrollmentCoC", "Event", "HealthAndDV",
-                       "IncomeBenefits", "YouthEducationStatus")) {
+                       "YouthEducationStatus")) {
   data <- trunc_userid(get(simple_table)) %>%
     filter(EnrollmentID %in% Enrollment$EnrollmentID) 
   
@@ -375,34 +383,10 @@ for (simple_table in c("Exit", "Disabilities", "EmploymentEducation",
            DOB = if_else(ymd(EntryDate) - ymd(DOB + days_to_shift) < 0,
                          DOB - days_to_shift / 2,
                          DOB + days_to_shift),
-           MiddleName = NULL) %>%
+           FirstName = sample(words_for_names$word, nrow(Client), replace = TRUE),
+           MiddleName = NA,
+           LastName = sample(words_for_names$word, nrow(Client), replace = TRUE)) %>%
     select(-c(EntryDate, days_to_shift))
-  
-  ##  unsure about this...want equity review
-  demographics_for_names <- Client %>%
-    mutate(
-      gender = case_when(
-        Female == 1 ~ 1,
-        Male == 1 ~ 0),
-      race_ethnicity = case_when(
-        Ethnicity == 1 ~ 4,
-        BlackAfAmerican == 1 ~ 3,
-        AmIndAKNative == 1 ~ 1,
-        NativeHIPacific == 1 |
-          Asian == 1 ~ 2,
-        White == 1 ~ 5))
-  
-  Client$FirstName <- randomNames(nrow(demographics_for_names),
-                                         gender = demographics_for_names$gender,
-                                         ethnicity = demographics_for_names$race_ethnicity,
-                                         which.names="first")
-  Client$LastName <- randomNames(nrow(demographics_for_names),
-                                        gender = demographics_for_names$gender,
-                                        ethnicity = demographics_for_names$race_ethnicity,
-                                        which.names="last")
-  # write_csv(demographics_for_names %>%
-  #        select("first_name", "last_name", colnames(demographics_for_names)[c(2, 4, 11:23)]),
-  #        "equity_review_names.csv")
 }
 
 CurrentLivingSituation <- CurrentLivingSituation %>%

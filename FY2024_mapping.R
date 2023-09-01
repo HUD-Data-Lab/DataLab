@@ -83,33 +83,33 @@ FY24_residence_types <- ResidenceUses %>%
 }
 
 {
-  # aligning project types to 4.20.2 (referred-to)
-    select(ProjectID, ProjectType) %>%
   referral_projects <- Project %>%
+    select(ProjectID, ProjectType) %>%
     filter(ProjectType %in% c(0, 1, 2, 3, 9, 10, 13)) %>%
     mutate(ProjectType = case_when(
       ProjectID %in% Funder$ProjectID[Funder$Funder == 44] ~ 12,
-      ProjectType %in% c(0, 1) ~ 10, 
-      ProjectType %in% c(9, 10) ~ 15, 
+      ProjectType %in% c(0, 1) ~ 10,
       ProjectType == 2 ~ 11,
-    arrange(EntryDate) %>%
       ProjectType == 3 ~ 14,
-    ))
+      ProjectType %in% c(9, 10) ~ 15,
       TRUE ~ ProjectType
+    )) 
   
-    mutate(PersonalID = as.character(PersonalID)) %>%
-    left_join(Enrollment %>%
   referral_locations <- Event %>%
-                inner_join(referral_projects, by = "ProjectID"), 
+    left_join(Enrollment %>%
                 select(PersonalID, ProjectID, EntryDate) %>%
-              by = "PersonalID") %>%
+                inner_join(referral_projects, by = "ProjectID"), 
+              by = "PersonalID",
+              multiple = "all",
+              relationship = "many-to-many") %>%
     filter(Event == ProjectType & 
-    group_by(EventID) %>%
              EntryDate >= EventDate) %>%
-{
-}
-    ungroup()
+    group_by(EventID) %>%
+    arrange(EntryDate) %>%
     slice(1L) %>%
+    ungroup()
+}
+{
   ##  No mapping required (for vendors, at least)
   ##  All HMIS Project Types depending on design of Coordinated Entry System
   CEParticipation <- Project %>%
@@ -172,7 +172,8 @@ FY24_residence_types <- ResidenceUses %>%
     left_join(FY24_residence_types,
               by = c("LivingSituation" = "Location_FY22")) %>%
     mutate(
-      CoCCode = replace_na(CoCCode, "missing"),
+      # CoCCode = replace_na(CoCCode, "missing"),
+      CoCCode = replace_na(CoCCode, "XX-501"),
       LivingSituation = LivingSituation + FY24_type_numeric,
       # need to confirm mapping of "Permanent housing for formerly homeless persons"
       RentalSubsidyType = case_when(
@@ -183,8 +184,9 @@ FY24_residence_types <- ResidenceUses %>%
       TranslationNeeded = 0,
       PreferredLanguage = 171,
       PreferredLanguageDifferent = NA) %>%
-    rename(EnrollmentCoC = CoCCode,
-           HOHLeaseholder = HoHLeaseholder
+    rename(EnrollmentCoC = CoCCode
+           # ,
+           # HOHLeaseholder = HoHLeaseholder
            # only required if loading in from DataLab.R
            # , DateCreated = enroll_DateCreated
            ) %>%
@@ -205,16 +207,19 @@ FY24_residence_types <- ResidenceUses %>%
       Destination = if_else(!is.na(DestinationSubsidyType),
                             435, Destination)) %>%
     # only required if loading in from DataLab.R
-    # rename(
+    rename(
     #        #  only required when source database has different capitalization
     #       # DateCreated = exit_DateCreated,
-    #        WorkplaceViolenceThreats = WorkPlaceViolenceThreats,
-    #        WorkplacePromiseDifference = WorkPlacePromiseDifference) %>%
+           WorkplaceViolenceThreats = WorkPlaceViolenceThreats,
+           WorkplacePromiseDifference = WorkPlacePromiseDifference) %>%
     select(all_of(exit_columns))
 }
 {
   Export <- Export %>%
-    mutate(ImplementationID = "0001") %>%
+    mutate(ImplementationID = "0001",
+           SoftwareName = "DataLab",
+           SoftwareVersion = "1.0",
+           CSVVersion = "2024 v1.3") %>%
     select(all_of(export_columns))
 }
 {
@@ -228,8 +233,8 @@ FY24_residence_types <- ResidenceUses %>%
 }
 {
   IncomeBenefits <- IncomeBenefits %>%
-    rename(VHAServicesHA = VAMedicalServices,
-           NoVHAReasonHA = NoVAMedReason) %>%
+    rename(VHAServices = VAMedicalServices,
+           NoVHAReason = NoVAMedReason) %>%
     select(all_of(incomebenefits_columns))
 }
 {
@@ -275,19 +280,18 @@ FY24_residence_types <- ResidenceUses %>%
     select(all_of(event_columns))
 }
 
-# write it all out --------------------------------------------------------
 
-df_names <- CSV_columns$File %>% unique()
-
-for(df in df_names) {
-  write.csv(
-    get(df),
-    file = paste0("output/", df, ".csv"),
-    row.names = FALSE,
-    quote = TRUE,
-    eol = "\r\n",
-    na = ""
-  )
+# write to zipped folder
+{
+  for (file in unique(CSV_columns$File)) {
+    write.csv(get(file), file.path(paste0("created_files/", file, ".csv")), 
+              row.names=FALSE, na="")
+  }
+  
+  archive_write_dir(paste0("DataLab - 2024 Zips.zip"),
+                    paste0(getwd(), "/created_files"))
+  
+  unlink(paste0(getwd(), "/created_files/*"))
 }
 
 
