@@ -9,161 +9,53 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
-kit_type <- "old_kit" # can switch from new_kit to old_kit
+kit_type <- "new_kit"
 combining_files <- kit_type == "old_kit"
 
 source("datalab_functions.R")
 source("DataLab_Lists.R")
 
-library(here)
-library(tidyverse)
-library(lubridate)
-library(readxl)
-library(janitor) 
-
-if(!exists("directory")) directory <- "CurrentGood"
-
-# Affiliation -------------------------------------------------------------
-
-Affiliation <-
-  read_csv(here(paste0(directory, "/Affiliation.csv")),
-           col_types = "cccTTcTc",
-           n_max = 1000L)
-
-# Client ------------------------------------------------------------------
-
-# This script later overwrites the Client.csv, masking Name and SSN PII. So
-# this logic will read in the modified file - or - the raw one straight from SP
-
-Client <-
-  read_csv(paste0(directory, "/Client.csv"),
-           col_types = "cccccncn?nnnnnnnnnnnnnnnnnnnnnnnnnnnTTcTc")
-
-# Current Living Situation ------------------------------------------------
-
-CurrentLivingSituation <-
-  read_csv(paste0(directory, "/CurrentLivingSituation.csv"),
-           col_types = "cccDncnnnnncTTcTc",
-           n_max = 1000L) 
-
-# Disabilities ------------------------------------------------------------
-
-Disabilities <-
-  read_csv(paste0(directory, "/Disabilities.csv"),
-           col_types = "cccDnnnnnnnnnnnTTcTc")
-
-# EmploymentEducation -----------------------------------------------------
-
-EmploymentEducation <-
-  read_csv(paste0(directory, "/EmploymentEducation.csv"),
-           col_types = "cccDnnnnnnTTcTc")
-
-# Exit --------------------------------------------------------------------
-
-Exit <-
-  read_csv(paste0(directory, "/Exit.csv"),
-           col_types = "cccDncnnnnnnnnnnnnnnnnnnnnnnnnnDnnnnnnTTcTc") %>%
-  mutate(DateCreated = format.Date(DateCreated, "%F %T"),
-         DateUpdated = format.Date(DateUpdated, "%F %T"))
-
-# Project -----------------------------------------------------------------
-
-Project <- 
-  read_csv(paste0(directory, "/Project.csv"),
-           col_types = "ccccDDnnnnnnnnnTTcTc") 
-
-# EnrollmentCoC -----------------------------------------------------------
-
-EnrollmentCoC <- 
-  read_csv(paste0(directory, "/EnrollmentCoC.csv"), 
-           col_types = "cccccDcnTTcTc") 
-
-# Enrollment --------------------------------------------------------------
-
-Enrollment <-
-  read_csv(paste0(directory, "/Enrollment.csv"),
-           col_types =
-             "cccDcnnnnnDnnnDDDnnnnccccnnnDnnnncnnnnnnnnnnnncnnnnnnnnnnnnnnnnnnnnTTcTc") %>%
-  mutate(DateCreated = format.Date(DateCreated, "%F %T"),
-         DateUpdated = format.Date(DateUpdated, "%F %T"))
-
-# Event -------------------------------------------------------------------
-
-Event <-
-  read_csv(paste0(directory, "/Event.csv"),
-           col_types = "ccnDnnncnDTTcTc",
-           n_max = 1000L) 
-
-# Export ------------------------------------------------------------------
-
-Export <- 
-  read_csv(paste0(directory, "/Export.csv"),
-           col_types = "cncccccccTDDcccnnn")
-
-# Funder ------------------------------------------------------------------
-
-Funder <- 
-  read_csv(paste0(directory, "/Funder.csv"),
-           col_types = "ccnccDDTTcTc")
-
-# HealthAndDV -------------------------------------------------------------
-
-HealthAndDV <-
-  read_csv(paste0(directory, "/HealthAndDV.csv"),
-           col_types = "cccDnnnnnnnDnnnnnTTcTc")
-
-# IncomeBenefits ----------------------------------------------------------
-
-IncomeBenefits <- 
-  read_csv(paste0(directory, "/IncomeBenefits.csv"),
-           col_types = 
-             "cccDnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnncnnnnnnncnnnnnnnnnnnnnnnnnnnncnnnnnnnnTTcTc")
-
-# Inventory ---------------------------------------------------------------
-
-Inventory <-
-  read_csv(paste0(directory, "/Inventory.csv"),
-           col_types = "cccnnnnnnnnnnnnDDTTcTc")
-
-# Organization ------------------------------------------------------------
-
-Organization <- 
-  read_csv(paste0(directory, "/Organization.csv"),
-           col_types = "ccncTTcTc")
-
-# ProjectCoC --------------------------------------------------------------
-
-ProjectCoC <- 
-  read_csv(paste0(directory, "/ProjectCoC.csv"),
-           col_types = "cccccccccnTTcTc")
-
-# Users ------------------------------------------------------------------
-User <- read_csv(paste0(directory, "/User.csv"),
-                 col_types = "ccccccTTTc")
-
-# Users ------------------------------------------------------------------
-YouthEducationStatus <- read_csv(paste0(directory, "/YouthEducationStatus.csv"),
-                                 col_types = "cccDnnnnTTcTc")
-
-# Services ----------------------------------------------------------------
-
-Services <- read_csv(paste0(directory, "/Services.csv"),
-                     col_types = "cccDnnccnnnTTcTc")
-
-# Assessment --------------------------------------------------------------
-
-Assessment <- read_csv(paste0(directory, "/Assessment.csv"),
-                       col_types = "cccDcnnnTTcTc")
-
-# AssessmentQuestions -----------------------------------------------------
-
-AssessmentQuestions <- read_csv(paste0(directory, "/AssessmentQuestions.csv"),
-                                col_types = "cccccnccTTcTc")
-
-# AssessmentResults -------------------------------------------------------
-
-AssessmentResults <- read_csv(paste0(directory, "/AssessmentResults.csv"),
-                              col_types = "ccccccTTcTc")
+if (combining_files) {
+  file_source_dir <- choose.dir()
+  
+  datalab_zips <- list.files(file_source_dir, full.names = TRUE)
+  
+  for (zip in datalab_zips) {
+    for (file in names(hmis_csvs)){
+      
+      data <- read_csv(unzip(zip, paste0(file, ".csv")),
+                       col_types = get(file, hmis_csvs))
+      
+      if (exists(file)) {
+        data <- get(file) %>%
+          full_join(data, by = intersect(colnames(get(file)),
+                                         colnames(data)))
+      } 
+      
+      assign(file, data)
+      
+      file.remove(paste0(file, ".csv"))
+    }
+  }
+} else {
+  file_source <- file.choose()
+  
+  for (file in names(hmis_csvs)){
+    
+    data <- read_csv(unzip(file_source, paste0(file, ".csv")),
+                     col_types = get(file, hmis_csvs))
+    
+    if (exists(file)) {
+      data <- get(file) %>%
+        full_join(data, by = intersect(colnames(get(file)),
+                                       colnames(data)))
+    } 
+    
+    assign(file, data)
+    
+    file.remove(paste0(file, ".csv"))
+  }
+}
 
 source("DataLab_hc_variables.R")
 
