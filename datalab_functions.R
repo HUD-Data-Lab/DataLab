@@ -960,7 +960,7 @@ create_summary_table <- function(filtered_enrollments, column_name) {
     summarise(Total.number.of.persons.served = n_distinct(PersonalID, na.rm = TRUE),
               Number.of.adults.age.18.or.over = uniqueN(na.omit(PersonalID[age_group == "Adults"])),
               Number.of.children.under.age.18 = uniqueN(na.omit(PersonalID[age_group == "Children"])),
-              Number.of.persons.with.unknown.age = uniqueN(na.omit(PersonalID[age_group %in% c("Client.Does.Not.Know.or.Refused", "Data.Not.Collected")])),
+              Number.of.persons.with.unknown.age = uniqueN(na.omit(PersonalID[age_group %in% c("Client.Doesn't.Know.Prefers.Not.to.Answer", "Data.Not.Collected")])), #Removed refused and entered prefers not to answer
               Number.of.leavers = uniqueN(na.omit(PersonalID[!is.na(ExitDate)])),
               Number.of.adult.leavers = uniqueN(na.omit(PersonalID[age_group == "Adults" &
                                                              !is.na(ExitDate)])),
@@ -1329,25 +1329,25 @@ get_household_info <- function(filtered_enrollments,
 
 
 # create first DQ table in glossary
-create_dq_Q1 <- function(filtered_enrollments) {  #Isn't this DQ2?
+create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Client.Does.Not.Know.or.Refused to Client.Doesn't.Know.Prefers.Not.to.Answer
   DQ1_data <- filtered_enrollments %>%
     inner_join(Client %>%
                  select(-ExportID), by = "PersonalID")
   
   DQ1_name <- DQ1_data %>%
     mutate(dq_flag = case_when(
-      NameDataQuality %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+      NameDataQuality %in% c(8, 9) ~ "Client.Doesn't.Know.Prefers.Not.to.Answer", # Changed from Client.Does.Not.Know.or.Refused
       NameDataQuality == 99 |
         is.na(FirstName) |
-        is.na(LastName) ~ "Information.Missing",
-      NameDataQuality == 2 ~ "Data.Issues",
+        is.na(LastName) ~ "Information Missing",
+      NameDataQuality == 2 ~ "Data Issues",
       TRUE ~ "OK")) %>%
     select(PersonalID, FirstName, LastName, NameDataQuality, dq_flag)
   
   DQ1_ssn <- DQ1_data %>%
     mutate(sequential = lapply(SSN, sequential_ssn),
            dq_flag = case_when(
-             SSNDataQuality %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+             SSNDataQuality %in% c(8, 9) ~ "Client.Doesn't.Know.Prefers.Not.to.Answer", # changed from Client.Does.Not.Know.or.Refused
              SSNDataQuality == 99 |
                #  below is what the data standards currently say
                # is.na(SSNDataQuality) ~ "Information.Missing",
@@ -1372,7 +1372,7 @@ create_dq_Q1 <- function(filtered_enrollments) {  #Isn't this DQ2?
   DQ1_dob <- DQ1_data %>%
     mutate(dq_flag = case_when(
       DOBDataQuality %in% c(8, 9) &
-        is.na(DOB) ~ "Client.Does.Not.Know.or.Refused",
+        is.na(DOB) ~ "Client.Doesn't.Know.Prefers.Not.to.Answer",
       is.na(DOBDataQuality) |
         (DOBDataQuality == 99 &
            is.na(DOB)) ~ "Information.Missing",
@@ -1390,7 +1390,7 @@ create_dq_Q1 <- function(filtered_enrollments) {  #Isn't this DQ2?
   
   DQ1_race <- DQ1_data %>%
     mutate(dq_flag = case_when(
-      RaceNone %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+      RaceNone %in% c(8, 9) ~ "Client.Doesn't.Know.Prefers.Not.to.Answer",
       RaceNone == 99 |
         (AmIndAKNative == 0 &
            Asian == 0 &
@@ -1406,7 +1406,7 @@ create_dq_Q1 <- function(filtered_enrollments) {  #Isn't this DQ2?
   
   DQ1_gender <- DQ1_data %>%
     mutate(dq_flag = case_when(
-      GenderNone %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+      GenderNone %in% c(8, 9) ~ "Client.Doesn't.Know.Prefers.Not.to.Answer",
       GenderNone == 99 |
         (Woman == 0 &
            Man == 0 &
@@ -1421,7 +1421,7 @@ create_dq_Q1 <- function(filtered_enrollments) {  #Isn't this DQ2?
            Questioning, DifferentIdentity, DifferentIdentityText, GenderNone, 
            dq_flag)
   
-  columns <- c("DataElement", "Client.Does.Not.Know.or.Refused", 
+  columns <- c("DataElement", "Client.Doesn't.Know.Prefers.Not.to.Answer", 
                "Information.Missing", "Data.Issues", "OK")
   
   DQ1 <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), columns) %>%
@@ -1470,19 +1470,19 @@ create_dq_Q1 <- function(filtered_enrollments) {  #Isn't this DQ2?
   
   DQ1 <- DQ1 %>%
     select(-OK) %>%
-    mutate(Client.Does.Not.Know.or.Refused = if_else(is.na(`Client.Does.Not.Know.or.Refused`), 
-                                                     0, as.double(`Client.Does.Not.Know.or.Refused`)),
+    mutate("Client.Doesn't.Know.Prefers.Not.to.Answer" = if_else(is.na(`Client.Doesn't.Know.Prefers.Not.to.Answer`), 
+                                                     0, as.double(`Client.Doesn't.Know.Prefers.Not.to.Answer`)),
            Information.Missing = if_else(is.na(Information.Missing), 
                                          0, as.double(Information.Missing)),
            Data.Issues = if_else(is.na(Data.Issues), 
                                  0, as.double(Data.Issues)),
-           Total = `Client.Does.Not.Know.or.Refused` + Information.Missing + Data.Issues) %>%
+           Total = `Client.Doesn't.Know.Prefers.Not.to.Answer` + Information.Missing + Data.Issues) %>%
     add_row(DataElement = "Overall Score", 
-            `Client.Does.Not.Know.or.Refused` = 0, Information.Missing = 0, Data.Issues = 0, 
+            `Client.Doesn't.Know.Prefers.Not.to.Answer` = 0, Information.Missing = 0, Data.Issues = 0, 
             Total = nrow(unique(error_clients))) %>%
     mutate("% of Issue Rate" = decimal_format(Total / Q5a$Count.of.Clients.for.DQ[1], 4)) #changed from ErrorRate to"% of Issue Rate"
   
-  DQ1[DQ1$DataElement == "Overall Score", c("Client.Does.Not.Know.or.Refused",
+  DQ1[DQ1$DataElement == "Overall Score", c("Client.Doesn't.Know.Prefers.Not.to.Answer",
                                             "Information.Missing")] <- NA
   DQ1$Data.Issues[4:6] <- NA
   

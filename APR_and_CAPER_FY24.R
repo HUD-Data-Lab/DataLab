@@ -97,6 +97,7 @@ generate_new_kits <- TRUE
         left_join(chronicity_data, by = "EnrollmentID")
       
       # Q4a
+      # Q4a Ready for QA ----
       {
         Q4a_detail <- "See Q5a_detail.csv"
         
@@ -106,6 +107,8 @@ generate_new_kits <- TRUE
       
       # Q5
       # Q5a
+      # Q5a Ready for QA ----
+      # GT-no change from FY22 I updated the function View(create_summary_table) from client.refused to prefers not to answer
       {
         recent_program_enrollment_dq <- recent_program_enrollment %>% #recent program enrollment created on line 91
           filter(ProjectType != 4 |     # This removes enrollments that are street outreach project type or
@@ -129,13 +132,16 @@ generate_new_kits <- TRUE
       
       # Q6
       # Q6a
+      #Q6a In Progress ----
+      # Just want to double check the % of issue rate. Made changes to Datalab_functions as I am going.
       {
         Q6a_data <- create_dq_Q1(recent_program_enrollment_dq) #View(create_dq_Q1) in datalab_functions.R line 1311. 
-        Q6a <- Q6a_data[[1]]  #where does the race variable come from? 
+        Q6a <- Q6a_data[[1]]
         Q6a_detail <- Q6a_data[[2]]
       }
       
-      # Q6b 
+      # Q6b
+      # Q6b Not Started ----
       {
         
         Q6b_earlier_enrollment <- recent_program_enrollment_dq %>% #use the DQ dataframe 
