@@ -14,8 +14,8 @@ library(kableExtra)
 library(eeptools) # Used for age calculation
   # flagging that this package is very old--let's swap to lubridate function - GB
 
-# lookback_stop_date <- ymd("2014-10-1")
-lookback_stop_date <- ymd("2012-10-1")
+lookback_stop_date <- ymd("2014-10-1")
+# lookback_stop_date <- ymd("2012-10-1")
 system_performance_measures <- TRUE
 
 # subscripts
