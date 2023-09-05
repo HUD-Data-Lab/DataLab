@@ -8,19 +8,17 @@ hmis_csvs <- list(Affiliation = "cccTTcTc",
                   Assessment = "cccDciiiTTcTc", 
                   AssessmentQuestions = "ccccciccTTcTc", 
                   AssessmentResults = "ccccccTTcTc",
-                  CEParticipation = "c", #Are these randomly generated? Added CEParticipation here as part of the csv lists that are needed for FY24
                   Client = "ccccciciDiiiiiiiiiiiiiciiiiiiiiiiiiiTTcTc", 
                   CurrentLivingSituation = "cccDiciiiiicTTcTc", 
                   Disabilities = "cccDiiiiiiiiiiiTTcTc", 
                   EmploymentEducation = "cccDiiiiiiTTcTc",
                   Enrollment = "cccDciiiiiDiiiDDDiiiicccciiiDiiiiciiiiiiiiiiiiciiiiiiiiiiiiiiiiiiiiTTcTc", 
-                  #EnrollmentCoC = "cccccDciTTcTc",  #This was removed for the FY2024 CSV specs
+                  EnrollmentCoC = "cccccDciTTcTc",  
                   Event = "cccDiiiciDTTcTc",
                   Exit = "cccDiciiiiiiiiiiiiiiiiiiiiiiiiiDiiiiiiTTcTc",
                   Export = "ciccccciiTTTccciii", 
                   Funder = "cciccDDTTcTc", 
                   HealthAndDV = "cccDiiiiiiiDiiiiiTTcTc",
-                  HMISParticipation = "c", #Are these randomly generated? Added HMISParticipation here as part of the csv lists that are needed for FY24
                   IncomeBenefits = "cccDididididididididididididididididciiiiiiiciiiiiiiiiiiiiiiiiiiiciiiiiiiiTTcTc", 
                   Inventory = "ccciiiiiiiiiiiiDDTTcTc", 
                   Organization = "ccncTTcTn", 
@@ -30,6 +28,34 @@ hmis_csvs <- list(Affiliation = "cccTTcTc",
                   User = "ccccccTTTc", 
                   YouthEducationStatus = "cccDiiiiTTcTc")
 
+# ------------------------------------------------------------------------------
+# --------------------- FY24 HMIS CSV File List With Types ---------------------
+# ------------------------------------------------------------------------------
+
+hmis_csvs_fy24 <- list(Export = "cicccccccTDDccciiic",
+                       Organization = "ccicTTcTc",
+                       User = "ccccccTTTc",
+                       Project = "ccccDDiiiiiiiiTTcTc",
+                       Funder = "cciccDDTTcTc",
+                       ProjectCoC = "ccccccccciTTcTc",
+                       Inventory = "ccciiiiiiiiiiiiDDTTcTc",
+                       Affiliation = "cccTTcTc",
+                       HMISParticipation = "cciDDTTcTc",
+                       CEParticipation = "cciiiiiiDDTTcTc",
+                       Client = "ccccciciDiiiiiiiiiciiiiiiiiciiiiiiiiiiiiiTTcTc",
+                       Enrollment = "cccDciciiiiiDiiiDDDiiiiiDiiiiciiiiiiiiiiiiciiiiiiiiiiiiiiiiiiiiiicTTcTc",
+                       Exit = "cccDiiciiiiiiiiiiiiiiiiiiiiiiiiiDiiiiiiTTcTc",
+                       IncomeBenefits = "cccDididididididididididididididididciiiiiiiciiiiiiiiiiiiiiiiiiiiciiiiiiTTcTc",
+                       HealthAndDV = "cccDiiiiiiiDiTTcTc",
+                       EmploymentEducation = "cccDiiiiiiTTcTc",
+                       Disabilities = "cccDiiiiiiiiiiiTTcTc",
+                       Services = "cccDiiccidDDiTTcTc",
+                       CurrentLivingSituation = "cccDiiciiiiicTTcTc",
+                       Assessment = "cccDciiiTTcTc",
+                       AssessmentQuestions = "ccccciccTTcTc",
+                       AssessmentResults = "ccccccTTcTc",
+                       Event = "cccDiiiciDTTcTc",
+                       YouthEducationStatus = "cccDiiiiTTcTc")
 
 # ------------------------------------------------------------------------------
 # ----------------------- Question List for APR --------------------------------

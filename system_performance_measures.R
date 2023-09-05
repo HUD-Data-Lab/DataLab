@@ -21,11 +21,34 @@ lookback_stop_date <- ymd("2013-10-1") #switch from 2013-10-1 (old Kit) to 2014-
 system_performance_measures <- TRUE
 
 # subscripts
-source("00_read_2022_csv.R")
-source("FY2024_mapping.R")
+source("local_functions.R")
+source("datalab_functions.R")
+source("DataLab_Lists.R")
+
+# save_to <- choose.dir()
+file_source <- file.choose()
+
+for (file in names(hmis_csvs_fy24)){
+  
+  data <- read_csv(unzip(file_source, paste0(file, ".csv")),
+                   col_types = get(file, hmis_csvs_fy24))
+  
+  if (exists(file)) {
+    data <- get(file) %>%
+      full_join(data, by = intersect(colnames(get(file)),
+                                     colnames(data)))
+  } 
+  
+  assign(file, data)
+  
+  file.remove(paste0(file, ".csv"))
+}
+
+relevant_CoC <- "XX-501"
 
 # Is there a reason this needs to be here and not above with other params?
 report_start_date <- lookback_stop_date %m+% years(7)
+report_end_date <- report_start_date %m+% years(1) %m-% days(1)
 
 # SPM universe
 single_CoC_projects <- ProjectCoC %>%
@@ -64,9 +87,6 @@ for (csv in c("Exit", "IncomeBenefits")) {
            filter(EnrollmentID %in% Enrollment$EnrollmentID))
 }
 
-NbN_projects <- c(1212, 1210)
-Project$ProjectType[Project$ProjectID %in% NbN_projects] <- 1
-
 enrollment_data <- Enrollment %>%
   select(all_of(colnames(Enrollment)[1:18])) %>%
   left_join(Exit %>%
@@ -90,22 +110,6 @@ enrollment_data <- Enrollment %>%
       (HoH_HMID <= ExitDate |
          is.na(ExitDate)) ~ EntryDate
   ))
-
-source("create_NbN_stays.R")
-
-# enrollment_data <- Enrollment %>%
-#   select(all_of(colnames(Enrollment)[1:18])) %>%
-#   left_join(Exit %>%
-#               select(EnrollmentID, ExitDate, Destination),
-#             by = "EnrollmentID") %>%
-#   left_join(Project %>%
-#               select(ProjectID, ProjectType),
-#             by = "ProjectID") %>%
-#   mutate(Method5_ExitDate = if_else(
-#     is.na(ExitDate) | ExitDate >= report_end_date,
-#     report_end_date, ExitDate %m-% days(1)))
-
-
 
 all_bed_nights <- Services %>%
   inner_join(enrollment_data %>%

@@ -9,25 +9,42 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
-library(tidyverse)
-library(lubridate)
 library(readxl)
 library(kableExtra) 
 library(eeptools) # Used for age calculation
-
-#SPM Programming specs: https://icfonline.sharepoint.com/:w:/r/sites/NHDAP/_layouts/15/Doc.aspx?action=edit&sourcedoc=%7B4ec4f3da-89f4-4c2d-810c-1f93ecc0e60c%7D&wdOrigin=TEAMS-ELECTRON.teamsSdk.openFilePreview&wdExp=TEAMS-CONTROL&web=1
-#HMIS Glossary: https://icfonline.sharepoint.com/:w:/r/sites/NHDAP/_layouts/15/Doc.aspx?action=edit&sourcedoc=%7Bda79cae5-b933-41f0-b408-40162ade797d%7D&wdOrigin=TEAMS-ELECTRON.teamsSdk.openFilePreview&wdExp=TEAMS-CONTROL&web=1
+  # flagging that this package is very old--let's swap to lubridate function - GB
 
 # lookback_stop_date <- ymd("2014-10-1")
 lookback_stop_date <- ymd("2012-10-1")
-file.choose()
-
 system_performance_measures <- TRUE
 
-source("00_read_2022_csv.R")
-source("FY2024_mapping.R")
+# subscripts
+source("local_functions.R")
+source("datalab_functions.R")
+source("DataLab_Lists.R")
+
+# save_to <- choose.dir()
+file_source <- file.choose()
+
+for (file in names(hmis_csvs_fy24)){
+  
+  data <- read_csv(unzip(file_source, paste0(file, ".csv")),
+                   col_types = get(file, hmis_csvs_fy24))
+  
+  if (exists(file)) {
+    data <- get(file) %>%
+      full_join(data, by = intersect(colnames(get(file)),
+                                     colnames(data)))
+  } 
+  
+  assign(file, data)
+  
+  file.remove(paste0(file, ".csv"))
+}
 
 report_start_date <- lookback_stop_date %m+% years(7)
+report_end_date <- report_start_date %m+% years(1) %m-% days(1)
+relevant_CoC <- "XX-501"
 
 single_CoC_projects <- ProjectCoC %>%
   mutate(relevant_to_CoC = 
@@ -94,12 +111,6 @@ enrollment_data <- Enrollment %>%
             (LivingSituation %in% c(0:99, 200:499) &
                LOSUnderThreshold == 1 &
                PreviousStreetESSH == 1))))
-
-
-##  next three lines are only for testing purposes
-NbN_projects <- c(1212, 1210)
-source("create_NbN_stays.R")
-Project$ProjectType[Project$ProjectID %in% NbN_projects] <- 1
 
 all_bed_nights <- Services %>%
   inner_join(enrollment_data %>%
