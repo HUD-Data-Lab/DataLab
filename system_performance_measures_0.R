@@ -14,37 +14,12 @@ library(kableExtra)
 library(eeptools) # Used for age calculation
   # flagging that this package is very old--let's swap to lubridate function - GB
 
-lookback_stop_date <- ymd("2014-10-1")
-# lookback_stop_date <- ymd("2012-10-1")
-system_performance_measures <- TRUE
+# lookback_stop_date <- ymd("2014-10-1")
+lookback_stop_date <- ymd("2012-10-1")
+kit_type <- "old_kit"
+# system_performance_measures <- TRUE
 
-# subscripts
-source("local_functions.R")
-source("datalab_functions.R")
-source("DataLab_Lists.R")
-
-# save_to <- choose.dir()
-file_source <- file.choose()
-
-for (file in names(hmis_csvs_fy24)){
-  
-  data <- read_csv(unzip(file_source, paste0(file, ".csv")),
-                   col_types = get(file, hmis_csvs_fy24))
-  
-  if (exists(file)) {
-    data <- get(file) %>%
-      full_join(data, by = intersect(colnames(get(file)),
-                                     colnames(data)))
-  } 
-  
-  assign(file, data)
-  
-  file.remove(paste0(file, ".csv"))
-}
-
-report_start_date <- lookback_stop_date %m+% years(7)
-report_end_date <- report_start_date %m+% years(1) %m-% days(1)
-relevant_CoC <- "XX-501"
+source("00_read_2024_csv.R")
 
 single_CoC_projects <- ProjectCoC %>%
   mutate(relevant_to_CoC = 
@@ -110,7 +85,13 @@ enrollment_data <- Enrollment %>%
          (LivingSituation %in% 100:199 |
             (LivingSituation %in% c(0:99, 200:499) &
                LOSUnderThreshold == 1 &
-               PreviousStreetESSH == 1))))
+               PreviousStreetESSH == 1))),
+    date_for_age = (if_else( 
+      EntryDate <= report_start_date,
+      report_start_date, # Return Report Start date if true
+      EntryDate)),
+    age = trunc((DOB %--% date_for_age) / years(1))) %>%
+  select(-date_for_age)
 
 all_bed_nights <- Services %>%
   inner_join(enrollment_data %>%
@@ -132,10 +113,21 @@ all_bed_nights <- Services %>%
 
 bed_nights_in_report <- all_bed_nights %>%
   filter(DateProvided >= report_start_date)
-
+# 
+# 
+# # need to review this logic...
+# bed_nights_in_report_ee_format <- bed_nights_in_report %>%
+#   left_join(enrollment_data %>%
+#               select(EnrollmentID, ProjectID, ProjectType),
+#             by = "EnrollmentID") %>%
+#   mutate(EnrollmentID = paste("S_", ServicesID),
+#          EntryDate = DateProvided,
+#          ExitDate = DateProvided) %>%
+#   select(EnrollmentID, PersonalID, EntryDate, ExitDate,
+#          ProjectID, ProjectType)
 
 # need to review this logic...
-bed_nights_in_report_ee_format <- bed_nights_in_report %>%
+bed_nights_ee_format <- all_bed_nights %>%
   left_join(enrollment_data %>%
               select(EnrollmentID, ProjectID, ProjectType),
             by = "EnrollmentID") %>%

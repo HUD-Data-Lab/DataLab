@@ -6,15 +6,7 @@ negate_lot_blocks <- function(enrollment_table,
                               include_3.917 = FALSE,
                               projects_to_remove) {
   
-  enrollments_to_check <- enrollment_table #%>%
-  # filter(Method5 &
-  #          ProjectType != 1) %>%
-  # full_join(bed_nights_in_report_ee_format,
-  #           by = colnames(bed_nights_in_report_ee_format)) %>%
-  # mutate(ExitDateAdj = case_when(
-  #   ProjectType == 1 ~ ExitDate %m+% days(1),
-  #   is.na(ExitDate) | ExitDate > report_end_date ~ report_end_date %m+% days(1), 
-  #   TRUE ~ ExitDate))
+  enrollments_to_check <- enrollment_table
   
   keep_ranges <- enrollments_to_check %>%
     filter(ProjectType %in% projects_to_keep &
@@ -52,26 +44,126 @@ negate_lot_blocks <- function(enrollment_table,
   kept_ranges_for_clients
 }
 
-test <- active_enrollments %>%
+keep_within_start_and_end_dates <- function(date_table) {
+  
+  client_start_dates <- date_table %>%
+    group_by(PersonalID) %>%
+    left_join(Client %>%
+                select(PersonalID, DOB),
+              by = "PersonalID") %>%
+    mutate(client_end_date = max(end_date),
+           client_start_date = case_when(
+             client_end_date - days(365) > DOB |
+               is.na(DOB) ~ client_end_date - days(365),
+             TRUE ~ DOB)) %>%
+    ungroup() %>%
+    select(PersonalID, client_start_date, client_end_date) %>%
+    mutate(range = iv(client_start_date, client_end_date)) %>%
+    distinct() 
+  
+  date_table <- date_table %>%
+    mutate(range = iv(start_date, end_date))
+  
+  for (client in unique(client_start_dates$PersonalID)) {
+    
+    valid_date_range <- client_start_dates$range[client_start_dates$PersonalID == client]
+    time_experiencing_homelessness <- date_table$range[date_table$PersonalID == client]
+    
+    overlap <- iv_locate_overlaps(time_experiencing_homelessness,
+                                  valid_date_range,
+                                  no_match = "drop")
+    
+    hold <- iv_align(time_experiencing_homelessness, 
+                     valid_date_range, 
+                     locations = overlap) 
+    
+    date_ranges <- data.frame(
+      PersonalID = rep(client, length(as.vector(hold$needles))),
+      keep_range = as.vector(hold$needles)) %>%
+      mutate(start_date = iv_start(keep_range),
+             end_date = iv_end(keep_range)) %>%
+      select(-keep_range)
+    
+    if (client == unique(client_start_dates$PersonalID)[1]) {
+      valid_ranges_for_clients <- date_ranges
+    } else {
+      valid_ranges_for_clients <- valid_ranges_for_clients %>%
+        union(date_ranges)
+    }
+  }
+  valid_ranges_for_clients
+}
+
+propagate_3.917 <- enrollment_data %>%
+  filter(RelationshipToHoH == 1 &
+           lh_at_entry &
+           !is.na(DateToStreetESSH)) %>%
+  group_by(HouseholdID) %>%
+  slice(1L) %>%
+  ungroup() %>%
+  select(HouseholdID, DateToStreetESSH) %>%
+  rename(HoH_DateToStreetESSH = DateToStreetESSH)
+
+spm_1_enrollments <- active_enrollments %>%
   filter(Method5 &
            ProjectType != 1) %>%
-  full_join(bed_nights_in_report_ee_format,
-            by = colnames(bed_nights_in_report_ee_format)) %>%
-  mutate(ExitDateAdj = case_when(
-    ProjectType == 1 ~ ExitDate %m+% days(1),
-    is.na(ExitDate) | ExitDate > report_end_date ~ report_end_date %m+% days(1), 
-    TRUE ~ ExitDate)) %>%
+  full_join(bed_nights_ee_format,
+            by = colnames(bed_nights_ee_format)) %>%
+  full_join(propagate_3.917, 
+            by = "HouseholdID") %>%
+  mutate(
+    ExitDateAdj = case_when(
+      ProjectType == 1 ~ ExitDate %m+% days(1),
+      is.na(ExitDate) | ExitDate > report_end_date ~ report_end_date %m+% days(1), 
+      TRUE ~ ExitDate),
+    DateToStreetESSH = case_when(
+      !is.na(age) & 
+        is.na(DateToStreetESSH) &
+        age < 18 ~ HoH_DateToStreetESSH,
+      TRUE ~ DateToStreetESSH),
+    DateToStreetESSH = case_when(
+      !is.na(DateToStreetESSH) &
+        DateToStreetESSH < DOB ~ DOB,
+      TRUE ~ DateToStreetESSH
+    )) 
+
+spm_1a1_table <- spm_1_enrollments %>%
   negate_lot_blocks(.,
                     projects_to_keep = c(0, 1, 8),
-                    projects_to_remove = c(3, 9, 10, 13))
+                    projects_to_remove = c(3, 9, 10, 13)) %>%
+  keep_within_start_and_end_dates(.)
 
-test_counts <- test %>%
+test_counts <- spm_1a1_table %>%
   mutate(days = interval(ymd(start_date),ymd(end_date))  %/% days(1)) %>%
   group_by(PersonalID) %>%
   summarise(days = sum(days)) %>%
   ungroup() %>%
   summarise(clients = n(),
-            average_lot = mean(days))
+            average_lot = mean(days),
+            median_lot = median(days))
+
+dq_check <- spm_1a1_table %>%
+  mutate(days = interval(ymd(start_date),ymd(end_date))  %/% days(1)) %>%
+  group_by(PersonalID) %>%
+  summarise(days = sum(days)) %>%
+  ungroup() %>%
+  left_join(spm_1_enrollments %>%
+              negate_lot_blocks(.,
+                                projects_to_keep = c(0, 1, 8),
+                                projects_to_remove = c(3, 9, 10, 13))  %>%
+              group_by(PersonalID) %>%
+              left_join(Client %>%
+                          select(PersonalID, DOB),
+                        by = "PersonalID") %>%
+              mutate(client_end_date = max(end_date),
+                     client_start_date = case_when(
+                       client_end_date - days(365) > DOB |
+                         is.na(DOB) ~ client_end_date - days(365),
+                       TRUE ~ DOB)) %>%
+              ungroup() %>%
+              select(PersonalID, client_start_date, client_end_date),
+            by = "PersonalID") %>%
+  distinct()
 
 client_start_dates <- test %>%
   group_by(PersonalID) %>%
@@ -87,6 +179,10 @@ checking <- keep_ranges %>%
   full_join(kept_ranges_for_clients %>%
               group_by(PersonalID) %>%
               summarise(blocks = n()),
+            by = "PersonalID") %>%
+  full_join(delete_ranges %>%
+              group_by(PersonalID) %>%
+              summarise(delete_blocks = n()),
             by = "PersonalID") %>%
   filter(enrollments != blocks)
 
