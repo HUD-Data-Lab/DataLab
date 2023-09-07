@@ -9,11 +9,16 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
+
+# This is a global parameter that should be changed if desired and then run FIRST
 generate_new_kits <- TRUE
 
 # this bracket will run everything; use with care!
 {
-  source("DataLab.R")
+  
+  # run this bracket to set up environment for test kit
+  {
+    source("DataLab.R")
   
   # used for building and testing APR on specifc projects or groups of projects. To run full test kit use full_project_list
   {
@@ -33,7 +38,7 @@ generate_new_kits <- TRUE
       # 388#,	#"DataLab - TH CoC",
       # 340,	#"DataLab - TH ESG"
     )
-  }
+    }
   
   # used for running all reports for all projects. Use project_list for running specific projects.
   {
@@ -54,6 +59,9 @@ generate_new_kits <- TRUE
   Enrollment <- Enrollment %>%
     rename(enroll_DateCreated = DateCreated)
   
+  } # End of metric-specific environment setup chunk
+    
+  
   # loop for running all
   for(project_id in full_project_list) {
     project_list <- c(project_id) 
@@ -61,6 +69,8 @@ generate_new_kits <- TRUE
     # run all table creation logic, including questions
     {
       
+      # run this chunk to define global variables for use in individual metric testing (i.e. does not include all questions)
+      {
       all_program_enrollments <- Enrollment %>% 
         filter(ProjectID %in% project_list) %>% #filter by projectID in Project list.
         left_join(Project %>%
@@ -95,7 +105,7 @@ generate_new_kits <- TRUE
         left_join(client_plus, by = "PersonalID") %>%
         left_join(household_info, by = "HouseholdID") %>%
         left_join(chronicity_data, by = "EnrollmentID")
-      
+      }
       # Q4a
       {
         Q4a_detail <- "See Q5a_detail.csv"
@@ -1640,6 +1650,14 @@ generate_new_kits <- TRUE
             TRUE ~ days_prior_to_housing)) %>%
           union(Q22e_groups %>%
                   filter(days_prior_to_housing %in% c("Not yet moved into housing", "Data.Not.Collected", "Total")))
+      }
+      
+      # Q22f
+      {
+        Q22f_detail <- recent_program_enrollment %>%
+          
+        
+        ## Q22f <- 
       }
       
       # Q23c
