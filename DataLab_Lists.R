@@ -288,7 +288,7 @@ age_groups <- c("Adults", "Children", "Client.Does.Not.Know.or.Prefers.Not.to.An
 #   APR/CAPER - 
 
 detailed_age_group_list = c("Under 5", "5-12", "13-17", "18-24", "25-34",
-                            "35-44", "45-54", "55-61", "62+", 
+                            "35-44", "45-54", "55-64", "65+", 
                             "Client.Does.Not.Know.or.Prefers.Not.to.Answer", "Data.Not.Collected")
 
 

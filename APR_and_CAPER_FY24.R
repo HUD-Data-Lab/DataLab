@@ -96,6 +96,9 @@ generate_new_kits <- TRUE
         left_join(household_info, by = "HouseholdID") %>%
         left_join(chronicity_data, by = "EnrollmentID")
       
+      CEParticipation <- CEParticipation %>% 
+        mutate(ProjectID = as.character(ProjectID)) #Changed data type because I was getting a join error in View(Program_information_table)
+      
       # Q4a
       # Q4a Ready for QA ----
       {
@@ -180,7 +183,7 @@ generate_new_kits <- TRUE
                          IndefiniteAndImpairs == 1)))
         
         Q6b_detail <- recent_program_enrollment_dq %>% 
-          left_join(EnrollmentCoC %>%
+          left_join(EnrollmentCoC %>% #Removed EnrollmentCoC.csv from fy202 specs
                       filter(DataCollectionStage == 1) %>%
                       select(EnrollmentID, CoCCode),
                     by = "EnrollmentID") %>%
@@ -227,13 +230,14 @@ generate_new_kits <- TRUE
       }
       
       # Q6c
+      # Q6c In Progress ---- Leaving this to Gwen
       {
         income_sources <- IncomeBenefits %>%
           mutate(across(c(Earned, Unemployment, SSI, SSDI,
                           VADisabilityService, VADisabilityNonService,
                           PrivateDisability, WorkersComp, TANF, GA,
                           SocSecRetirement, Pension, ChildSupport,
-                          Alimony, OtherIncomeSource), ~ ifnull(., 0)), #what does ~ifnull(.,0) do? This is saying that ifnull replace with 0.
+                          Alimony, OtherIncomeSource), ~ ifnull(., 0)),
                  number_of_sources = 
                    (Earned == 1) + (Unemployment == 1) +
                    (SSI == 1) + (SSDI == 1) +
@@ -275,9 +279,12 @@ generate_new_kits <- TRUE
                     by = c("EnrollmentID" = "EnrollmentID",
                            "ExitDate" = "InformationDate")) %>%
           left_join(income_annual, by = "EnrollmentID") %>%
-          mutate(Destination.3.12 = !is.na(ExitDate) &
-                   (is.na(Destination) |
-                      Destination %in% c(8, 9, 99, 30)),
+          mutate(Destination.3.12 = case_when(  # Gwen added case_when here to create grouping variables
+            !is.na(ExitDate) ~ case_when(
+              is.na(Destination) ~ "Missing",
+              Destination %in% c(8, 9, 99, 30) ~ "DK/PNTA/DNC"
+            )
+                   ),
                  Income.and.Sources.4.02.at.Start = (RelationshipToHoH == 1 |
                                                        age_group == "Adults") &
                    (enroll_IncomeFromAnySource %in% c(8, 9, 99) |
@@ -314,7 +321,7 @@ generate_new_kits <- TRUE
         Q6c <- Q6c_detail %>%
           summarise(Destination.3.12 = n_distinct(PersonalID[Destination.3.12], 
                                                   na.rm = TRUE),
-                    Income.and.Sources.4.02.at.Start = n_distinct(PersonalID[Income.and.Sources.4.02.at.Start], #What does this do? It is referencing itself.
+                    Income.and.Sources.4.02.at.Start = n_distinct(PersonalID[Income.and.Sources.4.02.at.Start],
                                                                   na.rm = TRUE),
                     Income.and.Sources.4.02.at.Annual.Assessment = n_distinct(PersonalID[Income.and.Sources.4.02.at.Annual.Assessment],
                                                                               na.rm = TRUE),
@@ -332,7 +339,13 @@ generate_new_kits <- TRUE
               Group == "Income.and.Sources.4.02.at.Exit" ~ Error.Count / Q5a$Count.of.Clients.for.DQ[7]), 4)
           ) %>%
           ifnull(., 0)
+      
+        
       }
+      
+      
+      
+      
       
       # Q6d
       {
@@ -510,7 +523,8 @@ generate_new_kits <- TRUE
       }
       
       # Q7
-      # Q7a
+      # Q7a In Progress ----
+      # Need to update Q7a-move in to not include members who leave HH
       {
         Q7a_detail <- recent_program_enrollment %>%
           select(all_of(housing_program_detail_columns),
@@ -522,6 +536,7 @@ generate_new_kits <- TRUE
         
         Q7a_moved_in <- Q7a_detail %>%
           filter(HoH_HMID <= report_end_date) %>% 
+          
           mutate(client_group = "For PSH & RRH - the total persons served who moved into housing") %>%
           return_household_groups(., client_group, "For PSH & RRH - the total persons served who moved into housing") 
         
@@ -534,6 +549,7 @@ generate_new_kits <- TRUE
       }
       
       # Q7b
+      # Q7b No change from FY2023 ----
       {
         year_household_info <- all_program_enrollments %>%
           group_by(HouseholdID) %>%
@@ -591,7 +607,8 @@ generate_new_kits <- TRUE
         }
       }
       
-      # Q7c Is this still incuded in the repoer? It seems like we removed it. ----
+      # Q7c Not Started / REIRED(?) ----
+      #Is this still included in the report? It seems like we removed it, but can't find the revision history that says we did. ----
       {
         Q7c_detail <- recent_program_enrollment %>%
           select(all_of(standard_detail_columns), age_group, HoH_HMID) %>%
@@ -616,14 +633,14 @@ generate_new_kits <- TRUE
         
       }
       
-      # Q8a
+      # Q8a No changes from FY23 ----
       {
         Q8a_data <- households_served_table(recent_program_enrollment) #View(households_served_table)
         Q8a <- Q8a_data[[1]]
         Q8a_detail <- Q8a_data[[2]]
       }
       
-      # Q8b
+      # Q8b Ready for QA ----
       {
         for (pit_month in pit_months) {
           pit_date <- pit_dates[[which(pit_dates$month == pit_month), 2]]
@@ -674,7 +691,7 @@ generate_new_kits <- TRUE
         }
       }
       
-      # Q9a
+      # Q9a Ready for QA ----
       {
         # same question as before--is this the most recent CLS for the *person* or the *enrollment*?
         recent_CLS_for_Q9 <- recent_program_enrollment %>%
@@ -748,7 +765,7 @@ generate_new_kits <- TRUE
           create_contact_table(., first_CLS_group, all_CLS_for_Q9)
       }
       
-      # Q9b
+      # Q9b Ready for QA ----
       {
         Q9b_detail <- "See Q9a_detail.csv"
         
@@ -774,7 +791,7 @@ generate_new_kits <- TRUE
         
       }
       
-      # Q10a
+      # Q10a Not Started. Gwen Follow up ----
       ############################
       ### PENDING FINALIZATION ###
       ############################
@@ -818,7 +835,10 @@ generate_new_kits <- TRUE
           create_gender_groups(.)
       }
       
-      # Q10d
+      # Q10d In progress ----
+      # Update age categories
+      # Update rowsums for More than 2 Gender Identities Selected | Client Doesn’t Know/Prefers Not to Answer | Data Not Collected
+      
       {
         Q10d_detail <- recent_program_enrollment %>%
           select(all_of(standard_detail_columns), "age", "detailed_age_group") %>%
@@ -830,8 +850,11 @@ generate_new_kits <- TRUE
             detailed_age_group %in% c("25-34", "35-44", "45-54", "55-61") ~ "25-61",
             TRUE ~ detailed_age_group)) 
         
+        
+        
         Q10d <- gender_info %>%
-          mutate(order = row_number()) %>%
+          mutate(order = row_number(),
+                 CulturallySpecific = as.character(CulturallySpecific)) %>% #Got an error on join, had to convert to charac
           left_join(Q10d_detail,
                     by = all_of(names(gender_columns)),
                     multiple = "all") %>%
@@ -860,10 +883,12 @@ generate_new_kits <- TRUE
         
       }
       
-      # Q11
+      # Q11 Ready for QA ----
       {
         Q11_detail <- recent_program_enrollment %>%
-          select(all_of(standard_detail_columns), "age", "detailed_age_group") %>%
+          rename(household_type = household_type.x,
+                 age=age.x) %>% 
+          select(all_of(standard_detail_columns), "age", "Q11_detailed_age_group") %>%
           left_join(Client %>%
                       select(PersonalID, DOB),
                     by = "PersonalID")
@@ -871,8 +896,9 @@ generate_new_kits <- TRUE
         Q11 <- Q11_detail %>%
           create_age_groups(.)
       }
-      
-      # Q12a
+       
+      # Q12a in progress. Gwen follow-up ----
+      # need to change order to match Specs
       {
         Q12a_detail <- "See Q7c_detail.csv"
         
@@ -904,7 +930,7 @@ generate_new_kits <- TRUE
         
       }
       
-      # Q13a1
+      # Q13a1 No changes from FY23 ----
       {
         Q13a1_detail <- recent_program_enrollment %>%
           select(all_of(standard_detail_columns), "age_group", 
@@ -918,7 +944,7 @@ generate_new_kits <- TRUE
                                   split_by_age = TRUE)
       }
       
-      # Q13b1
+      # Q13b1 No changes from FY23----
       {
         Q13b1_detail<- recent_program_enrollment %>%
           select(all_of(standard_detail_columns), "age_group", 
@@ -933,7 +959,7 @@ generate_new_kits <- TRUE
                                   split_by_age = TRUE)
       }
       
-      # Q13c1
+      # Q13c1 No changes from FY23 ----
       {
         Q13c1_detail <- recent_program_enrollment %>%
           select(all_of(standard_detail_columns), "age_group", 
@@ -958,7 +984,8 @@ generate_new_kits <- TRUE
                                   split_by_age = TRUE)
       }
       
-      # Q13a2
+      # Q13a2 Ready for QA ----
+      # Only change was row header to Client.does.not.know.prefers.not.to.answer
       {
         Q13a2_detail <- "See Q13a1_detail.csv"
         Q13a2 <- recent_program_enrollment %>%
@@ -973,7 +1000,8 @@ generate_new_kits <- TRUE
           adorn_totals("row")
       }
       
-      # Q13b2
+      # Q13b2 Ready for QA ----
+      # Only change was row header to Client.does.not.know.prefers.not.to.answer
       {
         Q13b2_detail <- "See Q13b1_detail.csv"
         Q13b2 <- recent_program_enrollment %>%
@@ -990,7 +1018,8 @@ generate_new_kits <- TRUE
           adorn_totals("row")
       }
       
-      # Q13c2
+      # Q13c2 Ready for QA ----
+      # Only change was row header to Client.does.not.know.prefers.not.to.answer
       {
         Q13c2_detail <- "See Q13c1_detail.csv"
         Q13c2 <- recent_program_enrollment %>%
@@ -1007,7 +1036,7 @@ generate_new_kits <- TRUE
           adorn_totals("row")
       }
       
-      # Q14a
+      # Q14a Not Started ----
       {
         Q14 <- recent_program_enrollment %>%
           keep_adults_and_hoh_only() %>%
@@ -1032,7 +1061,8 @@ generate_new_kits <- TRUE
           adorn_totals("row")
       }
       
-      # Q14b Updated question. New question: Most Recent experience of domestic violence, sexual assault, dating violence, stalking, human trafficking ----
+      # Q14b In progress ----
+      # Updated question. New question: Most Recent experience of domestic violence, sexual assault, dating violence, stalking, human trafficking ----
       {
         Q14b_detail <- Q14 %>%
           select(all_of(standard_detail_columns), DomesticViolenceSurvivor,
@@ -1047,7 +1077,7 @@ generate_new_kits <- TRUE
           adorn_totals("row")
       }
       
-      # Q15
+      # Q15 Not Started ----
       {
         ##  added a comment to the document, but putting here too--easier to
         ##  put in value order than an arbitrary one
@@ -1060,7 +1090,7 @@ generate_new_kits <- TRUE
       }
       
       
-      # Q16
+      # Q16 Not Started ----
       {
         entry_income <- recent_program_enrollment %>%
           left_join(IncomeBenefits %>%
@@ -1119,7 +1149,7 @@ generate_new_kits <- TRUE
           adorn_totals("row")
       }
       
-      # Q17
+      # Q17 Not Started ----
       {
         Q17_detail <- recent_program_enrollment %>%
           keep_adults_and_hoh_only() %>%
@@ -1144,7 +1174,7 @@ generate_new_kits <- TRUE
           create_income_sources(.)
       }
       
-      # Q18
+      # Q18 Not Started ----
       {
         Q18_detail <- "See Q16_detail.csv"
         
@@ -1167,7 +1197,7 @@ generate_new_kits <- TRUE
                                                 keep_adults_only()))
       }
       
-      # Q19a1
+      # Q19a1 Not Started ----
       {
         needed_columns <- c("earned_amount", "other_amount", "calculated_total_income")
         
@@ -1239,7 +1269,7 @@ generate_new_kits <- TRUE
           )
       }
       
-      # Q19a2
+      # Q19a2 Not Started ----
       {
         for(period in entry_annual_exit[c(1, 3)]) {
           income_for_changes <- get(paste0(period, "_income")) %>%
@@ -1310,7 +1340,7 @@ generate_new_kits <- TRUE
           )
       }
       
-      # Q19b
+      # Q19b Not Started ----
       {
         Q19b_detail <- Q17_detail %>%
           filter(EnrollmentID %in% exit_income$EnrollmentID[exit_income$IncomeFromAnySource %in% c(0, 1)]) %>%
@@ -1325,7 +1355,7 @@ generate_new_kits <- TRUE
         Q19b[, c(5, 9, 13)] <- decimal_format(Q19b[, c(5, 9, 13)], 4)
       }
       
-      # Q20a
+      # Q20a Not Started ----
       {
         Q20a_detail <- recent_program_enrollment %>%
           keep_adults_only() %>%
@@ -1344,7 +1374,7 @@ generate_new_kits <- TRUE
         Q20a <- create_benefit_groups(recent_program_enrollment)
       }
       
-      # Q20b
+      # Q20b Not Started ----
       {
         Q20b_detail <- "See Q20a_detail.csv"
         for(period in entry_annual_exit) {
@@ -1400,7 +1430,7 @@ generate_new_kits <- TRUE
       }
       
       
-      # Q21
+      # Q21 Not Started ----
       {
         Q21_detail <- recent_program_enrollment %>%
           select(all_of(standard_detail_columns))
@@ -1476,7 +1506,7 @@ generate_new_kits <- TRUE
         Q21[is.na(Q21) & Q21$InsuranceType != "Annual assessment not required"] <- 0
       }
       
-      # Q22a1
+      # Q22a1 Not Started ----
       {
         # groups in specs include Data.Not.Collected, what does that mean in length of stay?
         # it's not defined in the reporting glossary
@@ -1506,7 +1536,7 @@ generate_new_kits <- TRUE
           ifnull(., 0)
       }
       
-      # Q22a2
+      # Q22a2 Not Started ----
       {
         Q22a2_detail <- Q22a1_detail
         
@@ -1534,7 +1564,7 @@ generate_new_kits <- TRUE
           ifnull(., 0)
       }
       
-      # Q22b
+      # Q22b Not Started ----
       {
         Q22b_detail <- "See Q22a1_detail.csv"
         
@@ -1552,7 +1582,7 @@ generate_new_kits <- TRUE
                             Stayers = median(days_enrolled[is.na(ExitDate)])))
       }
       
-      # Q22c
+      # Q22c Not Started ----
       {
         Q22c_detail <- create_time_to_move_in(recent_program_enrollment)
         
@@ -1609,7 +1639,7 @@ generate_new_kits <- TRUE
                     by = colnames(exited_without_move_in_data))
       }
       
-      # Q22d
+      # Q22d Not Started ----
       {
         Q22d_detail <- "See Q22a2_detail.csv"
         
@@ -1622,7 +1652,7 @@ generate_new_kits <- TRUE
           ifnull(., 0) 
       }
       
-      #Q22e
+      #Q22e Not Started ----
       {
         Q22e_detail <- recent_program_enrollment %>%
           select(c("ProjectType", all_of(housing_program_detail_columns), "age",
@@ -1648,7 +1678,7 @@ generate_new_kits <- TRUE
                   filter(days_prior_to_housing %in% c("Not yet moved into housing", "Data.Not.Collected", "Total")))
       }
       
-      # Q23c
+      # Q23c Not Started ----
       {
         Q23c_detail <- recent_program_enrollment %>%
           filter(!is.na(ExitDate)) %>%
@@ -1661,7 +1691,7 @@ generate_new_kits <- TRUE
         Q23c[41, 2:6] <- as.list(decimal_format(as.numeric(Q23c[41, 2:6]), 4))
       }
       
-      # Q24
+      # Q24 Not Started ----
       {
         Q24_detail <- recent_program_enrollment %>%
           filter(!is.na(ExitDate) &
@@ -1738,7 +1768,7 @@ generate_new_kits <- TRUE
           ifnull(., 0)
         }
       
-      # Q25b
+      # Q25b Not Started ----
       {
         Q25b_detail <- recent_program_enrollment %>%
           select(all_of(standard_detail_columns)) %>%
@@ -1766,7 +1796,7 @@ generate_new_kits <- TRUE
           ifnull(., 0)
       }
       
-      # Q25c
+      # Q25c Not Started ----
       {
         Q25c_detail <- recent_veteran_enrollment %>%
           select(c(all_of(standard_detail_columns))) %>%
@@ -1779,7 +1809,7 @@ generate_new_kits <- TRUE
           select(-With.Only.Children)
       }
       
-      # Q25d
+      # Q25d Not Started ----
       {
         Q25d_detail <- Q11_detail %>%
           filter(PersonalID %in% recent_veteran_enrollment$PersonalID)
@@ -1790,7 +1820,7 @@ generate_new_kits <- TRUE
           filter(detailed_age_group %nin% detailed_age_group_list[1:3])
       }
       
-      # Q25e
+      # Q25e Not Started ----
       {
         Q25e_detail <- "See Q13a1.csv, Q13b1.csv, and Q13c1.csv respectively"
         Q25e.1.and.2 <- recent_veteran_enrollment %>%
@@ -1822,7 +1852,7 @@ generate_new_kits <- TRUE
           ifnull(0)
       }
       
-      # Q25f
+      # Q25f Not Started ----
       # Q26f specifies that rows 11 and 12 are excluded intentionally, Q25f does
       # not specify this but it also does not show these rows in the table
       {
@@ -1834,7 +1864,7 @@ generate_new_kits <- TRUE
           adorn_totals("row")
       }
       
-      # Q25g
+      # Q25g Not Started ----
       {
         Q25g_detail <- Q17_detail %>%
           filter(new_veteran_status == 1)
@@ -1843,7 +1873,7 @@ generate_new_kits <- TRUE
           create_income_sources(.)
       }
       
-      # Q25h
+      # Q25h Not Started ----
       {
         Q25h_detail <- Q20a_detail %>%
           filter(new_veteran_status == 1)
@@ -1851,7 +1881,7 @@ generate_new_kits <- TRUE
         Q25h <- create_benefit_groups(recent_veteran_enrollment)
       }
       
-      # Q25i
+      # Q25i Not Started ----
       {
         Q25i_detail <- Q23c_detail %>%
           filter(new_veteran_status == 1)
@@ -1869,7 +1899,7 @@ generate_new_kits <- TRUE
       recent_chronic_enrollment <- recent_program_enrollment %>%
         filter(chronic == "Y")
       
-      # Q26a
+      # Q26a Not Started ----
       {
         Q26b_detail <- recent_program_enrollment %>%
           mutate(category = case_when(
@@ -1887,7 +1917,7 @@ generate_new_kits <- TRUE
           ifnull(., 0)
         }
       
-      # Q26b
+      # Q26b Not Started ----
       {
         Q26b <- Q26b_detail %>%
           return_household_groups(., category, chronic_categories) %>%
@@ -1895,7 +1925,7 @@ generate_new_kits <- TRUE
           ifnull(., 0)
       }
       
-      # Q26c
+      # Q26c Not Started ----
       {
         Q26c_detail <- recent_chronic_enrollment %>%
           select(c(all_of(standard_detail_columns))) %>%
@@ -1907,7 +1937,7 @@ generate_new_kits <- TRUE
           create_gender_groups(.)
       }
       
-      # Q26d
+      # Q26d Not Started ----
       {
         Q26d_detail <- Q11_detail %>%
           filter(PersonalID %in% recent_chronic_enrollment$PersonalID)
@@ -1916,7 +1946,7 @@ generate_new_kits <- TRUE
           create_age_groups(., chronic = TRUE) 
       }
       
-      # Q26e
+      # Q26e Not Started ----
       {
         Q26e_detail <- "See Q13a1.csv, Q13b1.csv, and Q13c1.csv respectively"
         Q26e.1.and.2 <- recent_chronic_enrollment %>%
@@ -1948,7 +1978,7 @@ generate_new_kits <- TRUE
           ifnull(0)
       }
       
-      # Q26f
+      # Q26f Not Started ----
       {
         Q26f_detail <- Q16_detail %>%
           filter(chronic == "Y")
@@ -1959,7 +1989,7 @@ generate_new_kits <- TRUE
           adorn_totals("row")
       }
       
-      # Q26g
+      # Q26g Not Started ----
       {
         Q26g_detail <- Q17_detail %>%
           filter(chronic == "Y")
@@ -1969,7 +1999,7 @@ generate_new_kits <- TRUE
           create_income_sources(.)
       }
       
-      # Q26h
+      # Q26h Not Started ----
       {
         Q26h_detail <- Q20a_detail %>%
           filter(chronic == "Y") 
@@ -1985,7 +2015,7 @@ generate_new_kits <- TRUE
       recent_youth_enrollment <- recent_program_enrollment %>%
         filter(youth == 1)
       
-      # Q27a
+      # Q27a Not Started ----
       {
         Q27a_detail <- Q11_detail %>%
           filter(PersonalID %in% recent_youth_enrollment$PersonalID) 
@@ -1995,7 +2025,7 @@ generate_new_kits <- TRUE
           filter(detailed_age_group %nin% detailed_age_group_list[c(1:2, 5:9)])
         }
       
-      # Q27b
+      # Q27b Not Started ----
       {
         Q27b_headers <- as.data.frame(c("Parent youth < 18", "Parent youth 18 to 24"))  %>%
           `colnames<-`(c("household_type"))
@@ -2028,7 +2058,7 @@ generate_new_kits <- TRUE
           ifnull(., 0)
       }
       
-      # Q27c
+      # Q27c Not Started ----
       {
         Q27c_detail <- recent_youth_enrollment %>%
           select(c(all_of(standard_detail_columns))) %>%
@@ -2040,7 +2070,7 @@ generate_new_kits <- TRUE
           create_gender_groups(.)
       }
       
-      # Q27d
+      # Q27d Not Started ----
       {
         Q27d_detail <- Q15_detail %>%
           filter(PersonalID %in% recent_youth_enrollment$PersonalID &
@@ -2050,7 +2080,7 @@ generate_new_kits <- TRUE
           create_prior_residence_groups(.)
       }
       
-      # Q27e
+      # Q27e Not Started ----
       {
         Q27e_detail <- create_lot_table(recent_youth_enrollment)  
         
@@ -2078,7 +2108,7 @@ generate_new_kits <- TRUE
           ifnull(., 0)
       }
       
-      # Q27f
+      # Q27f Not Started ----
       {
         Q27f_detail <- Q23c_detail %>%
           filter(youth == 1)
@@ -2089,7 +2119,7 @@ generate_new_kits <- TRUE
         Q27f[45, 2:6] <- as.list(decimal_format(as.numeric(Q27f[45, 2:6]), 4))
       }
       
-      # Q27g
+      # Q27g Not Started ----
       # label for A17 specifies adults like the other uses of this logic, but
       # this question is unique in that it includes HoHs who are minors
       {
@@ -2101,7 +2131,7 @@ generate_new_kits <- TRUE
           create_income_sources(.)
       }
       
-      # Q27h
+      # Q27h Not Started ----
       {
         Q27h_detail <- Q16_detail %>%
           filter(youth == 1)
@@ -2126,7 +2156,7 @@ generate_new_kits <- TRUE
                      income_information_present(recent_youth_enrollment)[2:4]))
       }
       
-      # Q27i
+      # Q27i Not Started ----
       {
         Q27i_detail <- Q19b_detail %>%
           filter(PersonalID %in% recent_youth_enrollment$PersonalID)
@@ -2137,7 +2167,7 @@ generate_new_kits <- TRUE
         Q27i[, c(5, 9, 13, 17)] <- decimal_format(Q27i[, c(5, 9, 13, 17)], 4)
       }
       
-      # Q27j
+      # Q27j Not Started ----
       {
         Q27j_detail <- "See Q27e_detail.csv"
         Q27j <- Q27e_detail %>%
@@ -2154,7 +2184,7 @@ generate_new_kits <- TRUE
                             Stayers = median(days_enrolled[is.na(ExitDate)])))
       }
       
-      # Q27k
+      # Q27k Not Started ----
       {
         Q27k_detail <- create_time_to_move_in(recent_youth_enrollment)
         
@@ -2212,7 +2242,7 @@ generate_new_kits <- TRUE
                     by = colnames(exited_without_move_in_data))
       }
       
-      # Q27l
+      # Q27l Not Started ----
       {
         Q27l_detail <- recent_youth_enrollment %>%
           select(c("ProjectType", all_of(housing_program_detail_columns), "age",

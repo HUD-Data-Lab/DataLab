@@ -173,7 +173,7 @@ condition_count_groups <- function(enrollments_and_conditions) {
       case_when(
         DisablingCondition == 0 ~ "None",
         DisablingCondition == 1 ~ "Unknown",
-        DisablingCondition %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+        DisablingCondition %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
         TRUE ~ "Data.Not.Collected"),
       case_when(
         disability_count == 1 ~ "One Condition",
@@ -217,7 +217,7 @@ determine_total_income <- function(enrollments_and_income, annual = FALSE) {
                                                        IncomeFromAnySource == 1)) ~ 0),
            total_income_group = case_when(
              is.na(calculated_total_income) ~ if_else(
-               IncomeFromAnySource %in% c(8, 9), "Client.Does.Not.Know.or.Refused", "Data.Not.Collected"),
+               IncomeFromAnySource %in% c(8, 9), "Client.Does.Not.Know.or.Prefers.Not.to.Answer", "Data.Not.Collected"),
              calculated_total_income == 0 ~ "No Income",
              calculated_total_income <= 150 ~ "$1 - $150",
              calculated_total_income <= 250 ~ "$151 - $250",
@@ -605,14 +605,14 @@ create_age_groups <- function(filtered_recent_program_enrollment,
     detailed_age_group_list <- c("0 - 17", detailed_age_group_list[4:11])
     
     filtered_recent_program_enrollment <- filtered_recent_program_enrollment %>%
-      mutate(detailed_age_group = case_when(
-        detailed_age_group %nin% detailed_age_group_list ~ "0 - 17",
-        TRUE ~ detailed_age_group
+      mutate(Q11_detailed_age_group = case_when(
+        Q11_detailed_age_group %nin% detailed_age_group_list ~ "0 - 17",
+        TRUE ~ Q11_detailed_age_group
       ))
   }
   
   filtered_recent_program_enrollment %>%
-    return_household_groups(., detailed_age_group, detailed_age_group_list) %>%
+    return_household_groups(., Q11_detailed_age_group, detailed_age_group_list) %>%
     adorn_totals("row")
 }
 
@@ -678,7 +678,7 @@ create_destination_groups <- function(included_enrollments) {
                !is.na(LocationDescription) &
                Destination) %>%
       mutate(LocationDescription = case_when(
-        Location %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+        Location %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
         Location %in% c(30, 99) ~ "Data.Not.Collected",
         TRUE ~ LocationDescription))
     
@@ -754,7 +754,7 @@ create_prior_residence_groups <- function(included_enrollments) {
                Location != 9) %>%
       arrange(APR_LocationOrder) %>%
       mutate(LocationDescription = case_when(
-        Location == 8 ~ "Client.Does.Not.Know.or.Refused",
+        Location == 8 ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
         TRUE ~ LocationDescription))
     
     group_of_residences <- included_enrollments %>%
@@ -934,7 +934,7 @@ create_contact_table <- function(filtered_enrollments, first_CLS_group,
                                                                              na.rm = TRUE),
               First.contact.Worker.unable.to.determine = n_distinct(PersonalID[CLS_group == "Unknown"], 
                                                                     na.rm = TRUE)) %>%
-    adorn_totals("row")
+    adorn_totals("row") #
   
   as.data.frame(contact_groups) %>%
     `colnames<-`(c("ContactGroup")) %>% 
@@ -960,7 +960,7 @@ create_summary_table <- function(filtered_enrollments, column_name) {
     summarise(Total.number.of.persons.served = n_distinct(PersonalID, na.rm = TRUE),
               Number.of.adults.age.18.or.over = uniqueN(na.omit(PersonalID[age_group == "Adults"])),
               Number.of.children.under.age.18 = uniqueN(na.omit(PersonalID[age_group == "Children"])),
-              Number.of.persons.with.unknown.age = uniqueN(na.omit(PersonalID[age_group %in% c("Client.Doesn't.Know.Prefers.Not.to.Answer", "Data.Not.Collected")])), #Removed refused and entered prefers not to answer
+              Number.of.persons.with.unknown.age = uniqueN(na.omit(PersonalID[age_group %in% c("Client.Does.Not.Know.or.Prefers.Not.to.Answer", "Data.Not.Collected")])), #Removed refused and entered prefers not to answer
               Number.of.leavers = uniqueN(na.omit(PersonalID[!is.na(ExitDate)])),
               Number.of.adult.leavers = uniqueN(na.omit(PersonalID[age_group == "Adults" &
                                                              !is.na(ExitDate)])),
@@ -1036,7 +1036,7 @@ set_hud_format <- function(data_for_csv) {
                TRUE ~ get(first_col_name)))
   
   new_header <- names(data_for_csv)[2:length(data_for_csv)]
-  new_header[new_header == "Client.Does.Not.Know.or.Refused"] <- "Client Doesn't Know/Refused" # Flagging this for follow-up: FY2024 removed refused ----
+  new_header[new_header == "Client.Does.Not.Know.or.Prefers.Not.to.Answer"] <- "Client Doesn't Know/Refused" # Flagging this for follow-up: FY2024 removed refused ----
   
   data_for_csv %>%
     `colnames<-`(c("", gsub(".", " ", new_header, fixed = TRUE)))
@@ -1204,8 +1204,20 @@ add_client_info <- function(filtered_enrollments) { #Create function to add clie
                                           age <= 61 ~ "55-61",
                                           age >= 62 ~ "62+",
                                           !is.na(DOBDataQuality) &
-                                            DOBDataQuality %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+                                            DOBDataQuality %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
                                           TRUE ~ "Data.Not.Collected"), 
+           Q11_detailed_age_group = case_when(age < 5 ~ "Under 5", # Age category for Q11 is different from Q10. Created a seperate category list to reflect this change
+                                              age <= 12 ~ "5-12",
+                                              age <= 17 ~ "13-17",
+                                              age <= 24 ~ "18-24",
+                                              age <= 34 ~ "25-34",
+                                              age <= 44 ~ "35-44",
+                                              age <= 54 ~ "45-54",
+                                              age <= 64 ~ "55-64",
+                                              age >= 65 ~ "65+",
+                                              !is.na(DOBDataQuality) &
+                                                DOBDataQuality %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
+                                              TRUE ~ "Data.Not.Collected"),
            age_group = case_when(age >= 18 ~ "Adults",
                                  age < 18 ~ "Children",
                                  TRUE ~ detailed_age_group), #What does TRUE do?
@@ -1224,7 +1236,7 @@ add_client_info <- function(filtered_enrollments) { #Create function to add clie
                      1, 0))) %>%
     ungroup() %>%
     filter(EnrollmentID %in% filtered_enrollments$EnrollmentID) %>%
-    select(PersonalID, age, age_group, detailed_age_group, VeteranStatus, 
+    select(PersonalID, age, age_group, detailed_age_group,Q11_detailed_age_group, VeteranStatus, 
            youth_household, youth, has_children, new_veteran_status
            # ,
            # Woman, Man, NonBinary, CulturallySpecific, Transgender, 
@@ -1295,7 +1307,7 @@ get_household_info <- function(filtered_enrollments,
     group_by(HouseholdID) %>%
     mutate(adults = max(if_else(age_group == "Adults", 1, 0)),
            children = max(if_else(age_group == "Children", 1, 0)),
-           unknown = max(if_else(age_group %in% c("Client.Does.Not.Know.or.Refused", "Data.Not.Collected"), 1, 0)),
+           unknown = max(if_else(age_group %in% c("Client.Does.Not.Know.or.Prefers.Not.to.Answer", "Data.Not.Collected"), 1, 0)),
            HoH_HMID = ifnull(suppressWarnings(min(case_when(
              RelationshipToHoH == 1 &
                ProjectType %in% c(3, 13) ~ MoveInDate
@@ -1329,14 +1341,14 @@ get_household_info <- function(filtered_enrollments,
 
 
 # create first DQ table in glossary
-create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Client.Does.Not.Know.or.Refused to Client.Doesn't.Know.Prefers.Not.to.Answer
+create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Client.Does.Not.Know.or.Prefers.Not.to.Answer to Client.Does.Not.Know.or.Prefers.Not.to.Answer
   DQ1_data <- filtered_enrollments %>%
     inner_join(Client %>%
                  select(-ExportID), by = "PersonalID")
   
   DQ1_name <- DQ1_data %>%
     mutate(dq_flag = case_when(
-      NameDataQuality %in% c(8, 9) ~ "Client.Doesn't.Know.Prefers.Not.to.Answer", # Changed from Client.Does.Not.Know.or.Refused
+      NameDataQuality %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer", # Changed from Client.Does.Not.Know.or.Prefers.Not.to.Answer
       NameDataQuality == 99 |
         is.na(FirstName) |
         is.na(LastName) ~ "Information Missing",
@@ -1347,7 +1359,7 @@ create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Cl
   DQ1_ssn <- DQ1_data %>%
     mutate(sequential = lapply(SSN, sequential_ssn),
            dq_flag = case_when(
-             SSNDataQuality %in% c(8, 9) ~ "Client.Doesn't.Know.Prefers.Not.to.Answer", # changed from Client.Does.Not.Know.or.Refused
+             SSNDataQuality %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer", # changed from Client.Does.Not.Know.or.Prefers.Not.to.Answer
              SSNDataQuality == 99 |
                #  below is what the data standards currently say
                # is.na(SSNDataQuality) ~ "Information.Missing",
@@ -1372,7 +1384,7 @@ create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Cl
   DQ1_dob <- DQ1_data %>%
     mutate(dq_flag = case_when(
       DOBDataQuality %in% c(8, 9) &
-        is.na(DOB) ~ "Client.Doesn't.Know.Prefers.Not.to.Answer",
+        is.na(DOB) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
       is.na(DOBDataQuality) |
         (DOBDataQuality == 99 &
            is.na(DOB)) ~ "Information.Missing",
@@ -1390,7 +1402,7 @@ create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Cl
   
   DQ1_race <- DQ1_data %>%
     mutate(dq_flag = case_when(
-      RaceNone %in% c(8, 9) ~ "Client.Doesn't.Know.Prefers.Not.to.Answer",
+      RaceNone %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
       RaceNone == 99 |
         (AmIndAKNative == 0 &
            Asian == 0 &
@@ -1406,7 +1418,7 @@ create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Cl
   
   DQ1_gender <- DQ1_data %>%
     mutate(dq_flag = case_when(
-      GenderNone %in% c(8, 9) ~ "Client.Doesn't.Know.Prefers.Not.to.Answer",
+      GenderNone %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
       GenderNone == 99 |
         (Woman == 0 &
            Man == 0 &
@@ -1421,7 +1433,7 @@ create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Cl
            Questioning, DifferentIdentity, DifferentIdentityText, GenderNone, 
            dq_flag)
   
-  columns <- c("DataElement", "Client.Doesn't.Know.Prefers.Not.to.Answer", 
+  columns <- c("DataElement", "Client.Does.Not.Know.or.Prefers.Not.to.Answer", 
                "Information.Missing", "Data.Issues", "OK")
   
   DQ1 <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), columns) %>%
@@ -1470,19 +1482,19 @@ create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Cl
   
   DQ1 <- DQ1 %>%
     select(-OK) %>%
-    mutate("Client.Doesn't.Know.Prefers.Not.to.Answer" = if_else(is.na(`Client.Doesn't.Know.Prefers.Not.to.Answer`), 
-                                                     0, as.double(`Client.Doesn't.Know.Prefers.Not.to.Answer`)),
+    mutate("Client.Does.Not.Know.or.Prefers.Not.to.Answer" = if_else(is.na(`Client.Does.Not.Know.or.Prefers.Not.to.Answer`), 
+                                                     0, as.double(`Client.Does.Not.Know.or.Prefers.Not.to.Answer`)),
            Information.Missing = if_else(is.na(Information.Missing), 
                                          0, as.double(Information.Missing)),
            Data.Issues = if_else(is.na(Data.Issues), 
                                  0, as.double(Data.Issues)),
-           Total = `Client.Doesn't.Know.Prefers.Not.to.Answer` + Information.Missing + Data.Issues) %>%
+           Total = `Client.Does.Not.Know.or.Prefers.Not.to.Answer` + Information.Missing + Data.Issues) %>%
     add_row(DataElement = "Overall Score", 
-            `Client.Doesn't.Know.Prefers.Not.to.Answer` = 0, Information.Missing = 0, Data.Issues = 0, 
+            `Client.Does.Not.Know.or.Prefers.Not.to.Answer` = 0, Information.Missing = 0, Data.Issues = 0, 
             Total = nrow(unique(error_clients))) %>%
     mutate("% of Issue Rate" = decimal_format(Total / Q5a$Count.of.Clients.for.DQ[1], 4)) #changed from ErrorRate to"% of Issue Rate"
   
-  DQ1[DQ1$DataElement == "Overall Score", c("Client.Doesn't.Know.Prefers.Not.to.Answer",
+  DQ1[DQ1$DataElement == "Overall Score", c("Client.Does.Not.Know.or.Prefers.Not.to.Answer",
                                             "Information.Missing")] <- NA
   DQ1$Data.Issues[4:6] <- NA
   
@@ -1507,8 +1519,10 @@ households_served_table <- function(filtered_enrollments) {
   
   hh_served_moved_in <- hh_served_detail %>%
     filter(count_as_move_in_household) %>% 
-    mutate(client_group = "Moved In Households") %>%
-    return_household_groups(., client_group, "Moved In Households") 
+    mutate(client_group = "For PSH & RRH – the total households 
+served who moved into housing") %>%
+    return_household_groups(., client_group, "For PSH & RRH – the total households 
+served who moved into housing") 
   
   hh_served <- hh_served_all %>%
     union(hh_served_moved_in)
