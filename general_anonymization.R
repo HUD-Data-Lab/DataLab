@@ -397,15 +397,15 @@ CurrentLivingSituation <- CurrentLivingSituation %>%
   mutate(VerifiedBy = ProjectName) %>%
     select(-ProjectName)
 
-# write to zipped folder
-{
-  for (file in names(hmis_csvs)) {
-    write.csv(get(file), file.path(paste0("created_files/", file, ".csv")), 
-              row.names=FALSE, na="")
-  }
-  
-  archive_write_dir(paste0("DataLab - All Hashed CSVs.zip"),
-                    paste0(getwd(), "/created_files"))
-  
-  unlink(paste0(getwd(), "/created_files/*"))
-}
+# # write to zipped folder
+# {
+#   for (file in names(hmis_csvs)) {
+#     write.csv(get(file), file.path(paste0("created_files/", file, ".csv")), 
+#               row.names=FALSE, na="")
+#   }
+#   
+#   archive_write_dir(paste0("DataLab - All Hashed CSVs.zip"),
+#                     paste0(getwd(), "/created_files"))
+#   
+#   unlink(paste0(getwd(), "/created_files/*"))
+# }

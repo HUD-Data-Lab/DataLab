@@ -2,25 +2,85 @@ library(ivs)
 
 negate_lot_blocks <- function(enrollment_table,
                               projects_to_keep,
-                              # need to write this in
-                              include_3.917 = FALSE,
-                              projects_to_remove) {
+                              projects_to_remove,
+                              include_3.917 = FALSE) {
   
-  enrollments_to_check <- enrollment_table
-  
-  keep_ranges <- enrollments_to_check %>%
+  enrollments_to_keep <- enrollment_table %>%
     filter(ProjectType %in% projects_to_keep &
-             EntryDate < ExitDateAdj) %>%
-    mutate(range = iv(EntryDate, ExitDateAdj))
+             (ProjectType %nin% c(3, 9, 10, 13) |
+                (lh_at_entry &
+                   ((EntryDate >= report_start_date &
+                       EntryDate <= report_end_date) |
+                      (MoveInDateAdj > report_start_date &
+                         MoveInDateAdj <= report_end_date &
+                         !is.na(MoveInDateAdj)) |
+                      (is.na(MoveInDateAdj) &
+                         !is.na(ExitDate) &
+                         ExitDate >= report_start_date &
+                         ExitDate <= report_end_date)))))
   
-  delete_ranges <- enrollments_to_check %>%
+  keep_ranges <- enrollments_to_keep %>%
+    filter(
+      EntryDate < ExitDateAdj &
+      ##  QA this pair of conditions--if someone exits on the report start date,
+      ##  then by definition wouldn't they have no bed night in the report range?
+      ##  and following that up, what if they immediately re-enrolled? in that 
+      ##  case I guess we'd definitely want to keep this, because it would be 
+      ##  contiguous with another stay
+      (ExitDateAdj > report_start_date |
+         !is.na(original_enrollment_id)) &
+        (EntryDate < MoveInDateAdj |
+           is.na(MoveInDateAdj))) %>%
+    mutate(range = iv(EntryDate, 
+                      case_when(
+                        is.na(MoveInDateAdj) ~ ExitDateAdj,
+                        TRUE ~ MoveInDateAdj))) %>%
+    select(PersonalID, range)
+  
+  if(include_3.917) {
+    
+    stays <- enrollments_to_keep %>%
+      filter(ProjectType == 1) %>%
+      group_by(original_enrollment_id) %>%
+      summarise(end_prior = min(EntryDate)) %>%
+      ungroup() %>%
+      inner_join(active_enrollments %>%
+                   select(PersonalID, EnrollmentID, DateToStreetESSH),
+                 by = c("original_enrollment_id" = "EnrollmentID")) %>%
+      filter(!is.na(DateToStreetESSH) &
+               DateToStreetESSH < end_prior &
+               end_prior >= lookback_stop_date) %>%
+      mutate(range = iv(DateToStreetESSH, 
+                        end_prior)) %>%
+      select(PersonalID, range)
+    
+    enrollments <- enrollments_to_keep %>%
+      filter(ProjectType != 1 &
+               lh_at_entry &
+               EntryDate >= lookback_stop_date &
+               !is.na(DateToStreetESSH) &
+               DateToStreetESSH < EntryDate) %>%
+      mutate(range = iv(DateToStreetESSH, 
+                        EntryDate)) %>%
+      select(PersonalID, range)
+    
+    keep_ranges <- keep_ranges %>%
+      full_join(stays,
+                by = colnames(keep_ranges)) %>%
+      full_join(enrollments,
+                by = colnames(keep_ranges))
+    
+  }
+  
+  delete_ranges <- enrollment_table %>%
     filter(ProjectType %in% projects_to_remove &
              EntryDate < ExitDateAdj &
-             (EntryDate < MoveInDateAdj |
-                ProjectType %nin% c(3, 9, 10, 13))) %>%
-    mutate(range = iv(EntryDate, 
-                      case_when(ProjectType %in% c(3, 9, 10, 13) ~ MoveInDateAdj,
-                                TRUE ~ ExitDateAdj)))
+             (ProjectType %nin% c(3, 9, 10, 13) |
+                (EntryDate <= MoveInDateAdj &
+                   MoveInDateAdj < ExitDateAdj))) %>%
+    mutate(range = iv(case_when(ProjectType %in% c(3, 9, 10, 13) ~ MoveInDateAdj,
+                                TRUE ~ EntryDate), 
+                      ExitDateAdj))
   
   for (client in unique(keep_ranges$PersonalID)) {
     
@@ -44,7 +104,7 @@ negate_lot_blocks <- function(enrollment_table,
   kept_ranges_for_clients
 }
 
-keep_within_start_and_end_dates <- function(date_table) {
+make_spm1_dq_table <- function(date_table) {
   
   client_start_dates <- date_table %>%
     group_by(PersonalID) %>%
@@ -56,18 +116,21 @@ keep_within_start_and_end_dates <- function(date_table) {
              client_end_date - days(365) > DOB |
                is.na(DOB) ~ client_end_date - days(365),
              TRUE ~ DOB)) %>%
+    filter(report_start_date < client_end_date) %>%
     ungroup() %>%
     select(PersonalID, client_start_date, client_end_date) %>%
-    mutate(range = iv(client_start_date, client_end_date)) %>%
     distinct() 
   
-  date_table <- date_table %>%
+  client_start_dates_range <- client_start_dates %>%
+    mutate(range = iv(client_start_date, client_end_date))
+  
+  range_date_table <- date_table %>%
     mutate(range = iv(start_date, end_date))
   
-  for (client in unique(client_start_dates$PersonalID)) {
+  for (client in unique(client_start_dates_range$PersonalID)) {
     
-    valid_date_range <- client_start_dates$range[client_start_dates$PersonalID == client]
-    time_experiencing_homelessness <- date_table$range[date_table$PersonalID == client]
+    valid_date_range <- client_start_dates_range$range[client_start_dates_range$PersonalID == client]
+    time_experiencing_homelessness <- range_date_table$range[range_date_table$PersonalID == client]
     
     overlap <- iv_locate_overlaps(time_experiencing_homelessness,
                                   valid_date_range,
@@ -91,103 +154,106 @@ keep_within_start_and_end_dates <- function(date_table) {
         union(date_ranges)
     }
   }
-  valid_ranges_for_clients
+  
+  valid_ranges_for_clients %>%
+    mutate(days = interval(ymd(start_date),
+                           ymd(end_date)) %/% days(1)) %>%
+    group_by(PersonalID) %>%
+    summarise(days = sum(days)) %>%
+    ungroup() %>%
+    left_join(client_start_dates %>%
+                left_join(Client %>%
+                            select(PersonalID, DOB),
+                          by = "PersonalID") %>%
+                mutate(client_end_date = client_end_date %m-% days(1),
+                       client_start_date = case_when(
+                         client_start_date == DOB &
+                           !is.na(DOB) ~ client_start_date,
+                         TRUE ~ client_start_date %m-% days(1))) %>%
+                select(-DOB),
+              by = "PersonalID") %>%
+    distinct()
 }
 
-propagate_3.917 <- enrollment_data %>%
-  filter(RelationshipToHoH == 1 &
-           lh_at_entry &
-           !is.na(DateToStreetESSH)) %>%
-  group_by(HouseholdID) %>%
-  slice(1L) %>%
-  ungroup() %>%
-  select(HouseholdID, DateToStreetESSH) %>%
-  rename(HoH_DateToStreetESSH = DateToStreetESSH)
+
 
 spm_1_enrollments <- active_enrollments %>%
   filter(Method5 &
            ProjectType != 1) %>%
-  full_join(bed_nights_ee_format,
-            by = colnames(bed_nights_ee_format)) %>%
-  full_join(propagate_3.917, 
-            by = "HouseholdID") %>%
-  mutate(
-    ExitDateAdj = case_when(
-      ProjectType == 1 ~ ExitDate %m+% days(1),
-      is.na(ExitDate) | ExitDate > report_end_date ~ report_end_date %m+% days(1), 
-      TRUE ~ ExitDate),
-    DateToStreetESSH = case_when(
-      !is.na(age) & 
-        is.na(DateToStreetESSH) &
-        age < 18 ~ HoH_DateToStreetESSH,
-      TRUE ~ DateToStreetESSH),
-    DateToStreetESSH = case_when(
-      !is.na(DateToStreetESSH) &
-        DateToStreetESSH < DOB ~ DOB,
-      TRUE ~ DateToStreetESSH
-    )) 
+  full_join(bed_nights_ee_format %>%
+              filter(original_enrollment_id %in% active_enrollments$EnrollmentID),
+            by = colnames(bed_nights_ee_format)[1:6]) %>%
+  mutate(ExitDateAdj = case_when(
+    is.na(ExitDate) | ExitDate > report_end_date ~ report_end_date %m+% days(1), 
+    ProjectType == 1 ~ ExitDate %m+% days(1),
+    TRUE ~ ExitDate)) 
 
-spm_1a1_table <- spm_1_enrollments %>%
-  negate_lot_blocks(.,
-                    projects_to_keep = c(0, 1, 8),
-                    projects_to_remove = c(3, 9, 10, 13)) %>%
-  keep_within_start_and_end_dates(.)
-
-test_counts <- spm_1a1_table %>%
-  mutate(days = interval(ymd(start_date),ymd(end_date))  %/% days(1)) %>%
-  group_by(PersonalID) %>%
-  summarise(days = sum(days)) %>%
-  ungroup() %>%
-  summarise(clients = n(),
-            average_lot = mean(days),
-            median_lot = median(days))
-
-dq_check <- spm_1a1_table %>%
-  mutate(days = interval(ymd(start_date),ymd(end_date))  %/% days(1)) %>%
-  group_by(PersonalID) %>%
-  summarise(days = sum(days)) %>%
-  ungroup() %>%
-  left_join(spm_1_enrollments %>%
-              negate_lot_blocks(.,
-                                projects_to_keep = c(0, 1, 8),
-                                projects_to_remove = c(3, 9, 10, 13))  %>%
-              group_by(PersonalID) %>%
-              left_join(Client %>%
-                          select(PersonalID, DOB),
-                        by = "PersonalID") %>%
-              mutate(client_end_date = max(end_date),
-                     client_start_date = case_when(
-                       client_end_date - days(365) > DOB |
-                         is.na(DOB) ~ client_end_date - days(365),
-                       TRUE ~ DOB)) %>%
-              ungroup() %>%
-              select(PersonalID, client_start_date, client_end_date),
-            by = "PersonalID") %>%
-  distinct()
-
-client_start_dates <- test %>%
-  group_by(PersonalID) %>%
-  mutate(client_end_date = max(end_date),
-         client_start_date = client_end_date - days(365)) %>%
-  ungroup() %>%
-  select(PersonalID, client_end_date, client_start_date) %>%
-  distinct() 
-
-checking <- keep_ranges %>%
-  group_by(PersonalID) %>%
-  summarise(enrollments = n()) %>%
-  full_join(kept_ranges_for_clients %>%
-              group_by(PersonalID) %>%
-              summarise(blocks = n()),
-            by = "PersonalID") %>%
-  full_join(delete_ranges %>%
-              group_by(PersonalID) %>%
-              summarise(delete_blocks = n()),
-            by = "PersonalID") %>%
-  filter(enrollments != blocks)
-
+# SPM 1a1
 {
-  View(enrollments_to_check %>% 
-         select(PersonalID, EnrollmentID, ProjectID, EntryDate, ExitDate, ExitDateAdj, ProjectType))
+  spm_1a1_dq <- spm_1_enrollments %>%
+    negate_lot_blocks(.,
+                      projects_to_keep = c(0, 1, 8),
+                      projects_to_remove = c(2, 3, 9, 10, 13)) %>%
+    make_spm1_dq_table(.)
+  
+  spm_1a1 <- spm_1a1_dq %>%
+    summarise(clients = n(),
+              average_lot = round(mean(days), 2),
+              median_lot = round(median(days), 2))
   }
 
+# SPM 1a2
+{
+  spm_1a2_dq <- spm_1_enrollments %>%
+    negate_lot_blocks(.,
+                      projects_to_keep = c(0, 1, 2, 8),
+                      projects_to_remove = c(3, 9, 10, 13)) %>%
+    make_spm1_dq_table(.)
+  
+  spm_1a2 <- spm_1a2_dq %>%
+    summarise(clients = n(),
+              average_lot = round(mean(days), 2),
+              median_lot = round(median(days), 2))
+}
+
+# SPM 1b1
+{
+  spm_1b1_dq <- spm_1_enrollments %>%
+    negate_lot_blocks(.,
+                      projects_to_keep = c(0, 1, 3, 8, 9, 10, 13),
+                      projects_to_remove = c(2, 3, 9, 10, 13),
+                      include_3.917 = TRUE) %>%
+    make_spm1_dq_table(.)
+  
+  spm_1b1 <- spm_1b1_dq %>%
+    summarise(clients = n(),
+              average_lot = round(mean(days), 2),
+              median_lot = round(median(days), 2))
+}
+
+# SPM 1b2
+{
+  spm_1b2_dq <- spm_1_enrollments %>%
+    negate_lot_blocks(.,
+                      projects_to_keep = c(0, 1, 2, 3, 8, 9, 10, 13),
+                      projects_to_remove = c(3, 9, 10, 13),
+                      include_3.917 = TRUE) %>%
+    make_spm1_dq_table(.)
+  
+  spm_1b2 <- spm_1b2_dq %>%
+    summarise(clients = n(),
+              average_lot = round(mean(days), 2),
+              median_lot = round(median(days), 2))
+}
+
+#######################
+
+
+
+
+
+
+##  for QA
+write.table(
+  spm_1b2_dq, 
+  "clipboard", sep="\t", row.names=FALSE)

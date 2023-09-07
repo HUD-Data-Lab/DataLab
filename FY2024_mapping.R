@@ -146,6 +146,7 @@ FY24_residence_types <- ResidenceUses %>%
         CurrentLivingSituation %in% subsidized_residences ~ CurrentLivingSituation),
       CurrentLivingSituation = if_else(!is.na(CLSSubsidyType),
                                        435, CurrentLivingSituation)) %>%
+    filter(!is.na(CurrentLivingSituation)) %>%
     select(all_of(currentlivingsituation_columns))
 }
 {
@@ -207,11 +208,11 @@ FY24_residence_types <- ResidenceUses %>%
       Destination = if_else(!is.na(DestinationSubsidyType),
                             435, Destination)) %>%
      #only required if loading in from DataLab.R
-    #rename(
-     #      DateCreated = exit_DateCreated,
-      #       #only required when source database has different capitalization
-       #    WorkplaceViolenceThreats = WorkPlaceViolenceThreats,
-        #   WorkplacePromiseDifference = WorkPlacePromiseDifference) %>%
+    rename(
+         # DateCreated = exit_DateCreated,
+          #only required when source database has different capitalization
+       WorkplaceViolenceThreats = WorkPlaceViolenceThreats,
+      WorkplacePromiseDifference = WorkPlacePromiseDifference) %>%
     select(all_of(exit_columns[exit_columns %nin% c("WorkPlaceViolenceThreats")]))
 }
 {
@@ -265,6 +266,7 @@ FY24_residence_types <- ResidenceUses %>%
 }
 {
   Assessment <- Assessment %>%
+    filter(!is.na(AssessmentLevel)) %>%
     select(all_of(assessment_columns))
 }
 {
@@ -281,17 +283,17 @@ FY24_residence_types <- ResidenceUses %>%
 }
 
 
-# write to zipped folder
-{
-  for (file in unique(CSV_columns$File)) {
-    write.csv(get(file), file.path(paste0("created_files/", file, ".csv")), 
-              row.names=FALSE, na="")
-  }
-  
-  archive_write_dir(paste0("DataLab - 2024 Zips.zip"),
-                    paste0(getwd(), "/created_files"))
-  
-  unlink(paste0(getwd(), "/created_files/*"))
-}
+# # write to zipped folder
+# {
+#   for (file in unique(CSV_columns$File)) {
+#     write.csv(get(file), file.path(paste0("created_files/", file, ".csv")), 
+#               row.names=FALSE, na="")
+#   }
+#   
+#   archive_write_dir(paste0("DataLab - 2024 Zips.zip"),
+#                     paste0(getwd(), "/created_files"))
+#   
+#   unlink(paste0(getwd(), "/created_files/*"))
+# }
 
 

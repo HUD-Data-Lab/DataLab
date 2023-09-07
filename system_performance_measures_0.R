@@ -12,6 +12,7 @@
 library(readxl)
 library(kableExtra) 
 library(eeptools) # Used for age calculation
+library(lubridate)
   # flagging that this package is very old--let's swap to lubridate function - GB
 
 # lookback_stop_date <- ymd("2014-10-1")
@@ -131,13 +132,26 @@ bed_nights_ee_format <- all_bed_nights %>%
   left_join(enrollment_data %>%
               select(EnrollmentID, ProjectID, ProjectType),
             by = "EnrollmentID") %>%
-  mutate(EnrollmentID = paste("S_", ServicesID),
+  mutate(original_enrollment_id = EnrollmentID,
+         EnrollmentID = paste("S_", ServicesID),
          EntryDate = DateProvided,
          ExitDate = DateProvided) %>%
   select(EnrollmentID, PersonalID, EntryDate, ExitDate,
-         ProjectID, ProjectType)
+         ProjectID, ProjectType, original_enrollment_id)
+
+propagate_3.917 <- enrollment_data %>%
+  filter(RelationshipToHoH == 1 &
+           lh_at_entry &
+           !is.na(DateToStreetESSH)) %>%
+  group_by(HouseholdID) %>%
+  slice(1L) %>%
+  ungroup() %>%
+  select(HouseholdID, DateToStreetESSH) %>%
+  rename(HoH_DateToStreetESSH = DateToStreetESSH)
 
 active_enrollments <- enrollment_data %>%
+  left_join(propagate_3.917, 
+            by = "HouseholdID") %>%
   mutate(
     Method1 = EntryDate <= report_end_date &
       (is.na(ExitDate) |
@@ -152,7 +166,18 @@ active_enrollments <- enrollment_data %>%
     Method5 = Method1 &
       # don't need to check project type because that's done in `all_bed_nights`
       (EnrollmentID %in% bed_nights_in_report$EnrollmentID |
-         ProjectType %in% c(0, 2, 3, 8, 9, 10, 13)))
+         ProjectType %in% c(0, 2, 3, 8, 9, 10, 13)),
+    DateToStreetESSH = case_when(
+      !is.na(age) & 
+        is.na(DateToStreetESSH) &
+        age < 18 ~ HoH_DateToStreetESSH,
+      TRUE ~ DateToStreetESSH),
+    DateToStreetESSH = case_when(
+      !is.na(DateToStreetESSH) &
+        DateToStreetESSH < DOB ~ DOB,
+      TRUE ~ DateToStreetESSH
+    )) %>%
+  select(-HoH_DateToStreetESSH)
 
 items_to_keep <- c("items_to_keep", ls())
 
