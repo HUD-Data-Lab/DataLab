@@ -94,17 +94,14 @@ spm_2_dq <- spm_2_exits %>%
           days_to_return >= 366 ~ "366-730",
           days_to_return >= 181 ~ "181-365",
           days_to_return >= 0 ~ "0-180")),
-    spm_2_rows = factor(
-      paste0("Exit.was.from.",
+    spm_2_rows = paste0("Exit.was.from.",
              case_when(
                ProjectType %in% ph_program_types ~ "PH",
                ProjectType %in% c(0, 1) ~ "ES",
                ProjectType == 2 ~ "TH",
                ProjectType == 4 ~ "SO",
                ProjectType == 8 ~ "SH"
-             )),
-      ordered = TRUE,
-      levels = spm_2_rows))
+             )))
 
 spm_2 <- as.data.frame(spm_2_rows) %>%
   full_join(spm_2_dq %>%
