@@ -9,6 +9,9 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
+# items_to_keep <- c(items_to_keep,
+#                    do.call(paste0, expand.grid("spm_1", c("a", "b"), c("1", "2"), c("_dq", ""))))
+
 # 7. System Performance Performance Measure 7: Successful Placement from Street Outreach and Successful Placement in or Retention of Permanent Housing ----
 
 ## Metric 7a.1 ----  
@@ -262,3 +265,5 @@ df_7b.1_detail.slice %>%
 df_7b.2_client_detail %>% 
   select(PersonalID,EntryDate,ExitDate,ProjectType,Destination,Destination_category) %>%
   write_csv("7b2.Client.detail.csv")
+
+rm(list = ls()[ls() %nin% items_to_keep]) 

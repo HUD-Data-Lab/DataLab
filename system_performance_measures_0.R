@@ -11,9 +11,8 @@
 
 library(readxl)
 library(kableExtra) 
-library(eeptools) # Used for age calculation
-library(lubridate)
-  # flagging that this package is very old--let's swap to lubridate function - GB
+library(lubridate)    ## used anywhere we do date math
+library(ivs)          ## used in spm 1
 
 # lookback_stop_date <- ymd("2014-10-1")
 lookback_stop_date <- ymd("2012-10-1")
@@ -181,7 +180,11 @@ active_enrollments <- enrollment_data %>%
 
 items_to_keep <- c("items_to_keep", ls())
 
+#############################
+
 source(paste0(getwd(), "/System Performance Measures/system_performance_measures_1.R"))
+source(paste0(getwd(), "/System Performance Measures/system_performance_measures_2.R"))
+
 source(paste0(getwd(), "/System Performance Measures/system_performance_measures_3.R"))
 source(paste0(getwd(), "/System Performance Measures/system_performance_measures_5.R"))
 source(paste0(getwd(), "/System Performance Measures/system_performance_measures_7.R"))

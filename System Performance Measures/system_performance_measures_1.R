@@ -9,213 +9,253 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
-# 1. System Performance Measure 1: Length of Time Persons Remain Homeless ----
+items_to_keep <- c(items_to_keep,
+                   do.call(paste0, expand.grid("spm_1", c("a", "b"), c("1", "2"), c("_dq", ""))))
 
-#Create table to fill values in as we complete them.
-SPM.1a <- data.frame(
-  "Population" =c("Persons in ES-EE,ES-NbN, and SH","Persons in ES-EE, ES-NbN,SH,TH, and PH"),
-  "Previous.FY.Universe.(Persons)" = c(NA,NA),
-  "Current.FY.Universe.(Persons)" = c(NA,NA),
-  "Previous.FY.Average.LOT.Experiencing.Homelessness" = c(NA,NA),
-  "Current.FY.Average.LOT.Experiencing.Homelessness" = c(NA,NA),
-  "Difference" = c(NA,NA),
-  "Previous.FY.Median.LOT.Experiencing.Homelessness" = c(NA,NA),
-  "Current.FY.Median.LOT.Experiencing.Homelessness" = c(NA,NA),
-  "Difference2" = c(NA,NA)
-)
+negate_lot_blocks <- function(enrollment_table,
+                              projects_to_keep,
+                              projects_to_remove,
+                              include_3.917 = FALSE) {
+  
+  enrollments_to_keep <- enrollment_table %>%
+    filter(ProjectType %in% projects_to_keep &
+             (ProjectType %nin% c(3, 9, 10, 13) |
+                (lh_at_entry &
+                   ((EntryDate >= report_start_date &
+                       EntryDate <= report_end_date) |
+                      (MoveInDateAdj > report_start_date &
+                         MoveInDateAdj <= report_end_date &
+                         !is.na(MoveInDateAdj)) |
+                      (is.na(MoveInDateAdj) &
+                         !is.na(ExitDate) &
+                         ExitDate >= report_start_date &
+                         ExitDate <= report_end_date)))))
+  
+  keep_ranges <- enrollments_to_keep %>%
+    filter(
+      EntryDate < ExitDateAdj &
+      ##  QA this pair of conditions--if someone exits on the report start date,
+      ##  then by definition wouldn't they have no bed night in the report range?
+      ##  and following that up, what if they immediately re-enrolled? in that 
+      ##  case I guess we'd definitely want to keep this, because it would be 
+      ##  contiguous with another stay
+      (ExitDateAdj > report_start_date |
+         !is.na(original_enrollment_id)) &
+        (EntryDate < MoveInDateAdj |
+           is.na(MoveInDateAdj))) %>%
+    mutate(range = iv(EntryDate, 
+                      case_when(
+                        is.na(MoveInDateAdj) ~ ExitDateAdj,
+                        TRUE ~ MoveInDateAdj))) %>%
+    select(PersonalID, range)
+  
+  if(include_3.917) {
+    
+    stays <- enrollments_to_keep %>%
+      filter(ProjectType == 1) %>%
+      group_by(original_enrollment_id) %>%
+      summarise(end_prior = min(EntryDate)) %>%
+      ungroup() %>%
+      inner_join(active_enrollments %>%
+                   select(PersonalID, EnrollmentID, DateToStreetESSH),
+                 by = c("original_enrollment_id" = "EnrollmentID")) %>%
+      filter(!is.na(DateToStreetESSH) &
+               DateToStreetESSH < end_prior &
+               end_prior >= lookback_stop_date) %>%
+      mutate(range = iv(DateToStreetESSH, 
+                        end_prior)) %>%
+      select(PersonalID, range)
+    
+    enrollments <- enrollments_to_keep %>%
+      filter(ProjectType != 1 &
+               lh_at_entry &
+               EntryDate >= lookback_stop_date &
+               !is.na(DateToStreetESSH) &
+               DateToStreetESSH < EntryDate) %>%
+      mutate(range = iv(DateToStreetESSH, 
+                        EntryDate)) %>%
+      select(PersonalID, range)
+    
+    keep_ranges <- keep_ranges %>%
+      full_join(stays,
+                by = colnames(keep_ranges)) %>%
+      full_join(enrollments,
+                by = colnames(keep_ranges))
+    
+  }
+  
+  delete_ranges <- enrollment_table %>%
+    filter(ProjectType %in% projects_to_remove &
+             EntryDate < ExitDateAdj &
+             (ProjectType %nin% c(3, 9, 10, 13) |
+                (EntryDate <= MoveInDateAdj &
+                   MoveInDateAdj < ExitDateAdj))) %>%
+    mutate(range = iv(case_when(ProjectType %in% c(3, 9, 10, 13) ~ MoveInDateAdj,
+                                TRUE ~ EntryDate), 
+                      ExitDateAdj))
+  
+  for (client in unique(keep_ranges$PersonalID)) {
+    
+    hold <- iv_set_difference(keep_ranges$range[keep_ranges$PersonalID == client],
+                              delete_ranges$range[delete_ranges$PersonalID == client])
+    
+    date_ranges <- data.frame(
+      PersonalID = rep(client, length(as.vector(hold))),
+      keep_range = as.vector(hold)) %>%
+      mutate(start_date = iv_start(keep_range),
+             end_date = iv_end(keep_range)) %>%
+      select(-keep_range)
+    
+    if (client == unique(keep_ranges$PersonalID)[1]) {
+      kept_ranges_for_clients <- date_ranges
+    } else {
+      kept_ranges_for_clients <- kept_ranges_for_clients %>%
+        union(date_ranges)
+    }
+  }
+  kept_ranges_for_clients
+}
 
-view(SPM.1a) # view empty table
-
-# Measure 1a: Length of time Persons
-# Need Active Clients M5: 1+ Nights Active
-# Data needed: [Project Start date], [Report End Date], [Project Exit Date], [Report Start Date], [Project Type], [Date of bed night (TypeProvided == 200)]
-# ([Project Start Date] )
-
-###****
-
-df_entryExit <- Client %>% 
-  left_join(Enrollment, by = "PersonalID",keep = FALSE) %>% 
-  left_join(Exit, by = "EnrollmentID","PersonalID",keep = FALSE) %>% 
-  left_join(Project, by = "ProjectID",keep = FALSE)
-
-df_entryExit <- df_entryExit %>% 
-  rename(PersonalID = PersonalID.x)
-
-#Select active clients across all projects of relevant types in the CoC who have a Bednight in the report range. Use Method 5: Active Clients
-# NOTE: NbN only applies to Nbn. Use Service date to create Dummy enrollemnts to allow entrydate to be used consistently through
-
-df_NbN_srvcs <- Services %>% 
-  filter(RecordType == 200) %>% 
-  select(EnrollmentID,PersonalID,DateProvided) %>% 
-  mutate(Entrydate = DateProvided,
-         Exitdate = DateProvided)
-
-df_SPM.1.join <- Services %>% 
-  left_join(df_entryExit,by="EnrollmentID","PersonalID")
-
-
-df_SPM.1_base <- df_SPM.1.join %>% 
-  # Create a filter variable for Method 5 of Active Clients. Refer to HMIS Glossary for description
-  mutate(M5_EE_qual = 
-           EntryDate <= report_end_date &
-           (ExitDate >report_start_date | is.na(ExitDate)),
-         M5_bdnt_qual = ProjectType == 1 & 
-           TypeProvided == 200 & # I think this will leave out other project types in the dataset. May need to modify it to allow other project types
-           DateProvided >= report_start_date & 
-           DateProvided <= report_end_date & 
-           DateProvided >= EntryDate, 
-         M5_ptype_qual = ProjectType %in% c(0,2,3,8,9,10,13), #Use this to filter by clients that meet base qualifier under Method 5: Active Clients
-         M5.Active.Clients = 
-           M5_EE_qual & 
-           (M5_bdnt_qual | M5_ptype_qual), # Active clients following Method 5 outlined in the Glossary 
-         M1ab.L1.crrnt.prsns_qual = #Using [M5.Active.Clients] create the base active clients using the identified project types in the SPM reporting specs
-           M5.Active.Clients & 
-           (ProjectType %in% c(0,1,8)), #Active clients who are in ES-EE, ES-Nbn, and SH
-         M1ab.L2.crrnt.prsns_qual = 
-           M5.Active.Clients == 1 &
-           (ProjectType %in% c(0,1,8,2)), # Active clients who are in ES-EE, ES-Nbn, SH, TH
-         M1b.HmlsEntry_qual =  #Homeless at entry qualification for SPM 1b
-           LivingSituation %in% c(16,1,18), #living situation codes are changed in FY24 (i.e., 16 ~ 116)
-         M1b.strtdate_qual = 
-           EntryDate >= report_start_date & 
-           EntryDate <= report_end_date,
-         M1b.hsngdate_qual = 
-           MoveInDate >= report_start_date & 
-           MoveInDate <= report_end_date,
-         M1b.extdate_qual = 
-           is.na(MoveInDate) & ExitDate >= report_start_date & ExitDate <= report_end_date,
-         M1b.Actv.clnt.add = M1b.HmlsEntry_qual & (M1b.strtdate_qual | M1b.hsngdate_qual | M1b.extdate_qual))  #*** Use this variable for including the additional criteria for measure 1.b
-
-# This is for including the additional Active client criteria for measure M1.b Which includes persons in PH project types 3,9,10 and 13
-#These are the qualifier variables
-
-
-### Keep all relevant bed nights
-df_SPM.1.bednht <- df_SPM.1_base %>% 
-  select(EnrollmentID, PersonalID.x,ProjectID,ProjectType,
-         EntryDate,TypeProvided,DateProvided,
-         MoveInDate,ExitDate,
-         M5.Active.Clients,M1ab.L1.crrnt.prsns_qual,
-         M1ab.L2.crrnt.prsns_qual,M1b.Actv.clnt.add) %>% 
-  filter(DateProvided >= EntryDate & DateProvided <= report_end_date)
-
-
-### Gwen Recommendation. Does the same thing, but based on Boolean logic (returns TURE or FALSE)
-
-df_SPM.1_gwen_rec <- df_SPM.1.join %>% 
-  # Create a filter variable for Method 5 of Active Clients. Refer to HMIS Glossary for description
-  mutate(M5_EE_qual = EntryDate <= report_end_date & 
-           (ExitDate > report_start_date | is.na(ExitDate)),
-         M5_bdnt_qual = ProjectType == 1 & 
-           TypeProvided == 200 & # I think this will leave out other project types in the dataset. May need to modify it to allow other project types
-           DateProvided >= report_start_date & 
-           DateProvided <= report_end_date & 
-           DateProvided >= EntryDate, 
-         M5_ptype_qual = ProjectType == 0 | ProjectType == 2 | 
-           ProjectType == 3 | ProjectType == 8 | 
-           ProjectType == 9 | ProjectType == 10 | 
-           ProjectType == 13, 
-         #*** Use this to filter by clients that meet base qualifier under Method 5: Active Clients
-         M5.Active.Clients = M5_EE_qual & 
-           (M5_bdnt_qual | 
-              M5_ptype_qual))  # Active clients following Method 5 outlined in the Glossary
-
-## Step 2: Negate bed nights of overlapping HMIS records
-
-
-df_negateTest <- df_SPM.1.bednht %>% # Filter to keep relevant project data
-  filter(ProjectType == 0 | 
-           ProjectType == 1 | 
-           ProjectType == 2 | 
-           ProjectType == 3 |
-           ProjectType == 8 |
-           ProjectType == 9 |
-           ProjectType == 10 |
-           ProjectType == 13)
-
-#2 and 13 are the available project types in Iowa BOS data
-
-df_episodes.TH <- df_negateTest %>% 
-  filter(ProjectType == 02) %>% 
-  arrange(PersonalID.x, by=EntryDate) %>% 
-  group_by(PersonalID.x) %>% 
-  summarise(EntryDate = first(EntryDate), ExitDate = last(ExitDate)) %>% 
-  arrange(PersonalID.x, by=EntryDate)
-
-df_episodes.PH.RRH <- df_negateTest %>% 
-  filter(ProjectType == 13) %>% 
-  arrange(PersonalID.x, by=EntryDate) %>% 
-  group_by(PersonalID.x) %>% 
-  summarise(EntryDate = first(EntryDate), ExitDate = last(ExitDate)) %>% 
-  arrange(PersonalID.x, by=EntryDate)
-
-### Negate test
-
-Patient_episodes<- tribble(
-  ~patient, ~admitted, ~discharge,
-  810, "2020-12-15", "2020-12-16", # interval 1 - 15 to 16
-  811, "2021-05-15", "2021-06-30",
-  810, "2021-06-17", "2021-06-19", #Interval 2 - 17 to 03
-  810, "2021-06-19", "2021-06-27", #Interval 2
-  810, "2021-06-27", "2021-07-03", #interval 2
-  810, "2021-07-11", "2021-07-17", #Interval 3 - 11 to 18
-  810, "2021-07-12", "2021-07-14", #Interval 3
-  810, "2021-07-16", "2021-07-18"  #interval 3
-) 
-
-
-
-#Solution found here: [https://stackoverflow.com/questions/72188780/grouping-dates-in-r-to-create-patient-episodes]
-
-Patient_episodes %>% 
-  arrange(patient, by=admitted) %>% # Sorts by patient and sorts from earliest start date to latest
-  mutate(group = discharge == lead(admitted) | # No idea why group is here. But I would like to have an interval code.
-           admitted == lag(discharge)) %>%  
-  group_by(patient, group) %>%
-  summarise(admitted = first(admitted), discharge = last(discharge)) %>% # key part of the code. This pulls the dates based on the sort
-  arrange(patient, by=admitted)
-
-# In [https://www.pharmasug.org/proceedings/2019/BP/PharmaSUG-2019-BP-219.pdf] page 5 there was a concern on grouping based on row reference
-# I added the example in this code and it seems that R is correcting for that concern. 
-
-
-
-# got this from [https://stackoverflow.com/questions/60459164/creating-episodes-for-groups-based-on-date-sequence]
-# Not using this code chunk
-# df_overlap %>%
-#   group_by(Personalid) %>%
-#   mutate(difftime = Entry.date - lag(Entry.date, default = first(Entry.date)),
-#          expected2 = cumsum(difftime >= 30) + 1)
-
-### Step 1: Create episodes
+make_spm1_dq_table <- function(date_table) {
+  
+  client_start_dates <- date_table %>%
+    group_by(PersonalID) %>%
+    left_join(Client %>%
+                select(PersonalID, DOB),
+              by = "PersonalID") %>%
+    mutate(client_end_date = max(end_date),
+           client_start_date = case_when(
+             client_end_date - days(365) > DOB |
+               is.na(DOB) ~ client_end_date - days(365),
+             TRUE ~ DOB)) %>%
+    filter(report_start_date < client_end_date) %>%
+    ungroup() %>%
+    select(PersonalID, client_start_date, client_end_date) %>%
+    distinct() 
+  
+  client_start_dates_range <- client_start_dates %>%
+    mutate(range = iv(client_start_date, client_end_date))
+  
+  range_date_table <- date_table %>%
+    mutate(range = iv(start_date, end_date))
+  
+  for (client in unique(client_start_dates_range$PersonalID)) {
+    
+    valid_date_range <- client_start_dates_range$range[client_start_dates_range$PersonalID == client]
+    time_experiencing_homelessness <- range_date_table$range[range_date_table$PersonalID == client]
+    
+    overlap <- iv_locate_overlaps(time_experiencing_homelessness,
+                                  valid_date_range,
+                                  no_match = "drop")
+    
+    hold <- iv_align(time_experiencing_homelessness, 
+                     valid_date_range, 
+                     locations = overlap) 
+    
+    date_ranges <- data.frame(
+      PersonalID = rep(client, length(as.vector(hold$needles))),
+      keep_range = as.vector(hold$needles)) %>%
+      mutate(start_date = iv_start(keep_range),
+             end_date = iv_end(keep_range)) %>%
+      select(-keep_range)
+    
+    if (client == unique(client_start_dates$PersonalID)[1]) {
+      valid_ranges_for_clients <- date_ranges
+    } else {
+      valid_ranges_for_clients <- valid_ranges_for_clients %>%
+        union(date_ranges)
+    }
+  }
+  
+  valid_ranges_for_clients %>%
+    mutate(days = interval(ymd(start_date),
+                           ymd(end_date)) %/% days(1)) %>%
+    group_by(PersonalID) %>%
+    summarise(days = sum(days)) %>%
+    ungroup() %>%
+    left_join(client_start_dates %>%
+                left_join(Client %>%
+                            select(PersonalID, DOB),
+                          by = "PersonalID") %>%
+                mutate(client_end_date = client_end_date %m-% days(1),
+                       client_start_date = case_when(
+                         client_start_date == DOB &
+                           !is.na(DOB) ~ client_start_date,
+                         TRUE ~ client_start_date %m-% days(1))) %>%
+                select(-DOB),
+              by = "PersonalID") %>%
+    distinct()
+}
 
 
-# df4 <- df3
-# 
-# df4 <- df4 %>% 
-#   mutate(ProjectType_name = case_when(
-#     ProjectType %in% 0 ~ "ES EE",
-#     ProjectType %in% 1 ~ "ES NbN",
-#     ProjectType %in% 2 ~ "TH",
-#     ProjectType %in% 3 ~ "PH-PSH",
-#     ProjectType %in% 4 ~ "SO",
-#     ProjectType %in% 6 ~ "SSO",
-#     ProjectType %in% 7 ~ "Other",
-#     ProjectType %in% 8 ~ "Safe Haven",
-#     ProjectType %in% 9 ~ "PH-Housing only",
-#     ProjectType %in% 10 ~ "PH-Housing w Services",
-#     ProjectType %in% 11 ~ "Day Shelter",
-#     ProjectType %in% 12 ~ "Homeless Prevention",
-#     ProjectType %in% 13 ~ "PH-RRH",
-#     ProjectType %in% 14 ~ "CE"
-#   )) %>% group_by(PersonalID.x,EnrollmentID)
-# 
-# 
-# df %>% 
-#   arrange(patient, by=admitted) %>% # Sorts by patient and sorts from earliest start date to latest
-#   mutate(group = discharge == lead(admitted) | # No idea why group is here. I would like to have an interval code.
-#            admitted == lag(discharge)) %>%  
-#   group_by(patient, group) %>%
-#   summarise(admitted = first(admitted), discharge = last(discharge)) %>% # key part of the code. This pulls the dates based on the sort
-#   arrange(patient, by=admitted)
 
+spm_1_enrollments <- active_enrollments %>%
+  filter(Method5 &
+           ProjectType != 1) %>%
+  full_join(bed_nights_ee_format %>%
+              filter(original_enrollment_id %in% active_enrollments$EnrollmentID),
+            by = colnames(bed_nights_ee_format)[1:6]) %>%
+  mutate(ExitDateAdj = case_when(
+    is.na(ExitDate) | ExitDate > report_end_date ~ report_end_date %m+% days(1), 
+    ProjectType == 1 ~ ExitDate %m+% days(1),
+    TRUE ~ ExitDate)) 
+
+# SPM 1a1
+{
+  spm_1a1_dq <- spm_1_enrollments %>%
+    negate_lot_blocks(.,
+                      projects_to_keep = c(0, 1, 8),
+                      projects_to_remove = c(2, 3, 9, 10, 13)) %>%
+    make_spm1_dq_table(.)
+  
+  spm_1a1 <- spm_1a1_dq %>%
+    summarise(clients = n(),
+              average_lot = round(mean(days), 2),
+              median_lot = round(median(days), 2))
+  }
+
+# SPM 1a2
+{
+  spm_1a2_dq <- spm_1_enrollments %>%
+    negate_lot_blocks(.,
+                      projects_to_keep = c(0, 1, 2, 8),
+                      projects_to_remove = c(3, 9, 10, 13)) %>%
+    make_spm1_dq_table(.)
+  
+  spm_1a2 <- spm_1a2_dq %>%
+    summarise(clients = n(),
+              average_lot = round(mean(days), 2),
+              median_lot = round(median(days), 2))
+}
+
+# SPM 1b1
+{
+  spm_1b1_dq <- spm_1_enrollments %>%
+    negate_lot_blocks(.,
+                      projects_to_keep = c(0, 1, 3, 8, 9, 10, 13),
+                      projects_to_remove = c(2, 3, 9, 10, 13),
+                      include_3.917 = TRUE) %>%
+    make_spm1_dq_table(.)
+  
+  spm_1b1 <- spm_1b1_dq %>%
+    summarise(clients = n(),
+              average_lot = round(mean(days), 2),
+              median_lot = round(median(days), 2))
+}
+
+# SPM 1b2
+{
+  spm_1b2_dq <- spm_1_enrollments %>%
+    negate_lot_blocks(.,
+                      projects_to_keep = c(0, 1, 2, 3, 8, 9, 10, 13),
+                      projects_to_remove = c(3, 9, 10, 13),
+                      include_3.917 = TRUE) %>%
+    make_spm1_dq_table(.)
+  
+  spm_1b2 <- spm_1b2_dq %>%
+    summarise(clients = n(),
+              average_lot = round(mean(days), 2),
+              median_lot = round(median(days), 2))
+}
+
+rm(list = ls()[ls() %nin% items_to_keep]) 

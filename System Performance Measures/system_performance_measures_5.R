@@ -9,6 +9,9 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
+# items_to_keep <- c(items_to_keep,
+#                    do.call(paste0, expand.grid("spm_1", c("a", "b"), c("1", "2"), c("_dq", ""))))
+
 # Measure 5 - Number of Persons who Become Homeless for the First Time ----
 
 #### QUESTIONS
@@ -158,3 +161,5 @@ Q5M1_table <- data.frame(cbind(Q5M1_Col_A, Q5_Col_B, Q5M1_Col_C, Q5_Col_D)) %>%
 
 Q5M2_table <- data.frame(cbind(Q5M2_Col_A, Q5_Col_B, Q5M2_Col_C, Q5_Col_D)) %>% 
   setnames(.,c("A", "B", "C", "D"))
+
+rm(list = ls()[ls() %nin% items_to_keep]) 

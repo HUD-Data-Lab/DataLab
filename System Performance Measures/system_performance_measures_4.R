@@ -9,6 +9,9 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
+# items_to_keep <- c(items_to_keep,
+#                    do.call(paste0, expand.grid("spm_1", c("a", "b"), c("1", "2"), c("_dq", ""))))
+
 ### IF RUNNING STANDALONE: run system_performance_measures_0.R through line 118 FIRST ###
 
 # Measure 4: Employment and Income Growth for Homeless Persons in CoC Program-funded Projects
@@ -252,7 +255,7 @@ stayer_end_incomes <- stayer_income_annuals %>%
 ## for [Income from Any Source] then $0
 ## 6 / 7) DKR/NULL -- in my interpretation, results in "Missing" in either case.
 
-
+rm(list = ls()[ls() %nin% items_to_keep]) 
 
 
   

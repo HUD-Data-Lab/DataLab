@@ -9,6 +9,9 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
+# items_to_keep <- c(items_to_keep,
+#                    do.call(paste0, expand.grid("spm_1", c("a", "b"), c("1", "2"), c("_dq", ""))))
+
 # 3.2. System Performance Measure 3.2: Persons Experiencing Homelessness ----
 
 # df_spm.3.2_base <- enrollment_data %>% 
@@ -93,3 +96,5 @@ Metric.3.2.table %>%
 df_spm.3.2_u %>%
   select(PersonalID,ProjectType,EntryDate,MoveInDate,ExitDate,Method1,Method2,Method5) %>%
   write_csv("3.2.Client.detail.csv")
+
+rm(list = ls()[ls() %nin% items_to_keep]) 
