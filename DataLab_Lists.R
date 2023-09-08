@@ -384,7 +384,7 @@ vet_chronic_categories <- c("Chronically Homeless Veteran",
 
 chronic_categories <- c("Chronically Homeless",
                         "Not Chronically Homeless",
-                        "Client doesn’t know/Client refused",
+                        "Client doesn’t know/Prefers not to answer",
                         "Data not collected")
 
 
@@ -509,9 +509,9 @@ benefit_list <- c("SNAP", "WIC", "TANFChildCare", "TANFTransportation",
 # used in:
 #   APR/CAPER - Q19b
 
-income_rows_to_show <- c("Earned", "SSI", "SSDI", "VADisabilityService", 
-                         "PrivateDisability", "WorkersComp", "TANF", 
-                         "SocSecRetirement", "Pension", "ChildSupport",
+income_rows_to_show <- c("Earned", "Unemployment", "SSI", "SSDI", "VADisabilityService", 
+                         "VADisabilityNonService","PrivateDisability", "WorkersComp", "TANF", 
+                         "SocSecRetirement", "Pension", "ChildSupport", "Alimony",
                          "Other.Source")
 
 
