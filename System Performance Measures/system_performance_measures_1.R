@@ -10,7 +10,8 @@
 # <https://www.gnu.org/licenses/>. 
 
 items_to_keep <- c(items_to_keep,
-                   do.call(paste0, expand.grid("spm_1", c("a", "b"), c("1", "2"), c("_dq", ""))))
+                   "spm_1a", "spm_1b",
+                   do.call(paste0, expand.grid("spm_1", c("a", "b"), c("1", "2"), "_dq")))
 
 negate_lot_blocks <- function(enrollment_table,
                               projects_to_keep,
@@ -228,6 +229,24 @@ spm_1_enrollments <- active_enrollments %>%
               median_lot = round(median(days), 2))
 }
 
+spm_1a_row_headers <- c(
+  "Persons.in.ES-EE,.ES-NbN,.and.SH",
+  "Persons.in.ES-EE,.ES-NbN,.SH,.and.TH"
+)
+
+spm_1a_data <- union(spm_1a1, spm_1a2)
+
+spm_1a <- 
+  data.frame(spm_1a_row_headers,
+             "Previous.FY.Universe.Persons" = NA,
+             "Current.FY.Universe.Persons" = spm_1a_data$clients,
+             "Previous FY Average LOT Experiencing Homelessness" = NA,
+             "Current FY Average LOT Experiencing Homelessness" = spm_1a_data$average_lot,
+             "Difference.In.Average" = NA,
+             "Previous FY Median LOT Experiencing Homelessness" = NA,
+             "Current FY Median LOT Experiencing Homelessness" = spm_1a_data$median_lot,
+             "Difference.In.Median" = NA)
+
 # SPM 1b1
 {
   spm_1b1_dq <- spm_1_enrollments %>%
@@ -257,5 +276,23 @@ spm_1_enrollments <- active_enrollments %>%
               average_lot = round(mean(days), 2),
               median_lot = round(median(days), 2))
 }
+
+spm_1b_row_headers <- c(
+  "Persons.in.ES-EE,.ES-NbN,.SH,.and.PH",
+  "Persons.in.ES-EE,.ES-NbN,.SH,.TH,.and.PH"
+)
+
+spm_1b_data <- union(spm_1b1, spm_1b2)
+
+spm_1b <- 
+  data.frame(spm_1b_row_headers,
+             "Previous.FY.Universe.Persons" = NA,
+             "Current.FY.Universe.Persons" = spm_1b_data$clients,
+             "Previous FY Average LOT Experiencing Homelessness" = NA,
+             "Current FY Average LOT Experiencing Homelessness" = spm_1b_data$average_lot,
+             "Difference.In.Average" = NA,
+             "Previous FY Median LOT Experiencing Homelessness" = NA,
+             "Current FY Median LOT Experiencing Homelessness" = spm_1b_data$median_lot,
+             "Difference.In.Median" = NA)
 
 rm(list = ls()[ls() %nin% items_to_keep]) 
