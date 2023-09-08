@@ -40,6 +40,7 @@ generate_new_kits <- TRUE
     )
     }
   
+  
   # used for running all reports for all projects. Use project_list for running specific projects.
   {
     full_project_list <- c(Project$ProjectID[Project$ProjectID %in% Funder$ProjectID[Funder$Funder %in% 1:11]]) # Funding source HUD-CoC or HUD-ESG
@@ -47,6 +48,7 @@ generate_new_kits <- TRUE
     #project_list <- full_project_list #if you want to run full test kit undo the comment for this line
   
     }
+  
   
   items_to_keep <- c("items_to_keep", ls()) #Keep all functions and objects created up to this point. Why is this here? What is the purpose of this?
   
@@ -98,6 +100,8 @@ generate_new_kits <- TRUE
         select(HouseholdID, annual_due) %>%
         distinct()
       
+      ### NEED TO CHECK THISvvv TO SEE WHY NOT GETTING ANY [HoH_HMID] values.
+      
       household_info <- get_household_info(all_program_enrollments,
                                            return_type = "household")
       
@@ -106,6 +110,7 @@ generate_new_kits <- TRUE
         left_join(household_info, by = "HouseholdID") %>%
         left_join(chronicity_data, by = "EnrollmentID")
       }
+      
       # Q4a
       {
         Q4a_detail <- "See Q5a_detail.csv"
@@ -1652,9 +1657,24 @@ generate_new_kits <- TRUE
                   filter(days_prior_to_housing %in% c("Not yet moved into housing", "Data.Not.Collected", "Total")))
       }
       
-      # Q22f
+      # Q22f ----
+      
+      ## before running through below, see what can be repurposed from rest of 22
+      
+      ## anticipated steps:
+        ## Define two universes that should be mutually exclusive-- 
+          ## 1) Clients active in HHs on/after HoH HMI in report range
+          ## 2) Clients NOT in #1 that exited in report range
+        ## For each client in both universes, define Race/Ethn categorization
+        ## For each enrollment in universe #1, set HH member HMI date to match later of HoH HMI and member's enroll date
+        ## calculate each count metric, grouped by Race/Ethn 
+          ## rows 2,4,5 = universe #1
+          ## row 3 = universe #2
+        ## pivot data to get matrix table
+      
+    
       {
-        Q22f_detail <- recent_program_enrollment %>%
+        # Q22f_detail <- recent_program_enrollment %>%
           
         
         ## Q22f <- 
