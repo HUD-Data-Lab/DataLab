@@ -1081,7 +1081,7 @@ generate_new_kits <- TRUE
       }
       
       # Q15 In Progress ----
-      # Match order to the specs
+      # Match order to the specs?
       {
         ##  added a comment to the document, but putting here too--easier to
         ##  put in value order than an arbitrary one
@@ -1095,7 +1095,7 @@ generate_new_kits <- TRUE
       
       
       # Q16 Ready for QA w/question ----
-      # Do we need the row names to match exatly? And can we just recode them directly?
+      # Do we need the row names to match exactly? And can we just recode them directly?
       {
         entry_income <- recent_program_enrollment %>%
           left_join(IncomeBenefits %>%
@@ -1555,7 +1555,7 @@ generate_new_kits <- TRUE
           ifnull(., 0)
       }
       
-      # Q22a2 In Progress / Flagged for follow up Age categories are slightly different in Q22----
+      # Q22a2 In Progress / Flagged for follow up time categories are slightly different in Q22----
       # Removed the Data.not.collected.row
       {
         Q22a2_detail <- Q22a1_detail
