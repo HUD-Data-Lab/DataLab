@@ -883,12 +883,14 @@ generate_new_kits <- TRUE
         
       }
       
-      # Q11 Ready for QA ----
+      # Q11 Needs Review / Age categories split ----
+      #
       {
         Q11_detail <- recent_program_enrollment %>%
           rename(household_type = household_type.x,
+                 detailed_age_group = detailed_age_group.x,
                  age=age.x) %>% 
-          select(all_of(standard_detail_columns), "age", "Q11_detailed_age_group") %>%
+          select(all_of(standard_detail_columns), "age", "detailed_age_group") %>%
           left_join(Client %>%
                       select(PersonalID, DOB),
                     by = "PersonalID")
@@ -1036,7 +1038,8 @@ generate_new_kits <- TRUE
           adorn_totals("row")
       }
       
-      # Q14a Not Started ----
+      # Q14a Ready for QA ----
+      # Updated row headers to Client.does.not.know.or.prefers.not.to.answer
       {
         Q14 <- recent_program_enrollment %>%
           keep_adults_and_hoh_only() %>%
@@ -1061,7 +1064,7 @@ generate_new_kits <- TRUE
           adorn_totals("row")
       }
       
-      # Q14b In progress ----
+      # Q14b New question Not started ----
       # Updated question. New question: Most Recent experience of domestic violence, sexual assault, dating violence, stalking, human trafficking ----
       {
         Q14b_detail <- Q14 %>%
@@ -1077,7 +1080,8 @@ generate_new_kits <- TRUE
           adorn_totals("row")
       }
       
-      # Q15 Not Started ----
+      # Q15 In Progress ----
+      # Match order to the specs
       {
         ##  added a comment to the document, but putting here too--easier to
         ##  put in value order than an arbitrary one
@@ -1090,7 +1094,8 @@ generate_new_kits <- TRUE
       }
       
       
-      # Q16 Not Started ----
+      # Q16 Ready for QA w/question ----
+      # Do we need the row names to match exatly? And can we just recode them directly?
       {
         entry_income <- recent_program_enrollment %>%
           left_join(IncomeBenefits %>%
@@ -1146,10 +1151,16 @@ generate_new_kits <- TRUE
           rename(Income.at.Start = entryIncome,
                  Income.at.Latest.Annual.Assessment.for.Stayers = annualIncome,
                  Income.at.Exit.for.Leavers = exitIncome) %>%
-          adorn_totals("row")
+          adorn_totals("row", name = "Total adults")
+
+        #Recode attempt: Error because Q16$total_income_group is an ordered factor
+        #Q16.2 <- as.data.frame(Q16)
+        #Q16.2[Q16.2 == "No Annual Required"] <- "Number of adult stayers not yet required to have an annual assessment"
+        
+       
       }
       
-      # Q17 Not Started ----
+      # Q17 No change from FY 2023 ----
       {
         Q17_detail <- recent_program_enrollment %>%
           keep_adults_and_hoh_only() %>%
@@ -1174,7 +1185,8 @@ generate_new_kits <- TRUE
           create_income_sources(.)
       }
       
-      # Q18 Not Started ----
+      # Q18 Ready for QA ----
+      # Updated row header Client.Does.Not.Know.or.Prefers.Not.to.Answer
       {
         Q18_detail <- "See Q16_detail.csv"
         
@@ -1197,7 +1209,8 @@ generate_new_kits <- TRUE
                                                 keep_adults_only()))
       }
       
-      # Q19a1 Not Started ----
+      # Q19a1 No change from FY2023/ QA Needed ----
+      # only change noted was a reference in the programming specs. Grant interpreted that change as clarification on how it was done and not new specs.
       {
         needed_columns <- c("earned_amount", "other_amount", "calculated_total_income")
         
@@ -1269,7 +1282,8 @@ generate_new_kits <- TRUE
           )
       }
       
-      # Q19a2 Not Started ----
+      # Q19a2 No change from FY2023/ QA Needed ----
+      # only change noted was a reference in the programming specs. Grant interpreted that change as clarification on how it was done and not new specs.
       {
         for(period in entry_annual_exit[c(1, 3)]) {
           income_for_changes <- get(paste0(period, "_income")) %>%
@@ -1340,7 +1354,10 @@ generate_new_kits <- TRUE
           )
       }
       
-      # Q19b Not Started ----
+      # Q19b In progress  ----
+      #Update columns
+      #Update rows
+      #Update row order
       {
         Q19b_detail <- Q17_detail %>%
           filter(EnrollmentID %in% exit_income$EnrollmentID[exit_income$IncomeFromAnySource %in% c(0, 1)]) %>%
@@ -1355,7 +1372,7 @@ generate_new_kits <- TRUE
         Q19b[, c(5, 9, 13)] <- decimal_format(Q19b[, c(5, 9, 13)], 4)
       }
       
-      # Q20a Not Started ----
+      # Q20a No change from FY24 ----
       {
         Q20a_detail <- recent_program_enrollment %>%
           keep_adults_only() %>%
@@ -1374,7 +1391,9 @@ generate_new_kits <- TRUE
         Q20a <- create_benefit_groups(recent_program_enrollment)
       }
       
-      # Q20b Not Started ----
+      # Q20b Ready for QA ----
+      #Only change was change was the row header to client.does.not.know.or.prefers.not.to.answer
+      #Note row header one or more source(s) is different from specs (1 + Source(s)). How exact do we want to be?
       {
         Q20b_detail <- "See Q20a_detail.csv"
         for(period in entry_annual_exit) {
@@ -1430,7 +1449,8 @@ generate_new_kits <- TRUE
       }
       
       
-      # Q21 Not Started ----
+      # Q21 In Progress / Question to Gwen ----
+      # Gwen, can I edit the supplement files xlsx directly? Q21 needs the names updated, but the names live on the supplement excel workbook
       {
         Q21_detail <- recent_program_enrollment %>%
           select(all_of(standard_detail_columns))
@@ -1506,9 +1526,10 @@ generate_new_kits <- TRUE
         Q21[is.na(Q21) & Q21$InsuranceType != "Annual assessment not required"] <- 0
       }
       
-      # Q22a1 Not Started ----
+      # Q22a1 Ready for QA ----
+      # Removed the Data.not.collected.row
       {
-        # groups in specs include Data.Not.Collected, what does that mean in length of stay?
+        # groups in specs include Data.Not.Collected, what does that mean in length of stay? <- Update we removed Data.Not.Collected from specs
         # it's not defined in the reporting glossary
         Q22a1_detail <- create_lot_table(recent_program_enrollment)  
         
@@ -1530,13 +1551,12 @@ generate_new_kits <- TRUE
           left_join(Q22a1_total, by = "APR_enrollment_length_group") %>%
           left_join(Q22a1_leavers, by = "APR_enrollment_length_group") %>%
           left_join(Q22a1_stayers, by = "APR_enrollment_length_group") %>%
-          full_join(data.frame(APR_enrollment_length_group = c("Data Not Collected")),
-                    by = "APR_enrollment_length_group") %>%
           adorn_totals("row") %>%
           ifnull(., 0)
       }
       
-      # Q22a2 Not Started ----
+      # Q22a2 In Progress / Flagged for follow up Age categories are slightly different in Q22----
+      # Removed the Data.not.collected.row
       {
         Q22a2_detail <- Q22a1_detail
         
@@ -1558,13 +1578,11 @@ generate_new_kits <- TRUE
           left_join(Q22a2_total, by = "CAPER_enrollment_length_group") %>%
           left_join(Q22a2_leavers, by = "CAPER_enrollment_length_group") %>%
           left_join(Q22a2_stayers, by = "CAPER_enrollment_length_group") %>%
-          full_join(data.frame(CAPER_enrollment_length_group = c("Data Not Collected")),
-                    by = "CAPER_enrollment_length_group") %>%
           adorn_totals("row") %>%
           ifnull(., 0)
       }
       
-      # Q22b Not Started ----
+      # Q22b No changes from FY23 ----
       {
         Q22b_detail <- "See Q22a1_detail.csv"
         
@@ -1582,7 +1600,8 @@ generate_new_kits <- TRUE
                             Stayers = median(days_enrolled[is.na(ExitDate)])))
       }
       
-      # Q22c Not Started ----
+      # Q22c Ready for QA ----
+      # Created new age_categories and updated function "length_of_time_groups" with the new age categories
       {
         Q22c_detail <- create_time_to_move_in(recent_program_enrollment)
         
@@ -1639,7 +1658,8 @@ generate_new_kits <- TRUE
                     by = colnames(exited_without_move_in_data))
       }
       
-      # Q22d Not Started ----
+      # Q22d In progress / Question ----
+      # What did I miss when updating the age_categories?
       {
         Q22d_detail <- "See Q22a2_detail.csv"
         
@@ -1652,7 +1672,8 @@ generate_new_kits <- TRUE
           ifnull(., 0) 
       }
       
-      #Q22e Not Started ----
+      #Q22e Ready for QA ----
+      # Updated age_categories
       {
         Q22e_detail <- recent_program_enrollment %>%
           select(c("ProjectType", all_of(housing_program_detail_columns), "age",
@@ -1678,7 +1699,12 @@ generate_new_kits <- TRUE
                   filter(days_prior_to_housing %in% c("Not yet moved into housing", "Data.Not.Collected", "Total")))
       }
       
+      # Q22f New Question not coded yet ----
+      
+      # Q22g New Question not coded yet ----
+      
       # Q23c Not Started ----
+      # Edit order and rows in SupplementaTables.xlsx
       {
         Q23c_detail <- recent_program_enrollment %>%
           filter(!is.na(ExitDate)) %>%
@@ -1691,7 +1717,12 @@ generate_new_kits <- TRUE
         Q23c[41, 2:6] <- as.list(decimal_format(as.numeric(Q23c[41, 2:6]), 4))
       }
       
-      # Q24 Not Started ----
+      # Q23d new question not coded yet ----
+      
+      # Q23e new question not coded yet ----
+      
+      # Q24a Ready for QA ----
+      # Changed the row headers
       {
         Q24_detail <- recent_program_enrollment %>%
           filter(!is.na(ExitDate) &
@@ -1729,6 +1760,13 @@ generate_new_kits <- TRUE
         
       }
       
+      #Q24b New Question not coded yet ----
+      
+      #Q24c New Question not coded yet ----
+      
+      #Q24d New Question not coded yet ----
+      
+      
       #-------------------------------------------------------------
       #------------------- Veteran Questions -----------------------
       #-------------------------------------------------------------
@@ -1736,7 +1774,8 @@ generate_new_kits <- TRUE
       recent_veteran_enrollment <- recent_program_enrollment %>%
         filter(new_veteran_status == 1)
       
-      # Q25a
+      # Q25a Ready for QA / needs review ----
+      # Updated categories - NOTE did not follow up on the comment below
       {
         
         ##  check this and Q25b specifically against when to apply chronic logic
@@ -1768,7 +1807,8 @@ generate_new_kits <- TRUE
           ifnull(., 0)
         }
       
-      # Q25b Not Started ----
+      # Q25b Ready for QA / needs review ----
+      # Refer to comment above for Q25a
       {
         Q25b_detail <- recent_program_enrollment %>%
           select(all_of(standard_detail_columns)) %>%
@@ -1796,7 +1836,7 @@ generate_new_kits <- TRUE
           ifnull(., 0)
       }
       
-      # Q25c Not Started ----
+      # Q25c Ready for QA Pending Gwen follow up on Q10 ----
       {
         Q25c_detail <- recent_veteran_enrollment %>%
           select(c(all_of(standard_detail_columns))) %>%
@@ -1809,7 +1849,7 @@ generate_new_kits <- TRUE
           select(-With.Only.Children)
       }
       
-      # Q25d Not Started ----
+      # Q25d In porgress / re-run instance to check age_category change ----
       {
         Q25d_detail <- Q11_detail %>%
           filter(PersonalID %in% recent_veteran_enrollment$PersonalID)
@@ -1820,68 +1860,72 @@ generate_new_kits <- TRUE
           filter(detailed_age_group %nin% detailed_age_group_list[1:3])
       }
       
-      # Q25e Not Started ----
-      {
-        Q25e_detail <- "See Q13a1.csv, Q13b1.csv, and Q13c1.csv respectively"
-        Q25e.1.and.2 <- recent_veteran_enrollment %>%
-          inner_join(disability_table %>%
-                       filter(DataCollectionStage %in% c(1, 3)), by ="EnrollmentID",
-                     multiple = "all") %>%
-          group_by(disability_name) %>%
-          summarise(Conditions.At.Start = n_distinct(PersonalID[DataCollectionStage == 1], 
-                                                     na.rm = TRUE),
-                    Conditions.At.Exit.for.Leavers = n_distinct(
-                      PersonalID[DataCollectionStage == 3 & !is.na(ExitDate)], 
-                      na.rm = TRUE))
-        
-        Q25e.3 <- Q13c1_detail %>%
-          filter(EnrollmentID %in% recent_veteran_enrollment$EnrollmentID) %>%
-          group_by(disability_name) %>%
-          summarise(Conditions.At.Latest.Assessment.for.Stayers = n_distinct(PersonalID, 
-                                                                             na.rm = TRUE))
-        
-        Q25e <- as.data.frame(disability_list)  %>%
-          `colnames<-`(c("disability_name")) %>%
-          full_join(Q25e.1.and.2 %>%
-                      select(disability_name, Conditions.At.Start), 
-                    by = "disability_name") %>%
-          full_join(Q25e.3, by = "disability_name") %>%
-          full_join(Q25e.1.and.2 %>%
-                      select(disability_name, Conditions.At.Exit.for.Leavers), 
-                    by = "disability_name") %>%
-          ifnull(0)
-      }
+      # Q25e RETIRED ----
+      # {
+      #   Q25e_detail <- "See Q13a1.csv, Q13b1.csv, and Q13c1.csv respectively"
+      #   Q25e.1.and.2 <- recent_veteran_enrollment %>%
+      #     inner_join(disability_table %>%
+      #                  filter(DataCollectionStage %in% c(1, 3)), by ="EnrollmentID",
+      #                multiple = "all") %>%
+      #     group_by(disability_name) %>%
+      #     summarise(Conditions.At.Start = n_distinct(PersonalID[DataCollectionStage == 1], 
+      #                                                na.rm = TRUE),
+      #               Conditions.At.Exit.for.Leavers = n_distinct(
+      #                 PersonalID[DataCollectionStage == 3 & !is.na(ExitDate)], 
+      #                 na.rm = TRUE))
+      #   
+      #   Q25e.3 <- Q13c1_detail %>%
+      #     filter(EnrollmentID %in% recent_veteran_enrollment$EnrollmentID) %>%
+      #     group_by(disability_name) %>%
+      #     summarise(Conditions.At.Latest.Assessment.for.Stayers = n_distinct(PersonalID, 
+      #                                                                        na.rm = TRUE))
+      #   
+      #   Q25e <- as.data.frame(disability_list)  %>%
+      #     `colnames<-`(c("disability_name")) %>%
+      #     full_join(Q25e.1.and.2 %>%
+      #                 select(disability_name, Conditions.At.Start), 
+      #               by = "disability_name") %>%
+      #     full_join(Q25e.3, by = "disability_name") %>%
+      #     full_join(Q25e.1.and.2 %>%
+      #                 select(disability_name, Conditions.At.Exit.for.Leavers), 
+      #               by = "disability_name") %>%
+      #     ifnull(0)
+      # }
       
-      # Q25f Not Started ----
+      # Q25f RETIRED ----
+      
       # Q26f specifies that rows 11 and 12 are excluded intentionally, Q25f does
       # not specify this but it also does not show these rows in the table
-      {
-        Q25f_detail <- Q16_detail %>%
-          filter(new_veteran_status == 1)
-        
-        Q25f <- recent_veteran_enrollment %>%
-          create_income_categories(.) %>%
-          adorn_totals("row")
-      }
+      # {
+      #   Q25f_detail <- Q16_detail %>%
+      #     filter(new_veteran_status == 1)
+      #   
+      #   Q25f <- recent_veteran_enrollment %>%
+      #     create_income_categories(.) %>%
+      #     adorn_totals("row")
+      # }
       
-      # Q25g Not Started ----
-      {
-        Q25g_detail <- Q17_detail %>%
-          filter(new_veteran_status == 1)
-        
-        Q25g <- recent_veteran_enrollment %>% 
-          create_income_sources(.)
-      }
+      # Q25g RETIRED ----
+      # {
+      #   Q25g_detail <- Q17_detail %>%
+      #     filter(new_veteran_status == 1)
+      #   
+      #   Q25g <- recent_veteran_enrollment %>% 
+      #     create_income_sources(.)
+      # }
       
-      # Q25h Not Started ----
-      {
-        Q25h_detail <- Q20a_detail %>%
-          filter(new_veteran_status == 1)
-        
-        Q25h <- create_benefit_groups(recent_veteran_enrollment)
-      }
+      # Q25h RETIRED ----
+      # {
+      #   Q25h_detail <- Q20a_detail %>%
+      #     filter(new_veteran_status == 1)
+      #   
+      #   Q25h <- create_benefit_groups(recent_veteran_enrollment)
+      # }
+      # 
       
-      # Q25i Not Started ----
+      
+      # Q25i In progress ----
+      # Match Q23c - SupplementalTables.xlsx
       {
         Q25i_detail <- Q23c_detail %>%
           filter(new_veteran_status == 1)
@@ -1892,11 +1936,14 @@ generate_new_kits <- TRUE
         Q25i[45, 2:6] <- as.list(decimal_format(as.numeric(Q25i[45, 2:6]), 4))
       }
       
+      #Q25j New question not coded yet ----
+      
       #-------------------------------------------------------------
       #------------------- Chronic Questions -----------------------
       #-------------------------------------------------------------
       
       recent_chronic_enrollment <- recent_program_enrollment %>%
+        rename()
         filter(chronic == "Y")
       
       # Q26a Not Started ----

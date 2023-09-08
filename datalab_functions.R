@@ -419,8 +419,8 @@ pivot_existing_only <- function(data, group_name, client_label) {
 
 # used in Q22 questions
 # used in Q5
-add_length_of_time_groups <- function(data, start_date, end_date, report_type, #Are these all the arguments needed for this function?
-                                      in_project = TRUE) { #what is in_project?
+add_length_of_time_groups <- function(data, start_date, end_date, report_type,
+                                      in_project = TRUE) { 
   start_date <- enquo(start_date) #What is enquo and why are we using it for the date variables?
   end_date <- enquo(end_date) 
   
@@ -474,10 +474,16 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type, #
   } else if(report_type == "days_prior_to_housing") {
     time_groups <- time_groups %>%
       mutate(number_of_days_group = case_when(
-        between(number_of_days, 61, 180) ~ "61 to 180 days",
+        #between(number_of_days, 61, 180) ~ "61 to 180 days",    # Specs updated age categories to be 61 to 90 and 91 to 180
         number_of_days >= 731 ~ "731 days or more",
-        TRUE ~ number_of_days_group))
-  }
+        TRUE ~ number_of_days_group)) 
+  } # Set up different age categories for Q22d(?)
+    # else {
+    #time_groups <- time_groups %>%
+    #  mutate(number_of_days_group = case_when(
+    #    #between(number_of_days, 61, 180) ~ "61 to 180 days",    # Specs updated age categories to be 61 to 90 and 91 to 180
+    #    number_of_days >= 731 ~ "731 days or more",
+    #    TRUE ~ number_of_days_group))}
   data %>%
     left_join(time_groups %>%
                 select(EnrollmentID, number_of_days, number_of_days_group),
@@ -493,16 +499,22 @@ length_of_time_groups <- function(report_type, column_name) {
       "More than 1,825 days (>5 Yrs)")
   } else if(report_type == "days_prior_to_housing") {
     rows <- c("0 to 7 days", "8 to 14 days", "15 to 21 days", "22 to 30 days", 
-              "31 to 60 days", "61 to 180 days", "181 to 365 days", 
+              "31 to 60 days", "61 to 90 days", "91 to 180 days", "181 to 365 days", 
               "366 to 730 days (1-2 Yrs)", "731 days or more", 
               "Not yet moved into housing", "Data.Not.Collected")
-  } else {
-    rows <- c("0 to 7 days", "8 to 14 days", "15 to 21 days", "22 to 30 days", 
+  } else if (report_type == "CAPER"){
+    rows <- c("0 to 7 days", "8 to 14 days", "15 to 21 days", "22 to 30 days",  #This is for CAPER Specific age categories. 
               "31 to 60 days", "61 to 90 days", "91 to 180 days", 
               "181 to 365 days", "366 to 730 days (1-2 Yrs)", "731 to 1,095 days (2-3 Yrs)",
-              "1,096 to 1,460 days (3-4 Yrs)", "1,461 to 1,825 days (4-5 Yrs)",
-              "More than 1,825 days (>5 Yrs)")
-  }
+              "1,096 to 1,460 days (3-4 Yrs)", "1,461 to 1,825 days (4-5 Yrs)", "More than 1,825 days (>5 Yrs)")
+  } else {
+    rows <- c("0 to 7 days", "8 to 14 days", "15 to 21 days", "22 to 30 days",  #This is for CAPER Specific age categories. 
+              "31 to 60 days", "61 to 90 days", "91 to 180 days", 
+              "181 to 365 days", "366 to 730 days (1-2 Yrs)", "731 days or more")
+    #"731 to 1,095 days (2-3 Yrs)",
+    #"1,096 to 1,460 days (3-4 Yrs)", "1,461 to 1,825 days (4-5 Yrs)",
+    #"More than 1,825 days (>5 Yrs)")
+    }
   
   as.data.frame(rows) %>%
     rename(!!column_name := rows)
@@ -605,14 +617,14 @@ create_age_groups <- function(filtered_recent_program_enrollment,
     detailed_age_group_list <- c("0 - 17", detailed_age_group_list[4:11])
     
     filtered_recent_program_enrollment <- filtered_recent_program_enrollment %>%
-      mutate(Q11_detailed_age_group = case_when(
-        Q11_detailed_age_group %nin% detailed_age_group_list ~ "0 - 17",
-        TRUE ~ Q11_detailed_age_group
+      mutate(detailed_age_group = case_when(
+        detailed_age_group %nin% detailed_age_group_list ~ "0 - 17",
+        TRUE ~ detailed_age_group
       ))
   }
   
   filtered_recent_program_enrollment %>%
-    return_household_groups(., Q11_detailed_age_group, detailed_age_group_list) %>%
+    return_household_groups(., detailed_age_group, detailed_age_group_list) %>%
     adorn_totals("row")
 }
 
@@ -1201,23 +1213,11 @@ add_client_info <- function(filtered_enrollments) { #Create function to add clie
                                           age <= 34 ~ "25-34",
                                           age <= 44 ~ "35-44",
                                           age <= 54 ~ "45-54",
-                                          age <= 61 ~ "55-61",
-                                          age >= 62 ~ "62+",
+                                          age <= 64 ~ "55-64",
+                                          age >= 65 ~ "65+",
                                           !is.na(DOBDataQuality) &
                                             DOBDataQuality %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
                                           TRUE ~ "Data.Not.Collected"), 
-           Q11_detailed_age_group = case_when(age < 5 ~ "Under 5", # Age category for Q11 is different from Q10. Created a seperate category list to reflect this change
-                                              age <= 12 ~ "5-12",
-                                              age <= 17 ~ "13-17",
-                                              age <= 24 ~ "18-24",
-                                              age <= 34 ~ "25-34",
-                                              age <= 44 ~ "35-44",
-                                              age <= 54 ~ "45-54",
-                                              age <= 64 ~ "55-64",
-                                              age >= 65 ~ "65+",
-                                              !is.na(DOBDataQuality) &
-                                                DOBDataQuality %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
-                                              TRUE ~ "Data.Not.Collected"),
            age_group = case_when(age >= 18 ~ "Adults",
                                  age < 18 ~ "Children",
                                  TRUE ~ detailed_age_group), #What does TRUE do?
