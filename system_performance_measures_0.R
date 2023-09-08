@@ -9,10 +9,12 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
-library(readxl)
-library(kableExtra) 
+# library(readxl)
+# library(kableExtra) 
 library(lubridate)    ## used anywhere we do date math
-library(ivs)          ## used in spm 1
+library(ivs)          ## used in spm 14
+library(writexl)
+library(plyr)
 
 # lookback_stop_date <- ymd("2014-10-1")
 lookback_stop_date <- ymd("2012-10-1")
@@ -106,10 +108,10 @@ all_bed_nights <- Services %>%
            DateProvided >= EntryDate &
            DateProvided <= report_end_date &
            DateProvided >= OperatingStartDate,
-           # removed because specs call this an error in data entry
-           # which--correcting for data quality is a whole other thing
-           (is.na(ExitDate) |
-              DateProvided < ExitDate))
+         # removed because specs call this an error in data entry
+         # which--correcting for data quality is a whole other thing
+         (is.na(ExitDate) |
+            DateProvided < ExitDate))
 
 bed_nights_in_report <- all_bed_nights %>%
   filter(DateProvided >= report_start_date)
@@ -161,7 +163,7 @@ active_enrollments <- enrollment_data %>%
          EnrollmentID %in% bed_nights_in_report$EnrollmentID
        # don't need to check bed night date against project 
        # start at this point because it's done in `all_bed_nights`
-       ),
+      ),
     Method5 = Method1 &
       # don't need to check project type because that's done in `all_bed_nights`
       (EnrollmentID %in% bed_nights_in_report$EnrollmentID |
@@ -184,9 +186,26 @@ items_to_keep <- c("items_to_keep", ls())
 
 source(paste0(getwd(), "/System Performance Measures/system_performance_measures_1.R"))
 source(paste0(getwd(), "/System Performance Measures/system_performance_measures_2.R"))
-
 source(paste0(getwd(), "/System Performance Measures/system_performance_measures_3.R"))
+source(paste0(getwd(), "/System Performance Measures/system_performance_measures_4.R"))
 source(paste0(getwd(), "/System Performance Measures/system_performance_measures_5.R"))
 source(paste0(getwd(), "/System Performance Measures/system_performance_measures_7.R"))
 
+dq_tables <- ls()[sapply(ls(),function(t) is.data.frame(get(t))) &
+                    str_detect(ls(), "_dq")]
 
+spm_tables <- llply(
+  mget(ls()[sapply(ls(),function(t) is.data.frame(get(t))) &
+              str_detect(ls(), "spm_") &
+              !str_detect(ls(), "_dq")]), 
+  set_hud_format)
+
+write_xlsx(
+  mget(dq_tables),
+  "SPM_dq.xlsx"
+)
+
+write_xlsx(
+  spm_tables,
+  "SPM_tables.xlsx"
+)

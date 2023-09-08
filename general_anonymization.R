@@ -151,13 +151,20 @@ activity_information <- active_enrollments %>%
   }
 
 Project <- trunc_userid(Project) %>%
-  filter(ProjectID %in% activity_information$ProjectID) %>%
+  filter(ProjectID %in% activity_information$ProjectID &
+           (!is.na(ProjectType) | 
+              ContinuumProject == 0)) %>%
   mutate(TrackingMethod = case_when(
     ProjectID == 93 ~ 3,
     TRUE ~ TrackingMethod))
 
+max_org_length <- min(26, nrow(Organization))
+
 Organization <- trunc_userid(Organization) %>%
-  filter(OrganizationID %in% Project$OrganizationID) 
+  filter(OrganizationID %in% Project$OrganizationID)  %>%
+  slice(1:max_org_length) %>%
+  mutate(OrganizationName = paste("Organization", toupper(letters[1:max_org_length])),
+         OrganizationCommonName = paste("Org", toupper(letters[1:max_org_length])))
 
 # twelve most common US place names
 # https://en.wikipedia.org/wiki/List_of_the_most_common_U.S._place_names
@@ -175,25 +182,11 @@ organization_cities <- data.frame(OrganizationID = Organization$OrganizationID,
                                     replace = TRUE)) %>%
   left_join(fake_zips, by = "org_city")
 
-Organization$OrganizationName <- paste0(
-  sample(
-    c("", "The ", "First "), 
-    nrow(Organization), 
-    replace = TRUE), 
-  organization_cities$org_city,
-  " ",
-  sample(
-    c("Foundation", "Home", "Community", "Services", "Place", "Aid",
-      "Partnership", "Council", "Change", "for Good", "Alliance",
-      "Center"), 
-    nrow(Organization), 
-    replace = TRUE))
-
-Organization$OrganizationCommonName <- gsub("[^A-Z]","", 
-                                            strsplit(Organization$OrganizationName, 
-                                                     "[[:lower:]]*"))
-
 Project <- Project %>%
+  mutate(OrganizationID = sample(
+    Organization$OrganizationID, 
+    nrow(Project), 
+    replace = TRUE)) %>%
   left_join(Organization %>%
               select(OrganizationID, OrganizationName, OrganizationCommonName),
             by = "OrganizationID") %>%
@@ -219,11 +212,11 @@ Project <- Project %>%
       row_number() > 1 ~ paste("-", row_number()),
       TRUE ~ ""),
     ProjectName = paste(
-      OrganizationName,
+      OrganizationName, "-",
       project_type_string,
       project_number),
     ProjectCommonName = paste(
-      OrganizationCommonName,
+      OrganizationCommonName, "-",
       project_type_string,
       project_number)) %>%
   ungroup() %>%
@@ -248,7 +241,8 @@ ProjectCoC$Address1 <- paste(stri_rand_strings(nrow(ProjectCoC), 3, pattern = "[
 
 
 Enrollment <- trunc_userid(Enrollment) %>%
-  filter(EnrollmentID %in% activity_information$EnrollmentID) %>%
+  filter(EnrollmentID %in% activity_information$EnrollmentID &
+           ProjectID %in% Project$ProjectID) %>%
   mutate(LastPermanentStreet = NA,
          LastPermanentCity = NA,
          LastPermanentZIP = NA)
