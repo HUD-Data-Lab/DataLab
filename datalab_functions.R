@@ -1236,7 +1236,7 @@ add_client_info <- function(filtered_enrollments) { #Create function to add clie
                      1, 0))) %>%
     ungroup() %>%
     filter(EnrollmentID %in% filtered_enrollments$EnrollmentID) %>%
-    select(PersonalID, age, age_group, detailed_age_group,Q11_detailed_age_group, VeteranStatus, 
+    select(PersonalID, age, age_group, detailed_age_group, VeteranStatus, 
            youth_household, youth, has_children, new_veteran_status
            # ,
            # Woman, Man, NonBinary, CulturallySpecific, Transgender, 

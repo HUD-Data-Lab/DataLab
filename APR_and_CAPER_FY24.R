@@ -524,7 +524,7 @@ generate_new_kits <- TRUE
       
       # Q7
       # Q7a In Progress ----
-      # Need to update Q7a-move in to not include members who leave HH
+      # Need to confirm that Q7a-move in to not include members who leave HH
       {
         Q7a_detail <- recent_program_enrollment %>%
           select(all_of(housing_program_detail_columns),
@@ -809,34 +809,33 @@ generate_new_kits <- TRUE
       }
       
       # Q10b RETIRED ----
-      {
-        Q10b_detail <- recent_program_enrollment %>%
-          filter(age_group == "Children") %>%
-          select(all_of(standard_detail_columns)) %>%
-          left_join(Client %>%
-                      select(PersonalID, all_of(names(gender_columns)), GenderNone),
-                    by = "PersonalID")
-        
-        Q10b <- Q10b_detail %>%
-          create_gender_groups(.) %>%
-          select(-Without.Children)
-      }
+      # {
+      #   Q10b_detail <- recent_program_enrollment %>%
+      #     filter(age_group == "Children") %>%
+      #     select(all_of(standard_detail_columns)) %>%
+      #     left_join(Client %>%
+      #                 select(PersonalID, all_of(names(gender_columns)), GenderNone),
+      #               by = "PersonalID")
+      #   
+      #   Q10b <- Q10b_detail %>%
+      #     create_gender_groups(.) %>%
+      #     select(-Without.Children)
+      # }
       
       # Q10c RETIRED ----
-      {
-        Q10c_detail <- recent_program_enrollment %>%
-          filter(age_group %in% c("Client.Does.Not.Know.or.Prefers.Not.to.Answer", "Data.Not.Collected")) %>%
-          select(all_of(standard_detail_columns)) %>%
-          left_join(Client %>%
-                      select(PersonalID, all_of(names(gender_columns)), GenderNone),
-                    by = "PersonalID") 
-        
-        Q10c <- Q10c_detail %>%
-          create_gender_groups(.)
-      }
+      # {
+      #   Q10c_detail <- recent_program_enrollment %>%
+      #     filter(age_group %in% c("Client.Does.Not.Know.or.Prefers.Not.to.Answer", "Data.Not.Collected")) %>%
+      #     select(all_of(standard_detail_columns)) %>%
+      #     left_join(Client %>%
+      #                 select(PersonalID, all_of(names(gender_columns)), GenderNone),
+      #               by = "PersonalID") 
+      #   
+      #   Q10c <- Q10c_detail %>%
+      #     create_gender_groups(.)
+      # }
       
       # Q10d In progress ----
-      # Update age categories
       # Update rowsums for More than 2 Gender Identities Selected | Client Doesn’t Know/Prefers Not to Answer | Data Not Collected
       
       {
@@ -847,7 +846,7 @@ generate_new_kits <- TRUE
                     by = "PersonalID") %>%
           mutate(Q10d_age_group = case_when(
             detailed_age_group %in% c("Under 5", "5-12", "13-17") ~ "Under18",
-            detailed_age_group %in% c("25-34", "35-44", "45-54", "55-61") ~ "25-61",
+            detailed_age_group %in% c("25-34", "35-44", "45-54", "55-64") ~ "25-64",
             TRUE ~ detailed_age_group)) 
         
         
@@ -872,8 +871,8 @@ generate_new_kits <- TRUE
           summarise(Total = n_distinct(PersonalID, na.rm = TRUE),
                     Under.Age.18 = n_distinct(PersonalID[Q10d_age_group == "Under18"], na.rm = TRUE),
                     Age.18.to.24 = n_distinct(PersonalID[Q10d_age_group == "18-24"], na.rm = TRUE),
-                    Age.25.to.61 = n_distinct(PersonalID[Q10d_age_group == "25-61"], na.rm = TRUE),
-                    Age.62.and.over = n_distinct(PersonalID[Q10d_age_group == "62+"], na.rm = TRUE),
+                    Age.25.to.64 = n_distinct(PersonalID[Q10d_age_group == "25-64"], na.rm = TRUE),
+                    Age.65.and.over = n_distinct(PersonalID[Q10d_age_group == "65+"], na.rm = TRUE),
                     Client.Does.Not.Know.or.Prefers.Not.to.Answer = n_distinct(PersonalID[Q10d_age_group == "Client.Does.Not.Know.or.Declined"], na.rm = TRUE),
                     Data.Not.Collected = n_distinct(PersonalID[Q10d_age_group == "Data.Not.Collected"], na.rm = TRUE)) %>%
           ifnull(., 0) %>%
@@ -883,13 +882,10 @@ generate_new_kits <- TRUE
         
       }
       
-      # Q11 Needs Review / Age categories split ----
-      #
+      # Q11 Ready for QA ----
+      # updated age categories
       {
         Q11_detail <- recent_program_enrollment %>%
-          rename(household_type = household_type.x,
-                 detailed_age_group = detailed_age_group.x,
-                 age=age.x) %>% 
           select(all_of(standard_detail_columns), "age", "detailed_age_group") %>%
           left_join(Client %>%
                       select(PersonalID, DOB),
