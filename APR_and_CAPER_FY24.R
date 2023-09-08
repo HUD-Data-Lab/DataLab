@@ -12,7 +12,6 @@
 
 # This is a global parameter that should be changed if desired and then run FIRST
 generate_new_kits <- TRUE
-
 # this bracket will run everything; use with care!
 {
   
@@ -27,10 +26,10 @@ generate_new_kits <- TRUE
       # 93#,	#"DataLab - ES-NbN ESG",
       # 1409#,	"DataLab - HP ESG",
       # 780#,	#"DataLab - PSH CoC I",
-      #1428,	#"DataLab - RRH CoC I", #Commented out because Project ID did not exist
-     # 1495#,	#"DataLab - RRH CoC II", #Commented out because project ID did not exist
-      1554, #DataLab - RRH CoC I", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
-      1555 #, #"DataLab - RRH CoC II", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
+     1428,	#"DataLab - RRH CoC I", #Commented out because Project ID did not exist
+     1495#,	#"DataLab - RRH CoC II", #Commented out because project ID did not exist
+      # 1554, #DataLab - RRH CoC I", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
+      # 1555 #, #"DataLab - RRH CoC II", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
       # 1060#,	#"DataLab - RRH ESG I",
       # 1647#,	#"DataLab - SO CoC",
       # 1419,	#"DataLab - SO ESG",
@@ -49,13 +48,9 @@ generate_new_kits <- TRUE
   
     }
   
-  
   items_to_keep <- c("items_to_keep", ls()) #Keep all functions and objects created up to this point. Why is this here? What is the purpose of this?
   
-  # removes exits for prevention projects for Q23c of the APR/CAPER,
-  # remove upon finalization of guidance
   Exit <- Exit %>%
-    filter(EnrollmentID %nin% Enrollment$EnrollmentID[Enrollment$ProjectID %in% Project$ProjectID[Project$ProjectType == 12]]) %>% # Remove all enrollment Ids for project id == 12
     rename(exit_DateCreated = DateCreated)
   
   Enrollment <- Enrollment %>%
@@ -100,8 +95,6 @@ generate_new_kits <- TRUE
         select(HouseholdID, annual_due) %>%
         distinct()
       
-      ### NEED TO CHECK THISvvv TO SEE WHY NOT GETTING ANY [HoH_HMID] values.
-      
       household_info <- get_household_info(all_program_enrollments,
                                            return_type = "household")
       
@@ -111,11 +104,11 @@ generate_new_kits <- TRUE
         left_join(chronicity_data, by = "EnrollmentID")
       }
       
-      CEParticipation <- CEParticipation %>% 
-        mutate(ProjectID = as.character(ProjectID)) #Changed data type because I was getting a join error in View(Program_information_table)
+      # CEParticipation <- CEParticipation %>% 
+      #   mutate(ProjectID = as.character(ProjectID)) #Changed data type because I was getting a join error in View(Program_information_table)
       
       # Q4a
-      # Q4a Ready for QA ----
+      # Q4a checked
       {
         Q4a_detail <- "See Q5a_detail.csv"
         
@@ -125,8 +118,7 @@ generate_new_kits <- TRUE
       
       # Q5
       # Q5a
-      # Q5a Ready for QA ----
-      # GT-no change from FY22 I updated the function View(create_summary_table) from client.refused to prefers not to answer
+      # Q5a checked
       {
         recent_program_enrollment_dq <- recent_program_enrollment %>% #recent program enrollment created on line 91
           filter(ProjectType != 4 |     # This removes enrollments that are street outreach project type or
@@ -150,8 +142,7 @@ generate_new_kits <- TRUE
       
       # Q6
       # Q6a
-      #Q6a In Progress ----
-      # Just want to double check the % of issue rate. Made changes to Datalab_functions as I am going.
+      #Q6a checked
       {
         Q6a_data <- create_dq_Q1(recent_program_enrollment_dq) #View(create_dq_Q1) in datalab_functions.R line 1311. 
         Q6a <- Q6a_data[[1]]
@@ -159,7 +150,7 @@ generate_new_kits <- TRUE
       }
       
       # Q6b
-      # Q6b Not Started ----
+      # Q6b checked
       {
         
         Q6b_earlier_enrollment <- recent_program_enrollment_dq %>% #use the DQ dataframe 
@@ -198,54 +189,74 @@ generate_new_kits <- TRUE
                          IndefiniteAndImpairs == 1)))
         
         Q6b_detail <- recent_program_enrollment_dq %>% 
-          left_join(EnrollmentCoC %>% #Removed EnrollmentCoC.csv from fy202 specs
-                      filter(DataCollectionStage == 1) %>%
-                      select(EnrollmentID, CoCCode),
-                    by = "EnrollmentID") %>%
           select(c(all_of(standard_detail_columns),
                    all_of(demographic_detail_columns),
-                   "CoCCode")) %>%
-          mutate(CoC_Valid = CoCCode %in% valid_cocs,
-                 Disability_Check = EnrollmentID %in% recent_disability_check$EnrollmentID)
+                   "EnrollmentCoC")) %>%
+          mutate(CoC_Valid = EnrollmentCoC %in% valid_cocs,
+                 Disability_Check = EnrollmentID %in% recent_disability_check$EnrollmentID) %>%
+          group_by(PersonalID) %>%
+          slice(1L) %>%
+          ungroup() 
         
-        Q6b <- Q6b_detail %>%
-          mutate(Veteran.Status.3.07 = (VeteranStatus %in% c(8, 9, 99) & 
-                                          age_group == "Adults") |
-                   (age_group == "Children" &
-                      VeteranStatus == 1),
-                 Project.Start.Date.3.10 = EnrollmentID %in% Q6b_earlier_enrollment$EnrollmentID,
-                 Relationship.to.Head.of.Household.3.15 = is.na(RelationshipToHoH) |
-                   RelationshipToHoH %nin% 1:5 |
-                   HouseholdID %in% Q6b_hoh_count$HouseholdID,
-                 Client.Location.3.16 = RelationshipToHoH == 1 & !CoC_Valid,
-                 Disabling.Condition.3.08 = DisablingCondition %in% c(8, 9, 99) |
-                   is.na(DisablingCondition) |
-                   (DisablingCondition == 0 & Disability_Check)) %>% #This creates the values
-          summarise(Veteran.Status.3.07 = n_distinct(PersonalID[Veteran.Status.3.07], 
-                                                     na.rm = TRUE),
-                    Project.Start.Date.3.10 = n_distinct(PersonalID[Project.Start.Date.3.10], 
-                                                         na.rm = TRUE),
-                    Relationship.to.Head.of.Household.3.15 = n_distinct(PersonalID[Relationship.to.Head.of.Household.3.15], 
-                                                                        na.rm = TRUE),
-                    Client.Location.3.16 = n_distinct(PersonalID[Client.Location.3.16], 
-                                                      na.rm = TRUE),
-                    Disabling.Condition.3.08 = n_distinct(PersonalID[Disabling.Condition.3.08], 
-                                                          na.rm = TRUE),
-          ) %>% 
-          mutate(rowname = "Error.Count") %>%  #This is creating the columns for the new table based on the values
-          pivot_longer(!rowname, names_to = "Group", values_to = "values") %>% 
-          pivot_wider(names_from = "rowname", values_from = "values") %>%
-          mutate(Percent.of.Error.Count = decimal_format(
-            case_when(
-              Group == "Veteran.Status.3.07" ~ Error.Count / Q5a$Count.of.Clients.for.DQ[2],
-              Group == "Client.Location.3.16" ~ Error.Count / (Q5a$Count.of.Clients.for.DQ[14] + Q5a$Count.of.Clients.for.DQ[15]),
-              TRUE ~ Error.Count / Q5a$Count.of.Clients.for.DQ[1]), 4) #Refer to DQ check on Q5a
-          )
+        Q6b_setup <- Q6b_detail %>%
+          mutate(
+            Veteran.Status.3.07 = case_when(
+              age_group == "Adults" &
+                (VeteranStatus == 99 |
+                   is.na(VeteranStatus)) ~ "Missing",
+              VeteranStatus %in% c(8, 9) & 
+                age_group == "Adults" ~ "DK/PNTA",
+              age_group == "Children" &
+                VeteranStatus == 1 ~ "Data.Issues"),
+            Project.Start.Date.3.10 = case_when(
+              EnrollmentID %in% Q6b_earlier_enrollment$EnrollmentID |
+                (EntryDate > ExitDate &
+                   !is.na(ExitDate)) ~ "Data.Issues"),
+            Relationship.to.Head.of.Household.3.15 = case_when(
+              is.na(RelationshipToHoH) ~ "Missing",
+              RelationshipToHoH %nin% 1:5 |
+                HouseholdID %in% Q6b_hoh_count$HouseholdID ~ "Data.Issues"),
+            EnrollmentCoC.3.16 = case_when(
+              RelationshipToHoH == 1 & is.na(EnrollmentCoC) ~ "Missing",
+              RelationshipToHoH == 1 & !CoC_Valid ~ "Data.Issues"),
+            Disabling.Condition.3.08 = case_when(
+              DisablingCondition == 99 |
+                is.na(DisablingCondition) ~ "Missing",
+              DisablingCondition %in% c(8, 9) ~ "DK/PNTA",
+              (DisablingCondition == 0 & Disability_Check) ~ "Data.Issues")) %>%
+          select(PersonalID, Veteran.Status.3.07, Project.Start.Date.3.10,
+                 Relationship.to.Head.of.Household.3.15, EnrollmentCoC.3.16,
+                 Disabling.Condition.3.08) %>%
+          pivot_longer(!PersonalID, names_to = "Group", values_to = "DQ_flag") 
+        
+        Q6b <- Q6b_setup %>%
+          select(Group) %>%
+          distinct() %>%
+          full_join(Q6b_setup %>%
+                      full_join(data.frame(DQ_flag = c("DK/PNTA", "Missing", "Data.Issues")),
+                                by = "DQ_flag") %>%
+                      group_by(Group, DQ_flag) %>%
+                      summarise(count = n_distinct(PersonalID, na.rm = TRUE)) %>%
+                      ungroup() %>%
+                      pivot_wider(names_from = DQ_flag, values_from = count) %>%
+                      filter(!is.na(Group)) %>%
+                      select(c("Group", "DK/PNTA", "Missing", "Data.Issues")) %>%
+                      adorn_totals("col") %>%
+                      mutate(Percent.of.Issue.Rate = decimal_format(
+                        case_when(
+                          Group == "Veteran.Status.3.07" ~ Total / (Q5a$Count.of.Clients.for.DQ[2] +
+                                                                      Q5a$Count.of.Clients.for.DQ[3]),
+                          Group == "EnrollmentCoC.3.16" ~ Total / (Q5a$Count.of.Clients.for.DQ[14] + 
+                                                                     Q5a$Count.of.Clients.for.DQ[15]),
+                          TRUE ~ Total / Q5a$Count.of.Clients.for.DQ[1]), 4)), #Refer to DQ check on Q5a
+                    by = "Group")  %>%
+          ifnull(., 0)
+          
         
       }
       
       # Q6c
-      # Q6c In Progress ---- Leaving this to Gwen
+      # Q6c checked
       {
         income_sources <- IncomeBenefits %>%
           mutate(across(c(Earned, Unemployment, SSI, SSDI,
@@ -274,7 +285,6 @@ generate_new_kits <- TRUE
                  annual_IncomeFromAnySource = IncomeFromAnySource) %>%
           select(EnrollmentID, annual_IncomeFromAnySource, annual_number_of_sources)
         
-        
         Q6c_detail <- recent_program_enrollment_dq %>%
           select(c(all_of(standard_detail_columns), "age_group", 
                    "Destination")) %>%
@@ -294,73 +304,85 @@ generate_new_kits <- TRUE
                     by = c("EnrollmentID" = "EnrollmentID",
                            "ExitDate" = "InformationDate")) %>%
           left_join(income_annual, by = "EnrollmentID") %>%
-          mutate(Destination.3.12 = case_when(  # Gwen added case_when here to create grouping variables
-            !is.na(ExitDate) ~ case_when(
-              is.na(Destination) ~ "Missing",
-              Destination %in% c(8, 9, 99, 30) ~ "DK/PNTA/DNC"
-            )
-                   ),
-                 Income.and.Sources.4.02.at.Start = (RelationshipToHoH == 1 |
-                                                       age_group == "Adults") &
-                   (enroll_IncomeFromAnySource %in% c(8, 9, 99) |
-                      is.na(enroll_IncomeFromAnySource) |
-                      (enroll_IncomeFromAnySource == 0 &
-                         !is.na(enroll_number_of_sources) &
-                         enroll_number_of_sources > 0) |
-                      (enroll_IncomeFromAnySource == 1 &
-                         (is.na(enroll_number_of_sources) |
-                            enroll_number_of_sources == 0))),
-                 Income.and.Sources.4.02.at.Annual.Assessment = (RelationshipToHoH == 1 |
-                                                                   age_group == "Adults") &
-                   !is.na(annual_due) &
-                   is.na(ExitDate) &
-                   (annual_IncomeFromAnySource %in% c(8, 9, 99) |
-                      is.na(annual_IncomeFromAnySource) |
-                      (annual_IncomeFromAnySource == 0 &
-                         !is.na(annual_number_of_sources) &
-                         annual_number_of_sources > 0) |
-                      (annual_IncomeFromAnySource == 1 &
-                         (is.na(annual_number_of_sources) |
-                            annual_number_of_sources == 0))),
-                 Income.and.Sources.4.02.at.Exit = (RelationshipToHoH == 1 |
-                                                      age_group == "Adults") &
-                   !is.na(ExitDate) &
-                   (exit_IncomeFromAnySource %in% c(8, 9, 99) |
-                      is.na(exit_IncomeFromAnySource) |
-                      (exit_IncomeFromAnySource == 0 &
-                         !is.na(exit_number_of_sources) &
-                         exit_number_of_sources > 0) |
-                      (exit_IncomeFromAnySource == 1 &
-                         (is.na(exit_number_of_sources) |
-                            exit_number_of_sources == 0)))) 
-        Q6c <- Q6c_detail %>%
-          summarise(Destination.3.12 = n_distinct(PersonalID[Destination.3.12], 
-                                                  na.rm = TRUE),
-                    Income.and.Sources.4.02.at.Start = n_distinct(PersonalID[Income.and.Sources.4.02.at.Start],
-                                                                  na.rm = TRUE),
-                    Income.and.Sources.4.02.at.Annual.Assessment = n_distinct(PersonalID[Income.and.Sources.4.02.at.Annual.Assessment],
-                                                                              na.rm = TRUE),
-                    Income.and.Sources.4.02.at.Exit = n_distinct(PersonalID[Income.and.Sources.4.02.at.Exit],
-                                                                 na.rm = TRUE)
-          ) %>% 
-          mutate(rowname = "Error.Count") %>% 
-          pivot_longer(!rowname, names_to = "Group", values_to = "values") %>% 
-          pivot_wider(names_from = "rowname", values_from = "values") %>%
-          mutate(Percent.of.Error.Count = decimal_format(
-            case_when(
-              Group == "Destination.3.12" ~ Error.Count / Q5a$Count.of.Clients.for.DQ[5],
-              Group == "Income.and.Sources.4.02.at.Start" ~ Error.Count / (Q5a$Count.of.Clients.for.DQ[2] + Q5a$Count.of.Clients.for.DQ[15]),
-              Group == "Income.and.Sources.4.02.at.Annual.Assessment" ~ Error.Count / Q5a$Count.of.Clients.for.DQ[16],
-              Group == "Income.and.Sources.4.02.at.Exit" ~ Error.Count / Q5a$Count.of.Clients.for.DQ[7]), 4)
-          ) %>%
-          ifnull(., 0)
-      
+          mutate(
+            Destination.3.12 = case_when(  
+              !is.na(ExitDate) ~ case_when(
+                is.na(Destination) |
+                  Destination %in% c(30, 99) ~ "Missing",
+                Destination %in% c(8, 9) ~ "DK/PNTA")),
+            Income.and.Sources.4.02.at.Start = case_when(
+              (RelationshipToHoH == 1 |
+                 age_group == "Adults") ~ case_when(
+                   is.na(enroll_IncomeFromAnySource) |
+                     enroll_IncomeFromAnySource == 99 ~ "Missing",
+                   enroll_IncomeFromAnySource %in% c(8, 9) ~ "DK/PNTA", 
+                   (enroll_IncomeFromAnySource == 0 &
+                      !is.na(enroll_number_of_sources) &
+                      enroll_number_of_sources > 0) |
+                     (enroll_IncomeFromAnySource == 1 &
+                        (is.na(enroll_number_of_sources) |
+                           enroll_number_of_sources == 0)) ~ "Data.Issues")),
+            Income.and.Sources.4.02.at.Annual.Assessment = case_when(
+              !is.na(annual_due) &
+                is.na(ExitDate) &
+                (RelationshipToHoH == 1 |
+                   age_group == "Adults") ~ case_when(
+                     is.na(annual_IncomeFromAnySource) |
+                       annual_IncomeFromAnySource == 99 ~ "Missing",
+                     annual_IncomeFromAnySource %in% c(8, 9) ~ "DK/PNTA", 
+                     (annual_IncomeFromAnySource == 0 &
+                        !is.na(annual_number_of_sources) &
+                        annual_number_of_sources > 0) |
+                       (annual_IncomeFromAnySource == 1 &
+                          (is.na(annual_number_of_sources) |
+                             annual_number_of_sources == 0)) ~ "Data.Issues")),
+            Income.and.Sources.4.02.at.Exit = case_when(
+              !is.na(ExitDate) &
+                (RelationshipToHoH == 1 |
+                   age_group == "Adults") ~ case_when(
+                     is.na(exit_IncomeFromAnySource) |
+                       exit_IncomeFromAnySource == 99 ~ "Missing",
+                     exit_IncomeFromAnySource %in% c(8, 9) ~ "DK/PNTA",
+                     (exit_IncomeFromAnySource == 0 &
+                        !is.na(exit_number_of_sources) &
+                        exit_number_of_sources > 0) |
+                       (exit_IncomeFromAnySource == 1 &
+                          (is.na(exit_number_of_sources) |
+                             exit_number_of_sources == 0)) ~ "Data.Issues"))) %>%
+          group_by(PersonalID) %>%
+          slice(1L) %>%
+          ungroup() 
         
+        Q6c_setup <- Q6c_detail %>%
+          select(PersonalID, Destination.3.12, Income.and.Sources.4.02.at.Start,
+                 Income.and.Sources.4.02.at.Annual.Assessment,
+                 Income.and.Sources.4.02.at.Exit) %>%
+          mutate(across(everything(), as.character)) %>%
+          pivot_longer(!PersonalID, names_to = "Group", values_to = "DQ_flag") 
+        
+        Q6c <- Q6c_setup %>%
+          select(Group) %>%
+          distinct() %>%
+          full_join(Q6c_setup %>%
+                      full_join(data.frame(DQ_flag = c("DK/PNTA", "Missing", "Data.Issues")),
+                                by = "DQ_flag") %>%
+                      group_by(Group, DQ_flag) %>%
+                      summarise(count = n_distinct(PersonalID, na.rm = TRUE)) %>%
+                      ungroup() %>%
+                      pivot_wider(names_from = DQ_flag, values_from = count) %>%
+                      filter(!is.na(Group)) %>%
+                      select(c("Group", "DK/PNTA", "Missing", "Data.Issues")) %>%
+                      adorn_totals("col") %>%
+                      mutate(Percent.of.Issue.Rate = decimal_format(
+                        case_when(
+                          Group == "Destination.3.12" ~ Total / Q5a$Count.of.Clients.for.DQ[5],
+                          Group == "Income.and.Sources.4.02.at.Start" ~ Total / (Q5a$Count.of.Clients.for.DQ[2] + 
+                                                                                   Q5a$Count.of.Clients.for.DQ[15]),
+                          Group == "Income.and.Sources.4.02.at.Annual.Assessment" ~ Total / Q5a$Count.of.Clients.for.DQ[16],
+                          Group == "Income.and.Sources.4.02.at.Exit" ~ Total / Q5a$Count.of.Clients.for.DQ[7]), 4)), #Refer to DQ check on Q5a
+                    by = "Group")%>%
+          ifnull(., 0)
       }
-      
-      
-      
-      
       
       # Q6d
       {

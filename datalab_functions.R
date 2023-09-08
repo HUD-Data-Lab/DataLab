@@ -1236,7 +1236,7 @@ add_client_info <- function(filtered_enrollments) { #Create function to add clie
                      1, 0))) %>%
     ungroup() %>%
     filter(EnrollmentID %in% filtered_enrollments$EnrollmentID) %>%
-    select(PersonalID, age, age_group, detailed_age_group,Q11_detailed_age_group, VeteranStatus, 
+    select(PersonalID, age, age_group, detailed_age_group, VeteranStatus, 
            youth_household, youth, has_children, new_veteran_status
            # ,
            # Woman, Man, NonBinary, CulturallySpecific, Transgender, 
@@ -1365,6 +1365,8 @@ create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Cl
                # is.na(SSNDataQuality) ~ "Information.Missing",
                #  below is how the data standards are generally interpreted
                is.na(SSN) ~ "Information.Missing",
+             #  no change here--these all apply because the SSN has to be
+             #  exported as 9 digits
              SSNDataQuality == 2 |
                suppressWarnings(is.na(as.numeric(SSN))) |
                nchar(SSN) != 9 |
