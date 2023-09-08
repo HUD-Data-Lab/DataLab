@@ -9,104 +9,13 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
-# items_to_keep <- c(items_to_keep,
-#                    do.call(paste0, expand.grid("spm_1", c("a", "b"), c("1", "2"), c("_dq", ""))))
+items_to_keep <- c(items_to_keep,
+                   c("spm_4.1_4.2_4.3_dq", "spm_4.4_4.5_4.6_dq"),
+                   paste0("spm_4.", 1:6))
 
 ### IF RUNNING STANDALONE: run system_performance_measures_0.R through line 118 FIRST ###
 
 # Measure 4: Employment and Income Growth for Homeless Persons in CoC Program-funded Projects
-
-# Define universe ----
-
-## Limit Enrollments to Active Client Method 1 and CoC-funded projects----
-
-M4_enrollment_u <- active_enrollments %>%
-  filter(
-    Method1 == TRUE,
-    ProjectType %in% c(2,3,8,9,10,13),
-    ProjectID %in% 
-      filter(Funder, 
-             Funder %in% c(2,3,4,5,43,44,54,55) &
-               StartDate <= report_end_date & 
-               (is.na(EndDate) | EndDate >= report_start_date)
-             )$ProjectID
-    ) %>%
-  inner_join(
-    Client %>% select(PersonalID, DOB),
-    by = "PersonalID"
-  )
-
-## Split into stayer & leaver universes & limit to adults----
-
-# stayer clients (unique list of clients active on report_end_date)
-
-M4_stayer_clients <- M4_enrollment_u %>% 
-  filter(is.na(ExitDate) | ExitDate > report_end_date) %>%
-  .$PersonalID %>%
-  unique()
-
-# stayers
-
-M4_stayers <- M4_enrollment_u %>%
-  filter(
-    PersonalID %in% M4_stayer_clients, 
-    difftime( report_end_date , EntryDate, units = "days") >= 365
-    ) %>%
-  arrange(PersonalID, EntryDate, EnrollmentID) %>%
-  group_by(PersonalID) %>%
-  filter(row_number()==1) %>%
-  mutate(
-    # max of report start & entry added in case report run for more than a year range.
-    age = floor(age_calc( DOB, max( report_start_date, EntryDate), units = "years"))
-  ) %>%
-  ungroup() %>% 
-  filter(age >= 18) %>% #end universe filtering
-  # start prep calculations for income lookup
-  mutate(
-    years_enrolled = floor(age_calc( EntryDate, report_end_date, units = "years")),
-    report_anniversary = EntryDate %m+% years(years_enrolled),
-    report_anniversary_start = report_anniversary %m-% days(30),
-    report_anniversary_end = report_anniversary %m+% days(30),
-    annual_deadline_in_report = (report_anniversary_end %m+% days(1)) <= report_end_date 
-  )
-  
-# leavers
-
-M4_leavers <- M4_enrollment_u %>%
-  filter(
-    PersonalID %nin% M4_stayer_clients,
-    ExitDate >= report_start_date & ExitDate <= report_end_date
-  ) %>%
-  arrange(PersonalID, EntryDate, EnrollmentID) %>%
-  group_by(PersonalID) %>%
-  filter(row_number()==1) %>%
-  mutate(
-    age = floor(age_calc( DOB, max( report_start_date, EntryDate), units = "years"))
-  ) %>%
-  ungroup() %>% 
-  filter(age >= 18)
-
-## Lookup income start + end records ----
-
-#### QUESTIONS
-  ## How to pull in info before lookback_stop_date for old records?
-  ## How to handle >0 amount but "No" for income source?
-
-#### datalab functions referenced
-  ## APR/CAPER
-    ##get_annual_id
-
-# global income prep
-### ADD THIS BACK AFTER reduce the size of the table
-
-# base_income <- IncomeBenefits %>%
-#   # mutate(across(c(Earned, Unemployment, SSI, SSDI,
-#   VADisabilityService, VADisabilityNonService,
-# PrivateDisability, WorkersComp, TANF, GA,
-# SocSecRetirement, Pension, ChildSupport,
-# Alimony, OtherIncomeSource), ~ ifnull(., 0))
-
-### get stayer income records + validate ----
 
 # list of source Y/N columns
 source_yn_cols <- c(
@@ -127,105 +36,94 @@ source_yn_cols <- c(
   "OtherIncomeSource"
 )
 
-
 # list of source amount columns
-source_amount_cols <- c(
-  "EarnedAmount",
-  "UnemploymentAmount",
-  "SSIAmount",
-  "SSDIAmount",
-  "VADisabilityServiceAmount",
-  "VADisabilityNonServiceAmount",
-  "PrivateDisabilityAmount",
-  "WorkersCompAmount",
-  "TANFAmount",
-  "GAAmount",
-  "SocSecRetirementAmount",
-  "PensionAmount",
-  "ChildSupportAmount",
-  "AlimonyAmount",
-  "OtherIncomeAmount"
-)
+source_amount_cols <- paste0(c(source_yn_cols[1:14], "OtherIncome"), "Amount")
 
+# Define universe ----
+
+spm_4_projects <- Funder %>%
+  filter(Funder %in% c(2, 3, 4, 5, 43, 44, 54, 55) &
+           StartDate <= report_end_date &
+           (is.na(EndDate) |
+              EndDate >= report_start_date) &
+           ProjectID %in% Project$ProjectID[Project$ProjectType %in% 
+                                              c(2, 3, 8, 9, 10, 13)]) %>%
+  .$ProjectID %>%
+  unique()
+
+spm_4_projects <- c("1555", "1561", "1562")
+
+## Limit Enrollments to Active Client Method 1 and CoC-funded projects----
+
+M4_enrollment_u <- active_enrollments %>%
+  filter(
+    Method1 == TRUE,
+    ProjectID %in% spm_4_projects)
+
+## Split into stayer & leaver universes & limit to adults----
+
+# stayer clients (unique list of clients active on report_end_date)
+
+M4_stayer_clients <- M4_enrollment_u %>% 
+  filter(is.na(ExitDate) | ExitDate > report_end_date) %>%
+  .$PersonalID %>%
+  unique()
+
+# stayers
+
+spm_4.1_4.2_4.3_dq <- M4_enrollment_u %>%
+  filter(
+    PersonalID %in% M4_stayer_clients, 
+    difftime( report_end_date , EntryDate, units = "days") >= 365
+    ) %>%
+  arrange(PersonalID, desc(EntryDate), EnrollmentID) %>%
+  group_by(PersonalID) %>%
+  slice(1L) %>%
+  ungroup() %>% 
+  filter(age >= 18) %>% #end universe filtering
+  # start prep calculations for income lookup
+  mutate(
+    years_enrolled = trunc((EntryDate %--% report_end_date) / years(1)),
+    report_anniversary = EntryDate %m+% years(years_enrolled),
+    report_anniversary_start = report_anniversary %m-% days(30),
+    report_anniversary_end = report_anniversary %m+% days(30),
+    annual_deadline_in_report = (report_anniversary_end %m+% days(1)) <= report_end_date 
+  )
+  
 stayer_income <- IncomeBenefits %>%
   filter(
-    EnrollmentID %in% M4_stayers$EnrollmentID
+    EnrollmentID %in% spm_4.1_4.2_4.3_dq$EnrollmentID
   ) 
-
-### THIS SECTION is incomplete. It's meant to...
-### 1) Apply the total income logic rules from Glossary
-### 2) Finish with a reduction in the total number of required columns.
-
-# %>% 
-  # Replacing Source Amount with NA when not "Yes" for Souce YN
-# %>%  
-  
-  # Income source totals
-  # rowwise() %>%
-  # mutate(
-  #   sum_source_income_amounts = sum(
-  #     c(
-  #       EarnedAmount,
-  #       UnemploymentAmount,
-  #       SSIAmount,
-  #       SSDIAmount,
-  #       VADisabilityServiceAmount,
-  #       VADisabilityNonServiceAmount,
-  #       PrivateDisabilityAmount,
-  #       WorkersCompAmount,
-  #       TANFAmount,
-  #       GAAmount,
-  #       SocSecRetirementAmount,
-  #       PensionAmount,
-  #       ChildSupportAmount,
-  #       AlimonyAmount,
-  #       OtherIncomeAmount
-  #       ),
-  #     na.rm = TRUE 
-  #   )
-  #     
-  #   ) %>% 
-  # ungroup() %>% 
-  # mutate(
-  #   effective_monthly_income = 
-  #     case_when(
-  #       TotalMonthlyIncome > 0 ~ TotalMonthlyIncome, 
-  #       sum_source_income_amounts > 0 ~ sum_source_income_amounts
-  #       
-  #     )
-  # )
-
-stayer_income_entry <- stayer_income %>% filter(DataCollectionStage == 1) 
 
 stayer_income_annuals <- stayer_income %>% 
   filter(DataCollectionStage == 5) %>%
   left_join(
-    M4_stayers %>% select(EnrollmentID, EntryDate),
+    spm_4.1_4.2_4.3_dq %>% 
+      select(EnrollmentID, EntryDate, report_anniversary_start,
+             report_anniversary_end),
     by = "EnrollmentID"
   ) %>% 
   # these identify the relevant anniversary date and associated range 
-    # for each existing Annual Assessment and checks to see if within
-    # the +-30 day range.
+  # for each existing Annual Assessment and checks to see if within
+  # the +-30 day range.
   mutate(
-    years_entry_to_aa = floor(age_calc( EntryDate %m-% days(30), InformationDate, units = "years")),
+    years_entry_to_aa = trunc((EntryDate %m-% days(30) %--% InformationDate) / years(1)),
     related_anniversary_date = EntryDate %m+% years(years_entry_to_aa),
     in_range = 
       trunc((related_anniversary_date %--% InformationDate) / days(1)) >= -30 &
       trunc((related_anniversary_date %--% InformationDate) / days(1)) <= 30
-    ) %>%
+  ) %>%
   # used following select step for QA
   #select( EnrollmentID, IncomeBenefitsID, EntryDate, InformationDate, years_entry_to_aa, related_anniversary_date, in_range) %>%
-  
   filter(in_range == TRUE) %>%
-  
   # remove duplicate in-range AAs for the same anniversary date
-    ## there weren't any cases in Iowa BoS test data, but still think should account
-      ## for this possibility
-  arrange(EnrollmentID, desc(related_anniversary_date), desc(InformationDate), desc(IncomeBenefitsID)) %>%
+  ## there weren't any cases in Iowa BoS test data, but still think should account
+  ## for this possibility
+  arrange(desc(InformationDate), desc(IncomeBenefitsID)) %>%
   # Used below select step for QA
   #select( EnrollmentID,related_anniversary_date, InformationDate, IncomeBenefitsID) %>%
   group_by(EnrollmentID, related_anniversary_date) %>% 
-  filter(row_number() == 1) %>% 
+  slice(1L) %>% 
   ungroup() %>%
   group_by(EnrollmentID) %>%
   mutate(
@@ -235,25 +133,187 @@ stayer_income_annuals <- stayer_income %>%
 
 ### stayer start and endpoint incomes ----
 stayer_end_incomes <- stayer_income_annuals %>%
+  # filter(InformationDate >= report_anniversary_start &
+  #          InformationDate <= report_anniversary_end) %>%
+  arrange(desc(InformationDate)) %>%
   group_by(EnrollmentID) %>%
-  filter(row_number() == 1)
+  slice(1L) %>%
+  ungroup() %>%
+  determine_total_income() %>%
+  mutate(other_income = calculated_total_income - earned_income) %>%
+  select(c("EnrollmentID", "IncomeBenefitsID", "InformationDate", 
+           "IncomeFromAnySource", all_of(source_amount_cols), "earned_income", 
+           "other_income", "calculated_total_income"))
 
+stayer_start_incomes <- stayer_income %>% 
+  filter(DataCollectionStage == 1) %>%
+  full_join(stayer_income_annuals,
+            by = colnames(stayer_income)) %>%
+  left_join(stayer_end_incomes %>%
+              select(EnrollmentID, InformationDate) %>%
+              rename(LaterInformationDate = InformationDate),
+            by = "EnrollmentID") %>%
+  filter(IncomeBenefitsID %nin% stayer_end_incomes$IncomeBenefitsID &
+           InformationDate < LaterInformationDate) %>%
+  arrange(desc(InformationDate)) %>%
+  group_by(EnrollmentID) %>%
+  slice(1L) %>%
+  ungroup() %>%
+  determine_total_income() %>%
+  mutate(other_income = calculated_total_income - earned_income) %>%
+  select(c("EnrollmentID", "InformationDate", "IncomeFromAnySource",
+           all_of(source_amount_cols), "earned_income", "other_income",
+           "calculated_total_income"))
 
-# stayer_start_incomes <- 
-#   union(
-#     x = stayer_income_annuals, 
-#     y = stayer_income_entry)
-### FINISH -- arrange, group, and slice for 2nd row ###
+spm_4.1_4.2_4.3_dq <- spm_4.1_4.2_4.3_dq %>%
+  select(HouseholdID, PersonalID, EnrollmentID, RelationshipToHoH, EntryDate,
+         ExitDate, age) %>%
+  inner_join(stayer_start_incomes %>%
+               setNames(c("EnrollmentID", 
+                          paste0("S_", 
+                                 colnames(stayer_start_incomes)[2:ncol(stayer_start_incomes)]))),
+             by = "EnrollmentID") %>%
+  left_join(stayer_end_incomes %>%
+              setNames(c("EnrollmentID", 
+                         paste0("E_", colnames(stayer_end_incomes)[2:ncol(stayer_end_incomes)]))),
+            by = "EnrollmentID")
 
+########################################################
+# leavers
+########################################################
 
-# Total income logic:
-## 1) [Total Monthly Income] is auto-calculated (HOW WOULD WE KNOW??? No NULLs?)
-## 2) [Total montly income] > $0
-## 3) SUM([Source Income]) -- THIS IS MY BROAD-LEANING INTERPRETATION OF GLOSSARY
-## 4) If "No" for [Income from Any Source] then $0
-## 5) If non-null $0 or negative value for [Total Monthly Income] and Yes or NULL
-## for [Income from Any Source] then $0
-## 6 / 7) DKR/NULL -- in my interpretation, results in "Missing" in either case.
+spm_4.4_4.5_4.6_dq <- M4_enrollment_u %>%
+  filter(
+    PersonalID %nin% M4_stayer_clients,
+    ExitDate >= report_start_date & ExitDate <= report_end_date) %>%
+  arrange(PersonalID, desc(EntryDate), EnrollmentID) %>%
+  group_by(PersonalID) %>%
+  slice(1L) %>%
+  ungroup() %>% 
+  filter(age >= 18)
+
+leaver_exit_incomes <- IncomeBenefits %>%
+  inner_join(spm_4.4_4.5_4.6_dq %>%
+               select(EnrollmentID, ExitDate),
+             by = "EnrollmentID") %>%
+  filter(InformationDate == ExitDate &
+           DataCollectionStage == 3) %>%
+  group_by(EnrollmentID) %>%
+  arrange(desc(InformationDate), desc(IncomeBenefitsID)) %>%
+  slice(1L) %>%
+  ungroup() %>%
+  determine_total_income() %>%
+  mutate(other_income = calculated_total_income - earned_income) %>%
+  select(c("EnrollmentID", "InformationDate", "IncomeFromAnySource",
+           all_of(source_amount_cols), "earned_income", "other_income",
+           "calculated_total_income"))
+
+leaver_start_incomes <- IncomeBenefits %>%
+  inner_join(spm_4.4_4.5_4.6_dq %>%
+               select(EnrollmentID, EntryDate),
+             by = "EnrollmentID") %>%
+  filter(InformationDate == EntryDate &
+           DataCollectionStage == 1) %>%
+  group_by(EnrollmentID) %>%
+  arrange(desc(InformationDate), desc(IncomeBenefitsID)) %>%
+  slice(1L) %>%
+  ungroup() %>%
+  determine_total_income() %>%
+  mutate(other_income = calculated_total_income - earned_income) %>%
+  select(c("EnrollmentID", "InformationDate", "IncomeFromAnySource",
+           all_of(source_amount_cols), "earned_income", "other_income",
+           "calculated_total_income"))
+
+spm_4.4_4.5_4.6_dq <- spm_4.4_4.5_4.6_dq %>%
+  select(HouseholdID, PersonalID, EnrollmentID, RelationshipToHoH, EntryDate,
+         ExitDate, age) %>%
+  inner_join(leaver_start_incomes %>%
+               setNames(c("EnrollmentID", 
+                          paste0("S_", colnames(leaver_start_incomes)[2:ncol(leaver_start_incomes)]))),
+             by = "EnrollmentID") %>%
+  left_join(leaver_exit_incomes %>%
+              setNames(c("EnrollmentID", 
+                         paste0("E_", colnames(leaver_exit_incomes)[2:ncol(leaver_start_incomes)]))),
+            by = "EnrollmentID")
+
+make_spm_4_table <- function(income_data,
+                             client_type,
+                             income_type) {
+  
+  row_header <- c(
+    if_else(client_type == "leavers",
+            "Universe:.Number.of.adults.who.exited.(system.leavers)",
+            "Universe:.Number.of.adults.(system.stayers)"),
+    paste0("Number.of.adults.",
+           if_else(client_type == "leavers",
+                   "who.exited.", ""),
+           "with.increased.",
+           income_type,
+           ".income"),
+    paste0("Percentage.of.adults.who.increased.",
+           income_type,
+           ".income")
+  )
+  
+  income_column <- paste0(
+    case_when(
+      income_type == "non-employment cash" ~ "other",
+      income_type == "total" ~ "calculated_total",
+      TRUE ~ income_type
+    ),
+    "_income")
+  
+  start_income_column <- paste0("S_", income_column)
+  later_income_column <- paste0("E_", income_column)
+  
+  calculations <- income_data %>%
+    select(PersonalID, {{start_income_column}}, {{later_income_column}}) %>%
+    summarise(total_people = n_distinct(PersonalID, na.rm = TRUE),
+              people_increased = n_distinct(PersonalID[get(start_income_column)
+                                                       < get(later_income_column)],
+                                            na.rm = TRUE),
+              percent_increased = round(people_increased / total_people * 100, 2))
+  
+  Current.FY <- as.numeric(calculations[1, ])
+  
+  cbind.data.frame(row_header, Previous.FY = NA, Current.FY, Difference = NA)
+}
+
+spm_4.1 <- make_spm_4_table(
+  spm_4.1_4.2_4.3_dq,
+  "stayers",
+  "earned"
+)
+
+spm_4.2 <- make_spm_4_table(
+  spm_4.1_4.2_4.3_dq,
+  "stayers",
+  "non-employment cash"
+)
+
+spm_4.3 <- make_spm_4_table(
+  spm_4.1_4.2_4.3_dq,
+  "stayers",
+  "total"
+)
+
+spm_4.4 <- make_spm_4_table(
+  spm_4.4_4.5_4.6_dq,
+  "leavers",
+  "earned"
+)
+
+spm_4.5 <- make_spm_4_table(
+  spm_4.4_4.5_4.6_dq,
+  "leavers",
+  "non-employment cash"
+)
+
+spm_4.6 <- make_spm_4_table(
+  spm_4.4_4.5_4.6_dq,
+  "leavers",
+  "total"
+)
 
 rm(list = ls()[ls() %nin% items_to_keep]) 
 

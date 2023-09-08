@@ -9,8 +9,8 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
-library(readxl)
-library(kableExtra) 
+# library(readxl)
+# library(kableExtra) 
 library(lubridate)    ## used anywhere we do date math
 library(ivs)          ## used in spm 1
 
@@ -184,9 +184,10 @@ items_to_keep <- c("items_to_keep", ls())
 
 source(paste0(getwd(), "/System Performance Measures/system_performance_measures_1.R"))
 source(paste0(getwd(), "/System Performance Measures/system_performance_measures_2.R"))
-
 source(paste0(getwd(), "/System Performance Measures/system_performance_measures_3.R"))
+source(paste0(getwd(), "/System Performance Measures/system_performance_measures_4.R"))
 source(paste0(getwd(), "/System Performance Measures/system_performance_measures_5.R"))
+
 source(paste0(getwd(), "/System Performance Measures/system_performance_measures_7.R"))
 
 
