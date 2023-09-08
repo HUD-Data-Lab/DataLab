@@ -1998,12 +1998,16 @@ generate_new_kits <- TRUE
       #-------------------------------------------------------------
       
       recent_chronic_enrollment <- recent_program_enrollment %>%
-        rename()
+        rename(chronic = chronic.x,                   # May not be needed once you clear environment and script fresh.
+               household_type = household_type.x) %>% # May not be needed once you clear environment and script fresh.
         filter(chronic == "Y")
       
-      # Q26a Not Started ----
+      # Q26a Ready for QA ----
+      #Updated row names
       {
         Q26b_detail <- recent_program_enrollment %>%
+          rename(chronic = chronic.x,                   # May not be needed once you clear environment and script fresh
+                 household_type = household_type.x) %>% # May not be needed once you clear environment and script fresh
           mutate(category = case_when(
             chronic == "Y" ~ chronic_categories[1],
             chronic == "N" ~ chronic_categories[2],
@@ -2019,7 +2023,7 @@ generate_new_kits <- TRUE
           ifnull(., 0)
         }
       
-      # Q26b Not Started ----
+      # Q26b Ready for QA ----
       {
         Q26b <- Q26b_detail %>%
           return_household_groups(., category, chronic_categories) %>%
@@ -2027,7 +2031,8 @@ generate_new_kits <- TRUE
           ifnull(., 0)
       }
       
-      # Q26c Not Started ----
+      # Q26c Ready for QA ----
+      # Updated row names
       {
         Q26c_detail <- recent_chronic_enrollment %>%
           select(c(all_of(standard_detail_columns))) %>%
@@ -2039,7 +2044,8 @@ generate_new_kits <- TRUE
           create_gender_groups(.)
       }
       
-      # Q26d Not Started ----
+      # Q26d In progress / question ----
+      # I though I updated name categories, but it isn't translating to Q11 or in this script. I am missing a step somewhere.
       {
         Q26d_detail <- Q11_detail %>%
           filter(PersonalID %in% recent_chronic_enrollment$PersonalID)
@@ -2048,7 +2054,7 @@ generate_new_kits <- TRUE
           create_age_groups(., chronic = TRUE) 
       }
       
-      # Q26e Not Started ----
+      # Q26e No change from FY23 ----
       {
         Q26e_detail <- "See Q13a1.csv, Q13b1.csv, and Q13c1.csv respectively"
         Q26e.1.and.2 <- recent_chronic_enrollment %>%
@@ -2080,34 +2086,34 @@ generate_new_kits <- TRUE
           ifnull(0)
       }
       
-      # Q26f Not Started ----
-      {
-        Q26f_detail <- Q16_detail %>%
-          filter(chronic == "Y")
-        
-        Q26f <- recent_chronic_enrollment %>%
-          keep_adults_only() %>%
-          create_income_categories(.) %>%
-          adorn_totals("row")
-      }
+      # Q26f RETIRED ----
+      # {
+      #   Q26f_detail <- Q16_detail %>%
+      #     filter(chronic == "Y")
+      #   
+      #   Q26f <- recent_chronic_enrollment %>%
+      #     keep_adults_only() %>%
+      #     create_income_categories(.) %>%
+      #     adorn_totals("row")
+      # }
       
-      # Q26g Not Started ----
-      {
-        Q26g_detail <- Q17_detail %>%
-          filter(chronic == "Y")
-        
-        Q26g <- recent_chronic_enrollment %>%
-          keep_adults_only() %>%
-          create_income_sources(.)
-      }
+      # Q26g RETIRED ----
+      # {
+      #   Q26g_detail <- Q17_detail %>%
+      #     filter(chronic == "Y")
+      #   
+      #   Q26g <- recent_chronic_enrollment %>%
+      #     keep_adults_only() %>%
+      #     create_income_sources(.)
+      # }
       
-      # Q26h Not Started ----
-      {
-        Q26h_detail <- Q20a_detail %>%
-          filter(chronic == "Y") 
-        
-        Q26h <- create_benefit_groups(recent_chronic_enrollment)
-      }
+      # Q26h RETIRED ----
+      # {
+      #   Q26h_detail <- Q20a_detail %>%
+      #     filter(chronic == "Y") 
+      #   
+      #   Q26h <- create_benefit_groups(recent_chronic_enrollment)
+      # }
       
       
       #-------------------------------------------------------------
@@ -2118,6 +2124,7 @@ generate_new_kits <- TRUE
         filter(youth == 1)
       
       # Q27a Not Started ----
+      # Needs new age group 12-17. Calls out detailed_age_group_list, but that list doesn't have 12-17 it has 13-17 
       {
         Q27a_detail <- Q11_detail %>%
           filter(PersonalID %in% recent_youth_enrollment$PersonalID) 
@@ -2127,7 +2134,7 @@ generate_new_kits <- TRUE
           filter(detailed_age_group %nin% detailed_age_group_list[c(1:2, 5:9)])
         }
       
-      # Q27b Not Started ----
+      # Q27b No changes to FY 2023 ----
       {
         Q27b_headers <- as.data.frame(c("Parent youth < 18", "Parent youth 18 to 24"))  %>%
           `colnames<-`(c("household_type"))
@@ -2160,7 +2167,8 @@ generate_new_kits <- TRUE
           ifnull(., 0)
       }
       
-      # Q27c Not Started ----
+      # Q27c Ready fro QA ----
+      # Updated row headers
       {
         Q27c_detail <- recent_youth_enrollment %>%
           select(c(all_of(standard_detail_columns))) %>%
@@ -2182,7 +2190,8 @@ generate_new_kits <- TRUE
           create_prior_residence_groups(.)
       }
       
-      # Q27e Not Started ----
+      # Q27e Ready for QA ----
+      # Removed Data not collected row
       {
         Q27e_detail <- create_lot_table(recent_youth_enrollment)  
         
@@ -2204,13 +2213,11 @@ generate_new_kits <- TRUE
           left_join(Q27e_total, by = "APR_enrollment_length_group") %>%
           left_join(Q27e_leavers, by = "APR_enrollment_length_group") %>%
           left_join(Q27e_stayers, by = "APR_enrollment_length_group") %>%
-          full_join(data.frame(APR_enrollment_length_group = c("Data Not Collected")),
-                    by = "APR_enrollment_length_group") %>%
           adorn_totals("row") %>%
           ifnull(., 0)
       }
       
-      # Q27f Not Started ----
+      # Q27f1 Not Started ----
       {
         Q27f_detail <- Q23c_detail %>%
           filter(youth == 1)
@@ -2221,7 +2228,10 @@ generate_new_kits <- TRUE
         Q27f[45, 2:6] <- as.list(decimal_format(as.numeric(Q27f[45, 2:6]), 4))
       }
       
-      # Q27g Not Started ----
+      # Q27f2 New Question not coded yet ----
+      
+      
+      # Q27g No change from FY23 ----
       # label for A17 specifies adults like the other uses of this logic, but
       # this question is unique in that it includes HoHs who are minors
       {
@@ -2233,7 +2243,7 @@ generate_new_kits <- TRUE
           create_income_sources(.)
       }
       
-      # Q27h Not Started ----
+      # Q27h No changes from FY23 ----
       {
         Q27h_detail <- Q16_detail %>%
           filter(youth == 1)
@@ -2258,7 +2268,8 @@ generate_new_kits <- TRUE
                      income_information_present(recent_youth_enrollment)[2:4]))
       }
       
-      # Q27i Not Started ----
+      # Q27i In progress ----
+      # add actual row names
       {
         Q27i_detail <- Q19b_detail %>%
           filter(PersonalID %in% recent_youth_enrollment$PersonalID)
@@ -2269,7 +2280,7 @@ generate_new_kits <- TRUE
         Q27i[, c(5, 9, 13, 17)] <- decimal_format(Q27i[, c(5, 9, 13, 17)], 4)
       }
       
-      # Q27j Not Started ----
+      # Q27j No changes from FY23 ----
       {
         Q27j_detail <- "See Q27e_detail.csv"
         Q27j <- Q27e_detail %>%
@@ -2286,7 +2297,8 @@ generate_new_kits <- TRUE
                             Stayers = median(days_enrolled[is.na(ExitDate)])))
       }
       
-      # Q27k Not Started ----
+      # Q27k Ready for QA ----
+      # time categories match 22c
       {
         Q27k_detail <- create_time_to_move_in(recent_youth_enrollment)
         
@@ -2344,7 +2356,8 @@ generate_new_kits <- TRUE
                     by = colnames(exited_without_move_in_data))
       }
       
-      # Q27l Not Started ----
+      # Q27l Ready for QA ----
+      #time categories match Q22e
       {
         Q27l_detail <- recent_youth_enrollment %>%
           select(c("ProjectType", all_of(housing_program_detail_columns), "age",
