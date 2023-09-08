@@ -72,21 +72,21 @@ chronic_individual <- Enrollment %>%
     DisablingCondition == 1 |
       has_disability == 1 ~ "Y",
     DisablingCondition == 0 ~ "N",
-    DisablingCondition %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+    DisablingCondition %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
     TRUE ~ "Information.Missing"),
     homeless_year_prior = trunc((DateToStreetESSH %--% EntryDate) / years(1)) >= 1 &
       !is.na(DateToStreetESSH),
     four_or_more_times = case_when(
       TimesHomelessPastThreeYears == 4 ~ "Y",
       TimesHomelessPastThreeYears %in% c(1, 2, 3) ~ "N",
-      TimesHomelessPastThreeYears %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+      TimesHomelessPastThreeYears %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
       TRUE ~ "Information.Missing"),
     twelve_or_more_months = case_when(
       MonthsHomelessPastThreeYears >= 112 ~ "Y",
       MonthsHomelessPastThreeYears %in% c(101, 102, 103, 104, 
                                           105, 106, 107, 108, 
                                           109, 110, 111) ~ "N",
-      MonthsHomelessPastThreeYears %in% c(8, 9) ~ "Client.Does.Not.Know.or.Refused",
+      MonthsHomelessPastThreeYears %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
       TRUE ~ "Information.Missing"
     ),
     chronic = case_when(
@@ -136,7 +136,7 @@ chronic_household <- Enrollment %>%
               mutate(numeric_chronic = case_when(
                 chronic == "Y" ~ 1,
                 chronic == "N" ~ 2,
-                chronic == "Client.Does.Not.Know.or.Refused" ~ 3,
+                chronic == "Client.Does.Not.Know.or.Prefers.Not.to.Answer" ~ 3,
                 chronic == "Information.Missing" ~ 4
               )), 
             by = "EnrollmentID") %>%
@@ -155,7 +155,7 @@ chronic_household <- Enrollment %>%
              TRUE ~ numeric_chronic
            ), 
            levels = c(1, 2, 3, 4),
-           labels = c("Y", "N", "Client.Does.Not.Know.or.Refused", "Information.Missing"))) %>%
+           labels = c("Y", "N", "Client.Does.Not.Know.or.Prefers.Not.to.Answer", "Information.Missing"))) %>%
   ungroup() %>%
   filter(EntryDate == first_entry_date) %>%
   select(EnrollmentID, new_chronic)

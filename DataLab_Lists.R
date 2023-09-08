@@ -314,7 +314,7 @@ age_groups <- c("Adults", "Children", "Client.Does.Not.Know.or.Prefers.Not.to.An
 #   APR/CAPER - 
 
 detailed_age_group_list = c("Under 5", "5-12", "13-17", "18-24", "25-34",
-                            "35-44", "45-54", "55-61", "62+", 
+                            "35-44", "45-54", "55-64", "65+", 
                             "Client.Does.Not.Know.or.Prefers.Not.to.Answer", "Data.Not.Collected")
 
 
@@ -383,9 +383,9 @@ assessment_outcomes = c("Able to maintain the housing they had at project start-
                                  "Moved in with family/friends on a permanent basis",
                                  "Moved to a transitional or temporary housing facility or program",
                                  "Client became homeless – moving to a shelter or other place unfit for human habitation",
-                                 "Client went to jail/prison",
-                                 "Client died",
-                                 "Client doesn’t know/Client refused",
+                                 "Jail/prison",
+                                 "Deceased",
+                                 "Client doesn’t know/Prefers Not to Answer",
                                  "Data not collected (no exit interview completed)")
 
 
@@ -398,7 +398,7 @@ assessment_outcomes = c("Able to maintain the housing they had at project start-
 vet_chronic_categories <- c("Chronically Homeless Veteran",
                        "Non-Chronically Homeless Veteran",
                        "Not a Veteran",
-                       "Client doesn’t know/Client refused",
+                       "Client doesn’t know/Prefers Not to Answer",
                        "Data not collected")
 
 
