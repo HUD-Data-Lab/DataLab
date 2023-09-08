@@ -9,17 +9,18 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
-# library(readxl)
-# library(kableExtra) 
 library(lubridate)    ## used anywhere we do date math
 library(ivs)          ## used in spm 14
 library(writexl)
 library(plyr)
 
-# lookback_stop_date <- ymd("2014-10-1")
-lookback_stop_date <- ymd("2012-10-1")
-kit_type <- "old_kit"
-# system_performance_measures <- TRUE
+kit_type <- "new_kit"
+
+if (kit_type == "new_kit") {
+  lookback_stop_date <- ymd("2014-10-1")
+} else {
+  lookback_stop_date <- ymd("2012-10-1")
+}
 
 source("00_read_2024_csv.R")
 
