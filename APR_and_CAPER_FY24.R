@@ -1076,8 +1076,7 @@ generate_new_kits <- TRUE
           adorn_totals("row")
       }
       
-      # Q15 In Progress ----
-      # Match order to the specs?
+      # Q15 checked
       {
         ##  added a comment to the document, but putting here too--easier to
         ##  put in value order than an arbitrary one
@@ -1090,8 +1089,7 @@ generate_new_kits <- TRUE
       }
       
       
-      # Q16 Ready for QA w/question ----
-      # Do we need the row names to match exactly? And can we just recode them directly?
+      # Q16 checked
       {
         entry_income <- recent_program_enrollment %>%
           left_join(IncomeBenefits %>%
@@ -1156,7 +1154,7 @@ generate_new_kits <- TRUE
        
       }
       
-      # Q17 No change from FY 2023 ----
+      # Q17 checked
       {
         Q17_detail <- recent_program_enrollment %>%
           keep_adults_and_hoh_only() %>%
@@ -1181,8 +1179,7 @@ generate_new_kits <- TRUE
           create_income_sources(.)
       }
       
-      # Q18 Ready for QA ----
-      # Updated row header Client.Does.Not.Know.or.Prefers.Not.to.Answer
+      # Q18 checked
       {
         Q18_detail <- "See Q16_detail.csv"
         
@@ -1205,8 +1202,7 @@ generate_new_kits <- TRUE
                                                 keep_adults_only()))
       }
       
-      # Q19a1 No change from FY2023/ QA Needed ----
-      # only change noted was a reference in the programming specs. Grant interpreted that change as clarification on how it was done and not new specs.
+      # Q19a1 checked
       {
         needed_columns <- c("earned_amount", "other_amount", "calculated_total_income")
         
@@ -1278,8 +1274,7 @@ generate_new_kits <- TRUE
           )
       }
       
-      # Q19a2 No change from FY2023/ QA Needed ----
-      # only change noted was a reference in the programming specs. Grant interpreted that change as clarification on how it was done and not new specs.
+      # Q19a2 checked
       {
         for(period in entry_annual_exit[c(1, 3)]) {
           income_for_changes <- get(paste0(period, "_income")) %>%
@@ -1350,10 +1345,7 @@ generate_new_kits <- TRUE
           )
       }
       
-      # Q19b In progress  ----
-      #Update columns
-      #Update rows
-      #Update row order
+      # Q19b checked
       {
         Q19b_detail <- Q17_detail %>%
           filter(EnrollmentID %in% exit_income$EnrollmentID[exit_income$IncomeFromAnySource %in% c(0, 1)]) %>%
@@ -1363,12 +1355,19 @@ generate_new_kits <- TRUE
                      by = "EnrollmentID")
         
         Q19b <- exit_income %>%
-          income_hh_type_disabling_condition_table(.)
+          income_hh_type_disabling_condition_table(.) %>%
+          left_join(IncomeTypes,
+                    by = c("name" = "IncomeGroup")) %>%
+          mutate(name = case_when(
+            !is.na(OfficialIncomeName) ~ OfficialIncomeName,
+            TRUE ~ name
+          )) %>%
+          select(-OfficialIncomeName)
         
         Q19b[, c(5, 9, 13)] <- decimal_format(Q19b[, c(5, 9, 13)], 4)
       }
       
-      # Q20a No change from FY24 ----
+      # Q20a checked
       {
         Q20a_detail <- recent_program_enrollment %>%
           keep_adults_only() %>%
@@ -1387,8 +1386,7 @@ generate_new_kits <- TRUE
         Q20a <- create_benefit_groups(recent_program_enrollment)
       }
       
-      # Q20b Ready for QA ----
-      #Only change was change was the row header to client.does.not.know.or.prefers.not.to.answer
+      # Q20b checked
       #Note row header one or more source(s) is different from specs (1 + Source(s)). How exact do we want to be?
       {
         Q20b_detail <- "See Q20a_detail.csv"
@@ -1445,13 +1443,12 @@ generate_new_kits <- TRUE
       }
       
       
-      # Q21 In Progress / Question to Gwen ----
-      # Gwen, can I edit the supplement files xlsx directly? Q21 needs the names updated, but the names live on the supplement excel workbook
+      # Q21 checked
       {
         Q21_detail <- recent_program_enrollment %>%
           select(all_of(standard_detail_columns))
         
-        insurance_list <- c("Medicaid", "Medicare", "SCHIP", "VHAServicesHA", 
+        insurance_list <- c("Medicaid", "Medicare", "SCHIP", "VHAServices", 
                             "EmployerProvided", "COBRA", "PrivatePay", "StateHealthIns",
                             "IndianHealthServices", "OtherInsurance")
         
@@ -1459,7 +1456,7 @@ generate_new_kits <- TRUE
           
           data <- get(paste0(period, "_income")) %>%
             mutate(insurance_count = ifnull(Medicaid == 1, 0) + ifnull(Medicare == 1, 0) +
-                     ifnull(SCHIP == 1, 0) + ifnull(VHAServicesHA == 1, 0) +
+                     ifnull(SCHIP == 1, 0) + ifnull(VHAServices == 1, 0) +
                      ifnull(EmployerProvided == 1, 0) + ifnull(COBRA == 1, 0) +
                      ifnull(PrivatePay == 1, 0) + ifnull(StateHealthIns == 1, 0) +
                      ifnull(IndianHealthServices == 1, 0) + ifnull(OtherInsurance == 1, 0)
@@ -1522,8 +1519,7 @@ generate_new_kits <- TRUE
         Q21[is.na(Q21) & Q21$InsuranceType != "Annual assessment not required"] <- 0
       }
       
-      # Q22a1 Ready for QA ----
-      # Removed the Data.not.collected.row
+      # Q22a1 checked
       {
         # groups in specs include Data.Not.Collected, what does that mean in length of stay? <- Update we removed Data.Not.Collected from specs
         # it's not defined in the reporting glossary
@@ -1551,8 +1547,7 @@ generate_new_kits <- TRUE
           ifnull(., 0)
       }
       
-      # Q22a2 In Progress / Flagged for follow up time categories are slightly different in Q22----
-      # Removed the Data.not.collected.row
+      # Q22a2 checked
       {
         Q22a2_detail <- Q22a1_detail
         
@@ -1578,7 +1573,7 @@ generate_new_kits <- TRUE
           ifnull(., 0)
       }
       
-      # Q22b No changes from FY23 ----
+      # Q22b checked
       {
         Q22b_detail <- "See Q22a1_detail.csv"
         
@@ -1596,8 +1591,7 @@ generate_new_kits <- TRUE
                             Stayers = median(days_enrolled[is.na(ExitDate)])))
       }
       
-      # Q22c Ready for QA ----
-      # Created new age_categories and updated function "length_of_time_groups" with the new age categories
+      # Q22c checked
       {
         Q22c_detail <- create_time_to_move_in(recent_program_enrollment)
         
@@ -1654,22 +1648,18 @@ generate_new_kits <- TRUE
                     by = colnames(exited_without_move_in_data))
       }
       
-      # Q22d In progress / Question ----
-      # What did I miss when updating the age_categories?
+      # Q22d checking
       {
         Q22d_detail <- "See Q22a2_detail.csv"
         
         Q22d <- Q22a1_detail %>%
           return_household_groups(., CAPER_enrollment_length_group, 
                                   length_of_participation$enrollment_length_group) %>%
-          full_join(data.frame(CAPER_enrollment_length_group = c("Data Not Collected")),
-                    by = "CAPER_enrollment_length_group") %>%
           adorn_totals("row") %>%
           ifnull(., 0) 
       }
       
-      #Q22e Ready for QA ----
-      # Updated age_categories
+      #Q22e checked
       {
         Q22e_detail <- recent_program_enrollment %>%
           select(c("ProjectType", all_of(housing_program_detail_columns), "age",
@@ -1695,7 +1685,45 @@ generate_new_kits <- TRUE
                   filter(days_prior_to_housing %in% c("Not yet moved into housing", "Data.Not.Collected", "Total")))
       }
       
-      # Q22f ----
+      # Q22f ---- ##stopped here
+      
+      Q22f_detail <- create_time_to_move_in(recent_program_enrollment) %>%
+        ifnull(., 0)  %>%
+        left_join(Client %>%
+                    select(PersonalID, all_of(unname(race_columns)), RaceNone),
+                  by = "PersonalID") %>%
+        left_join(race_info, #Race_info created from DataLab_lists.R line 261
+                  by = all_of(unname(race_columns))) %>% 
+        mutate(across(
+          all_of(unname(race_columns)),
+          ~ as.numeric(.)),
+          race_count = rowSums(across(all_of(unname(race_columns))),
+                               na.rm = TRUE),
+          race_tabulation = case_when(
+            race_count == 1 ~ race_name_list,
+            race_count > 1 &
+              HispanicLatinaeo == 1 ~ "At Least 1 Race and Hispanic/Latina/e/o",
+            race_count > 1 ~ "Multi-racial (does not include Hispanic/Latina/e/o)",
+            TRUE ~ "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)"
+          )
+        )
+        
+      
+      average_time_to_house <- Q22c_detail %>%
+        summarise(housing_length_group = "Average length of time to housing",
+                  Total = round(mean(days_to_house, na.rm = TRUE), 0),
+                  Without.Children = round(mean(
+                    days_to_house[household_type == "AdultsOnly"],
+                    na.rm = TRUE), 0),
+                  With.Children.And.Adults = round(mean(
+                    days_to_house[household_type == "AdultsAndChildren"],
+                    na.rm = TRUE), 0),
+                  With.Only.Children = round(mean(
+                    days_to_house[household_type == "ChildrenOnly"],
+                    na.rm = TRUE), 0),
+                  Unknown.Household.Type = round(mean(
+                    days_to_house[household_type == "Unknown"],
+                    na.rm = TRUE), 0))
       
       ## before running through below, see what can be repurposed from rest of 22
       

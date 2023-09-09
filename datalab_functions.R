@@ -505,8 +505,7 @@ length_of_time_groups <- function(report_type, column_name) {
   } else if (report_type == "CAPER"){
     rows <- c("0 to 7 days", "8 to 14 days", "15 to 21 days", "22 to 30 days",  #This is for CAPER Specific age categories. 
               "31 to 60 days", "61 to 90 days", "91 to 180 days", 
-              "181 to 365 days", "366 to 730 days (1-2 Yrs)", "731 to 1,095 days (2-3 Yrs)",
-              "1,096 to 1,460 days (3-4 Yrs)", "1,461 to 1,825 days (4-5 Yrs)", "More than 1,825 days (>5 Yrs)")
+              "181 to 365 days", "366 to 730 days (1-2 Yrs)", "731 days or more")
   } else {
     rows <- c("0 to 7 days", "8 to 14 days", "15 to 21 days", "22 to 30 days",  #This is for CAPER Specific age categories. 
               "31 to 60 days", "61 to 90 days", "91 to 180 days", 
@@ -777,7 +776,7 @@ create_prior_residence_groups <- function(included_enrollments) {
       return_household_groups(., LocationDescription, residences_to_include$LocationDescription) %>%
       adorn_totals("row") %>%
       mutate(LocationDescription = case_when(
-        LocationDescription == "Total" ~ "Subtotal",
+        LocationDescription == "Total" ~ paste(residence_type, "Subtotal"),
         TRUE ~ LocationDescription
       ))
     
@@ -847,7 +846,7 @@ create_prior_residence_groups <- function(included_enrollments) {
             GA == 1 |
             Alimony == 1 |
             OtherIncomeSource == 1, 1, 0)) %>%
-        select(c(PersonalID, household_type, IncomeFromAnySource, all_of(income_rows_to_show))) 
+        select(c(PersonalID, household_type, IncomeFromAnySource, all_of(IncomeTypes$IncomeGroup))) 
       
       long_income_information <- filtered_income_information %>%
         pivot_longer(!c(PersonalID, household_type, IncomeFromAnySource)) %>%

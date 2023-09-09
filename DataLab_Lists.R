@@ -175,7 +175,7 @@ ResidenceUses <- read_excel("SupplementalTables.xlsx",
                             sheet = "ResidenceUses",
                             col_types = c("numeric", "numeric", "text", "text", 
                                           "text", "logical", "logical", "logical",
-                                          "numeric", "numeric", "text")) %>%
+                                          "numeric", "numeric", "text", "numeric")) %>%
   mutate(PriorResidenceType_Chronicity = case_when(
     floor(Location/100) == 1 ~ "homeless",
     floor(Location/100) == 2 ~ "institution",
@@ -185,8 +185,9 @@ ResidenceUses <- read_excel("SupplementalTables.xlsx",
       Location <= 199 ~ "Homeless",
       Location <= 299 ~ "Institutional",
       Location <= 399 ~ "Temporary",
-      Location <= 499 ~ "Permanent"),
-    APR_LocationOrder = if_else(Location <= 99, Location + 500, Location))
+      Location <= 499 ~ "Permanent")
+    # APR_LocationOrder = if_else(Location <= 99, Location + 500, Location)
+    )
 
 
 # ------------------------------------------------------------------------------
@@ -531,10 +532,11 @@ benefit_list <- c("SNAP", "WIC", "TANFChildCare", "TANFTransportation",
 # used in:
 #   APR/CAPER - Q19b
 
-income_rows_to_show <- c("Earned", "SSI", "SSDI", "VADisabilityService", 
-                         "PrivateDisability", "WorkersComp", "TANF", 
-                         "SocSecRetirement", "Pension", "ChildSupport",
-                         "Other.Source")
+# income_rows_to_show <- c("Earned", "SSI", "SSDI", "VADisabilityService", 
+#                          "PrivateDisability", "WorkersComp", "TANF", 
+#                          "SocSecRetirement", "Pension", "ChildSupport",
+#                          "Other.Source")
+income_rows_to_show <- IncomeTypes$IncomeGroup
 
 
 # ------------------------------------------------------------------------------
