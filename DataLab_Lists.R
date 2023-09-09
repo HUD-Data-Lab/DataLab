@@ -592,7 +592,8 @@ standard_detail_columns <- c("ProjectName", "HouseholdID", "PersonalID",
 housing_program_detail_columns <- c("ProjectName", "HouseholdID", 
                                     "PersonalID", "EnrollmentID",
                                     "RelationshipToHoH", "EntryDate", 
-                                    "HoH_HMID", "ExitDate", "household_type")
+                                    "HoH_HMID", "MoveInDateAdj", 
+                                    "ExitDate", "household_type")
 
 
 # ------------------------------------------------------------------------------

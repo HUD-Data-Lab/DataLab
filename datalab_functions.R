@@ -1237,7 +1237,7 @@ add_client_info <- function(filtered_enrollments) { #Create function to add clie
     ungroup() %>%
     filter(EnrollmentID %in% filtered_enrollments$EnrollmentID) %>%
     select(PersonalID, age, age_group, detailed_age_group, VeteranStatus, 
-           youth_household, youth, has_children, new_veteran_status
+           youth_household, youth, has_children, new_veteran_status, DOB
            # ,
            # Woman, Man, NonBinary, CulturallySpecific, Transgender, 
            # Questioning, DifferentIdentity, GenderNone, AmIndAKNative,
@@ -1344,7 +1344,7 @@ get_household_info <- function(filtered_enrollments,
 create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Client.Does.Not.Know.or.Prefers.Not.to.Answer to Client.Does.Not.Know.or.Prefers.Not.to.Answer
   DQ1_data <- filtered_enrollments %>%
     inner_join(Client %>%
-                 select(-ExportID), by = "PersonalID")
+                 select(-c(ExportID, DOB)), by = "PersonalID")
   
   DQ1_name <- DQ1_data %>%
     mutate(dq_flag = case_when(

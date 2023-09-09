@@ -101,6 +101,15 @@ generate_new_kits <- TRUE
       recent_program_enrollment <- recent_program_enrollment %>%
         left_join(client_plus, by = "PersonalID") %>%
         left_join(household_info, by = "HouseholdID") %>%
+        mutate(MoveInDateAdj = case_when(
+          !is.na(HoH_HMID) &
+            HoH_HMID >= DOB &
+            HoH_HMID >= EntryDate &
+            (HoH_HMID <= ExitDate |
+               is.na(ExitDate)) ~ HoH_HMID,
+          !is.na(HoH_HMID) &
+            (HoH_HMID <= ExitDate |
+               is.na(ExitDate)) ~ EntryDate)) %>%
         left_join(chronicity_data, by = "EnrollmentID")
       }
       
@@ -252,7 +261,6 @@ generate_new_kits <- TRUE
                     by = "Group")  %>%
           ifnull(., 0)
           
-        
       }
       
       # Q6c
@@ -386,28 +394,31 @@ generate_new_kits <- TRUE
       
       # Q6d
       {
-        Entering.into.project.type <- c("ES.SH.Street.Outreach", "TH", "PH.all")
+        Entering.into.project.type <- c("ES-EE.ES-NbN.SH.Street.Outreach", "TH", 
+                                        "PH.all", "SSO.Day.Shelter.HP", "CE")
         
         Q6d_detail <- recent_program_enrollment_dq %>% 
           filter(EntryDate >= mdy("10/1/2016") & #Just making a note that this date is hard coded ----
-                   ProjectType %in% c(0, 1, 2, 3, 4, 8, 9, 10, 13)) %>%
+                   ProjectType %in% c(0, 1, 2, 3, 4, 6, 8, 9, 10, 11, 12, 13, 14)) %>%
           keep_adults_and_hoh_only() %>% #View(keep_adults_and_hoh_only)
           select(c("ProjectType", all_of(standard_detail_columns), 
                    all_of(lot_homeless_detail_columns))) %>%
           mutate(Entering.into.project.type = case_when(
-            ProjectType %in% c(0, 1, 4, 8) ~ "ES.SH.Street.Outreach",
+            ProjectType %in% c(0, 1, 4, 8) ~ "ES-EE.ES-NbN.SH.Street.Outreach",
             ProjectType == 2 ~ "TH",
-            ProjectType %in% c(3, 9, 10, 13) ~ "PH.all"),
-            missing_institution = Entering.into.project.type != "ES.SH.Street.Outreach" &
+            ProjectType %in% c(3, 9, 10, 13) ~ "PH.all",
+            ProjectType %in% c(6, 11, 12) ~ "SSO.Day.Shelter.HP",
+            ProjectType == 14 ~ "CE"),
+            missing_institution = Entering.into.project.type != "ES-EE.ES-NbN.SH.Street.Outreach" &
               LivingSituation %in% 200:299 &
               (LengthOfStay %in% c(8, 9, 99) |
                  is.na(LengthOfStay)),
-            missing_housing = Entering.into.project.type != "ES.SH.Street.Outreach" &
+            missing_housing = Entering.into.project.type != "ES-EE.ES-NbN.SH.Street.Outreach" &
               (LivingSituation %in% c(0:99, 300:499) |
                  is.na(LivingSituation)) &
               (LengthOfStay %in% c(8, 9, 99) |
                  is.na(LengthOfStay)),
-            include_for_EFG = Entering.into.project.type == "ES.SH.Street.Outreach" |
+            include_for_EFG = Entering.into.project.type == "ES-EE.ES-NbN.SH.Street.Outreach" |
               LivingSituation %in% 100:199 |
               (PreviousStreetESSH == 1 & 
                  ((LivingSituation %in% 200:299 &
@@ -471,12 +482,12 @@ generate_new_kits <- TRUE
             Percent.of.records.unable.to.calculate, 4))
         
         
-        Q6d[Q6d$Entering.into.project.type == "ES.SH.Street.Outreach",  #What is this section doing? It doesn't seem to be writing back into Q6d.
+        Q6d[Q6d$Entering.into.project.type == "ES-EE.ES-NbN.SH.Street.Outreach",  #What is this section doing? It doesn't seem to be writing back into Q6d.
             c("Missing.time.in.institution.3.917.2",
               "Missing.time.in.housing.3.917.2")] <- NA
       }
       
-      # Q6e
+      # Q6e checked
       {
         Q6e_detail <- recent_program_enrollment_dq %>%
           select(c(all_of(standard_detail_columns)), "enroll_DateCreated",
@@ -486,7 +497,7 @@ generate_new_kits <- TRUE
               EntryDate <= report_end_date ~ floor(
                 interval(EntryDate, floor_date(enroll_DateCreated, "day")) / days(1))),
             TimeForEnrollmentEntry = case_when(
-              days_for_entry < 0 ~ "Error",
+              days_for_entry < 0 ~ "< 0 days",
               days_for_entry == 0 ~ "0 days",
               days_for_entry <= 3 ~ "1-3 days",
               days_for_entry <= 6 ~ "4-6 days",
@@ -502,8 +513,8 @@ generate_new_kits <- TRUE
               days_for_exit <= 10 ~ "7-10 days",
               !is.na(days_for_exit) ~ "11+ days"))
         
-        Q6e <- data.frame(TimeForEntry = c("0 days", "1-3 days", "4-6 days",
-                                           "7-10 days", "11+ days")) %>%
+        Q6e <- data.frame(TimeForEntry = c("< 0 days", "0 days", "1-3 days", 
+                                           "4-6 days", "7-10 days", "11+ days")) %>%
           left_join(Q6e_detail %>%
                       filter(!is.na(TimeForEnrollmentEntry)) %>%
                       group_by(TimeForEnrollmentEntry) %>%
@@ -520,7 +531,7 @@ generate_new_kits <- TRUE
         
       }
       
-      # Q6f
+      # Q6f checked
       {
         # programming specs are unclear--most recent for individual or enrollment?
         most_recent_CLS <- CurrentLivingSituation %>%
@@ -540,7 +551,7 @@ generate_new_kits <- TRUE
         Q6f_detail <- recent_program_enrollment_dq %>%
           filter(is.na(ExitDate) &
                    trunc((EntryDate %--% report_end_date) / days(1)) >= 90 &
-                   (ProjectType %in% c(1, 4))) %>%
+                   (ProjectType %in% c(0, 1, 4))) %>%
           select(all_of(standard_detail_columns)) %>%
           left_join(most_recent_CLS %>%
                       select(EnrollmentID, InformationDate),
@@ -560,8 +571,7 @@ generate_new_kits <- TRUE
       }
       
       # Q7
-      # Q7a In Progress ----
-      # Need to update Q7a-move in to not include members who leave HH
+      # Q7a checked
       {
         Q7a_detail <- recent_program_enrollment %>%
           select(all_of(housing_program_detail_columns),
@@ -572,8 +582,7 @@ generate_new_kits <- TRUE
           return_household_groups(., client_group, c("Total")) 
         
         Q7a_moved_in <- Q7a_detail %>%
-          filter(HoH_HMID <= report_end_date) %>% 
-          
+          filter(MoveInDateAdj <= report_end_date) %>% 
           mutate(client_group = "For PSH & RRH - the total persons served who moved into housing") %>%
           return_household_groups(., client_group, "For PSH & RRH - the total persons served who moved into housing") 
         
@@ -585,8 +594,7 @@ generate_new_kits <- TRUE
         
       }
       
-      # Q7b
-      # Q7b No change from FY2023 ----
+      # Q7b checked
       {
         year_household_info <- all_program_enrollments %>%
           group_by(HouseholdID) %>%
@@ -644,40 +652,14 @@ generate_new_kits <- TRUE
         }
       }
       
-      # Q7c Not Started / REIRED(?) ----
-      #Is this still included in the report? It seems like we removed it, but can't find the revision history that says we did. ----
-      {
-        Q7c_detail <- recent_program_enrollment %>%
-          select(all_of(standard_detail_columns), age_group, HoH_HMID) %>%
-          left_join(Client %>%
-                      select(PersonalID, all_of(unname(race_columns)), RaceNone),
-                    by = "PersonalID")
-        
-        Q7c_all <- Q7c_detail %>%
-          mutate(client_group = "Total") %>%
-          return_race_groups(., client_group, c("Total")) 
-        
-        Q7c_moved_in <- Q7c_detail %>%
-          filter(HoH_HMID <= report_end_date) %>% 
-          mutate(client_group = "For PSH & RRH - the total persons served who moved into housing") %>%
-          return_race_groups(., client_group, "For PSH & RRH - the total persons served who moved into housing") 
-        
-        Q7c <- Q7c_detail %>%
-          return_race_groups(., age_group, age_groups) %>%
-          rename(client_group = age_group) %>%
-          union(Q7c_all) %>%
-          union(Q7c_moved_in)
-        
-      }
-      
-      # Q8a No changes from FY23 ----
+      # Q8a checked
       {
         Q8a_data <- households_served_table(recent_program_enrollment) #View(households_served_table)
         Q8a <- Q8a_data[[1]]
         Q8a_detail <- Q8a_data[[2]]
       }
       
-      # Q8b Ready for QA ----
+      # Q8b checked
       {
         for (pit_month in pit_months) {
           pit_date <- pit_dates[[which(pit_dates$month == pit_month), 2]]
@@ -728,7 +710,7 @@ generate_new_kits <- TRUE
         }
       }
       
-      # Q9a Ready for QA ----
+      # Q9a checked
       {
         # same question as before--is this the most recent CLS for the *person* or the *enrollment*?
         recent_CLS_for_Q9 <- recent_program_enrollment %>%
@@ -802,7 +784,7 @@ generate_new_kits <- TRUE
           create_contact_table(., first_CLS_group, all_CLS_for_Q9)
       }
       
-      # Q9b Ready for QA ----
+      # Q9b checked
       {
         Q9b_detail <- "See Q9a_detail.csv"
         
@@ -828,54 +810,20 @@ generate_new_kits <- TRUE
         
       }
       
-      # Q10a Not Started. Gwen Follow up ----
-      ############################
-      ### PENDING FINALIZATION ###
-      ############################
+      # Q10a checked
       {
         Q10a_detail <- recent_program_enrollment %>%
-          keep_adults_only() %>%
           select(all_of(standard_detail_columns)) %>%
           left_join(Client %>%
                       select(PersonalID, all_of(names(gender_columns)), GenderNone),
                     by = "PersonalID")
 
         Q10a <- Q10a_detail %>%
-          create_gender_groups(.) %>%
-          select(-With.Only.Children)
-      }
-      
-      # Q10b RETIRED ----
-      {
-        Q10b_detail <- recent_program_enrollment %>%
-          filter(age_group == "Children") %>%
-          select(all_of(standard_detail_columns)) %>%
-          left_join(Client %>%
-                      select(PersonalID, all_of(names(gender_columns)), GenderNone),
-                    by = "PersonalID")
-        
-        Q10b <- Q10b_detail %>%
-          create_gender_groups(.) %>%
-          select(-Without.Children)
-      }
-      
-      # Q10c RETIRED ----
-      {
-        Q10c_detail <- recent_program_enrollment %>%
-          filter(age_group %in% c("Client.Does.Not.Know.or.Prefers.Not.to.Answer", "Data.Not.Collected")) %>%
-          select(all_of(standard_detail_columns)) %>%
-          left_join(Client %>%
-                      select(PersonalID, all_of(names(gender_columns)), GenderNone),
-                    by = "PersonalID") 
-        
-        Q10c <- Q10c_detail %>%
           create_gender_groups(.)
       }
       
-      # Q10d In progress ----
-      # Update age categories
-      # Update rowsums for More than 2 Gender Identities Selected | Client Doesn’t Know/Prefers Not to Answer | Data Not Collected
       
+      # Q10d checked
       {
         Q10d_detail <- recent_program_enrollment %>%
           select(all_of(standard_detail_columns), "age", "detailed_age_group") %>%
@@ -884,14 +832,10 @@ generate_new_kits <- TRUE
                     by = "PersonalID") %>%
           mutate(Q10d_age_group = case_when(
             detailed_age_group %in% c("Under 5", "5-12", "13-17") ~ "Under18",
-            detailed_age_group %in% c("25-34", "35-44", "45-54", "55-61") ~ "25-61",
+            detailed_age_group %in% c("25-34", "35-44", "45-54", "55-64") ~ "25-64",
             TRUE ~ detailed_age_group)) 
         
-        
-        
-        Q10d <- gender_info %>%
-          mutate(order = row_number(),
-                 CulturallySpecific = as.character(CulturallySpecific)) %>% #Got an error on join, had to convert to charac
+        Q10d_setup <- gender_info %>%
           left_join(Q10d_detail,
                     by = all_of(names(gender_columns)),
                     multiple = "all") %>%
@@ -904,29 +848,32 @@ generate_new_kits <- TRUE
               gender_count %in% 1:2 ~ gender_name_list,
               gender_count > 2 ~ "More than 2 Gender Identities Selected",
               GenderNone %in% c(8, 9) ~ "Client Doesn’t Know/Prefers Not to Answer",
-              TRUE ~ "Data Not Collected")) %>%
-          group_by(gender_tabulation, order) %>%
-          summarise(Total = n_distinct(PersonalID, na.rm = TRUE),
-                    Under.Age.18 = n_distinct(PersonalID[Q10d_age_group == "Under18"], na.rm = TRUE),
-                    Age.18.to.24 = n_distinct(PersonalID[Q10d_age_group == "18-24"], na.rm = TRUE),
-                    Age.25.to.61 = n_distinct(PersonalID[Q10d_age_group == "25-61"], na.rm = TRUE),
-                    Age.62.and.over = n_distinct(PersonalID[Q10d_age_group == "62+"], na.rm = TRUE),
-                    Client.Does.Not.Know.or.Prefers.Not.to.Answer = n_distinct(PersonalID[Q10d_age_group == "Client.Does.Not.Know.or.Declined"], na.rm = TRUE),
-                    Data.Not.Collected = n_distinct(PersonalID[Q10d_age_group == "Data.Not.Collected"], na.rm = TRUE)) %>%
+              TRUE ~ "Data Not Collected")) 
+        
+        Q10d <- data.frame(
+          gender_tabulation = c(gender_info$gender_name_list, 
+                                "More than 2 Gender Identities Selected",
+                                "Client Doesn’t Know/Prefers Not to Answer",
+                                "Data Not Collected")) %>%
+          full_join(
+            Q10d_setup %>%
+              group_by(gender_tabulation) %>%
+              summarise(Total = n_distinct(PersonalID, na.rm = TRUE),
+                        Under.Age.18 = n_distinct(PersonalID[Q10d_age_group == "Under18"], na.rm = TRUE),
+                        Age.18.to.24 = n_distinct(PersonalID[Q10d_age_group == "18-24"], na.rm = TRUE),
+                        Age.25.to.61 = n_distinct(PersonalID[Q10d_age_group == "25-64"], na.rm = TRUE),
+                        Age.62.and.over = n_distinct(PersonalID[Q10d_age_group == "65+"], na.rm = TRUE),
+                        Client.Does.Not.Know.or.Prefers.Not.to.Answer = n_distinct(PersonalID[Q10d_age_group == "Client.Does.Not.Know.or.Declined"], na.rm = TRUE),
+                        Data.Not.Collected = n_distinct(PersonalID[Q10d_age_group == "Data.Not.Collected"], na.rm = TRUE)),
+            by = "gender_tabulation") %>%
           ifnull(., 0) %>%
-          arrange(order) %>%
-          select(-order) %>%
           adorn_totals("row")
         
       }
       
-      # Q11 Needs Review / Age categories split ----
-      #
+      # Q11 checked
       {
         Q11_detail <- recent_program_enrollment %>%
-          rename(household_type = household_type.x,
-                 detailed_age_group = detailed_age_group.x,
-                 age=age.x) %>% 
           select(all_of(standard_detail_columns), "age", "detailed_age_group") %>%
           left_join(Client %>%
                       select(PersonalID, DOB),
@@ -936,12 +883,15 @@ generate_new_kits <- TRUE
           create_age_groups(.)
       }
        
-      # Q12a in progress. Gwen follow-up ----
-      # need to change order to match Specs
+      # Q12a checked
       {
-        Q12a_detail <- "See Q7c_detail.csv"
+        Q12a_detail <- recent_program_enrollment %>%
+          select(all_of(standard_detail_columns), age_group, HoH_HMID) %>%
+          left_join(Client %>%
+                      select(PersonalID, all_of(unname(race_columns)), RaceNone),
+                    by = "PersonalID")
         
-        Q12a <- Q7c_detail %>%
+        Q12a <- Q12a_detail %>%
           ifnull(., 0) %>%
           left_join(race_info, #Race_info created from DataLab_lists.R line 261
                     by = all_of(unname(race_columns))) %>% 
@@ -953,23 +903,23 @@ generate_new_kits <- TRUE
             race_tabulation = case_when(
               race_count %in% 1:2 ~ race_name_list,
               race_count > 2 &
-                HispanicLatinaeo == 1 ~ "Hispanic/Latina/e/o and 2 or more races",
-              race_count > 2 ~ "Non-Hispanic/Latina/e/o and 2 or more races",
+                HispanicLatinaeo == 1 ~ "Multiracial – more than 2 races/ethnicity, with one being Hispanic/Latina/e/o",
+              race_count > 2 ~ "Multiracial – more than 2 races, where no option is Hispanic/Latina/e/o",
               RaceNone %in% c(8, 9) ~ "Client Doesn’t Know/Prefers Not to Answer",
               TRUE ~ "Data Not Collected"
             )
           ) %>%
           return_household_groups(., race_tabulation, 
                                   c(race_info$race_name_list, 
-                                    "Hispanic/Latina/e/o and 2 or more races",
-                                    "Non-Hispanic/Latina/e/o and 2 or more races",
+                                    "Multiracial – more than 2 races/ethnicity, with one being Hispanic/Latina/e/o",
+                                    "Multiracial – more than 2 races, where no option is Hispanic/Latina/e/o",
                                     "Client Doesn’t Know/Prefers Not to Answer",
                                     "Data Not Collected")) %>%
           adorn_totals("row")
         
       }
       
-      # Q13a1 No changes from FY23 ----
+      # Q13a1 checked
       {
         Q13a1_detail <- recent_program_enrollment %>%
           select(all_of(standard_detail_columns), "age_group", 
@@ -983,7 +933,7 @@ generate_new_kits <- TRUE
                                   split_by_age = TRUE)
       }
       
-      # Q13b1 No changes from FY23----
+      # Q13b1 checked
       {
         Q13b1_detail<- recent_program_enrollment %>%
           select(all_of(standard_detail_columns), "age_group", 
@@ -998,7 +948,7 @@ generate_new_kits <- TRUE
                                   split_by_age = TRUE)
       }
       
-      # Q13c1 No changes from FY23 ----
+      # Q13c1 checked
       {
         Q13c1_detail <- recent_program_enrollment %>%
           select(all_of(standard_detail_columns), "age_group", 
@@ -1023,8 +973,7 @@ generate_new_kits <- TRUE
                                   split_by_age = TRUE)
       }
       
-      # Q13a2 Ready for QA ----
-      # Only change was row header to Client.does.not.know.prefers.not.to.answer
+      # Q13a2 checked
       {
         Q13a2_detail <- "See Q13a1_detail.csv"
         Q13a2 <- recent_program_enrollment %>%
@@ -1039,8 +988,7 @@ generate_new_kits <- TRUE
           adorn_totals("row")
       }
       
-      # Q13b2 Ready for QA ----
-      # Only change was row header to Client.does.not.know.prefers.not.to.answer
+      # Q13b2 checked
       {
         Q13b2_detail <- "See Q13b1_detail.csv"
         Q13b2 <- recent_program_enrollment %>%
@@ -1057,8 +1005,7 @@ generate_new_kits <- TRUE
           adorn_totals("row")
       }
       
-      # Q13c2 Ready for QA ----
-      # Only change was row header to Client.does.not.know.prefers.not.to.answer
+      # Q13c2 checked
       {
         Q13c2_detail <- "See Q13c1_detail.csv"
         Q13c2 <- recent_program_enrollment %>%
@@ -1075,8 +1022,7 @@ generate_new_kits <- TRUE
           adorn_totals("row")
       }
       
-      # Q14a Ready for QA ----
-      # Updated row headers to Client.does.not.know.or.prefers.not.to.answer
+      # Q14a checked
       {
         Q14 <- recent_program_enrollment %>%
           keep_adults_and_hoh_only() %>%
@@ -1086,7 +1032,7 @@ generate_new_kits <- TRUE
                       group_by(EnrollmentID) %>%
                       slice(1L) %>%
                       ungroup() %>%
-                      select(EnrollmentID, DomesticViolenceSurvivor, CurrentlyFleeing),
+                      select(EnrollmentID, DomesticViolenceSurvivor, WhenOccurred),
                     by = "EnrollmentID")
         
         Q14a_detail <- Q14 %>%
@@ -1101,19 +1047,32 @@ generate_new_kits <- TRUE
           adorn_totals("row")
       }
       
-      # Q14b New question Not started ----
-      # Updated question. New question: Most Recent experience of domestic violence, sexual assault, dating violence, stalking, human trafficking ----
+      # Q14b checked
       {
+        when_occurred_options <- data.frame(
+          WhenOccurred = c(1, 2, 3, 4, 8, 9, 99, NA),
+          when_occurred = c(
+            "Within the past three months",
+            "Three to six months ago",
+            "Six months to one year ago",
+            "One year or more",
+            "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
+            "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
+            "Data.Not.Collected",
+            "Data.Not.Collected"
+          )
+        )
+        
         Q14b_detail <- Q14 %>%
           select(all_of(standard_detail_columns), DomesticViolenceSurvivor,
-                 CurrentlyFleeing) %>%
+                 WhenOccurred) %>%
           filter(DomesticViolenceSurvivor == 1) %>%
-          mutate(currently_fleeing = case_when(CurrentlyFleeing == 1 ~ "Yes",
-                                               CurrentlyFleeing == 0 ~ "No",
-                                               CurrentlyFleeing %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
-                                               TRUE ~ "Data.Not.Collected")) 
+          inner_join(when_occurred_options,
+                     by = "WhenOccurred")
+        
         Q14b <- Q14b_detail %>%
-          return_household_groups(., currently_fleeing, y_n_dkr_dnc_list) %>%
+          return_household_groups(., when_occurred, 
+                                  when_occurred_options$when_occurred[c(1:5, 7)]) %>%
           adorn_totals("row")
       }
       
