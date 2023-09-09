@@ -609,6 +609,7 @@ generate_new_kits <- TRUE
       
       # Q7c Not Started / REIRED(?) ----
       #Is this still included in the report? It seems like we removed it, but can't find the revision history that says we did. ----
+      # Also Q7c_detail is used by Q12a so I didn't want to comment it out.
       {
         Q7c_detail <- recent_program_enrollment %>%
           select(all_of(standard_detail_columns), age_group, HoH_HMID) %>%
@@ -792,6 +793,7 @@ generate_new_kits <- TRUE
       }
       
       # Q10a Not Started. Gwen Follow up ----
+      # This flagged as needing a finalization.
       ############################
       ### PENDING FINALIZATION ###
       ############################
@@ -837,6 +839,7 @@ generate_new_kits <- TRUE
       
       # Q10d In progress ----
       # Update rowsums for More than 2 Gender Identities Selected | Client Doesn’t Know/Prefers Not to Answer | Data Not Collected
+      # Question: Not sure why Client doesnt know and Data not collected are not showing from the summarise function.
       
       {
         Q10d_detail <- recent_program_enrollment %>%
@@ -873,7 +876,7 @@ generate_new_kits <- TRUE
                     Age.18.to.24 = n_distinct(PersonalID[Q10d_age_group == "18-24"], na.rm = TRUE),
                     Age.25.to.64 = n_distinct(PersonalID[Q10d_age_group == "25-64"], na.rm = TRUE),
                     Age.65.and.over = n_distinct(PersonalID[Q10d_age_group == "65+"], na.rm = TRUE),
-                    Client.Does.Not.Know.or.Prefers.Not.to.Answer = n_distinct(PersonalID[Q10d_age_group == "Client.Does.Not.Know.or.Declined"], na.rm = TRUE),
+                    Client.Does.Not.Know.or.Prefers.Not.to.Answer = n_distinct(PersonalID[Q10d_age_group == "Client.Does.Not.Know.or.Prefers.Not.to.Answer"], na.rm = TRUE),
                     Data.Not.Collected = n_distinct(PersonalID[Q10d_age_group == "Data.Not.Collected"], na.rm = TRUE)) %>%
           ifnull(., 0) %>%
           arrange(order) %>%
