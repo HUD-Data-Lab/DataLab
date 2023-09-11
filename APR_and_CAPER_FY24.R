@@ -19,7 +19,7 @@ generate_new_kits <- TRUE
   {
     source("DataLab.R")
   
-  # used for building and testing APR on specifc projects or groups of projects. To run full test kit use full_project_list
+  # used for building and testing APR on specific projects or groups of projects. To run full test kit use full_project_list
   {
     project_list <- c(
       # 1362#,	#"DataLab - ES-EE ESG I",
@@ -1685,10 +1685,15 @@ generate_new_kits <- TRUE
                   filter(days_prior_to_housing %in% c("Not yet moved into housing", "Data.Not.Collected", "Total")))
       }
       
-      # Q22f ---- ##stopped here
-      
+      # Q22f ----
+      {
       Q22f_detail <- create_time_to_move_in(recent_program_enrollment) %>%
         ifnull(., 0)  %>%
+        filter(., #either move-in w/in report or exit w/in report
+               ((MoveInDateAdj >= report_start_date & MoveInDateAdj <= report_end_date) | 
+                 (ExitDate >= report_start_date & ExitDate <= report_end_date)) & 
+                 ProjectType %in% c(3, 13)
+        ) %>%
         left_join(Client %>%
                     select(PersonalID, all_of(unname(race_columns)), RaceNone),
                   by = "PersonalID") %>%
@@ -1707,43 +1712,51 @@ generate_new_kits <- TRUE
             TRUE ~ "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)"
           )
         )
-        
-      
-      average_time_to_house <- Q22c_detail %>%
-        summarise(housing_length_group = "Average length of time to housing",
-                  Total = round(mean(days_to_house, na.rm = TRUE), 0),
-                  Without.Children = round(mean(
-                    days_to_house[household_type == "AdultsOnly"],
-                    na.rm = TRUE), 0),
-                  With.Children.And.Adults = round(mean(
-                    days_to_house[household_type == "AdultsAndChildren"],
-                    na.rm = TRUE), 0),
-                  With.Only.Children = round(mean(
-                    days_to_house[household_type == "ChildrenOnly"],
-                    na.rm = TRUE), 0),
-                  Unknown.Household.Type = round(mean(
-                    days_to_house[household_type == "Unknown"],
-                    na.rm = TRUE), 0))
-      
-      ## before running through below, see what can be repurposed from rest of 22
-      
-      ## anticipated steps:
-        ## Define two universes that should be mutually exclusive-- 
-          ## 1) Clients active in HHs on/after HoH HMI in report range
-          ## 2) Clients NOT in #1 that exited in report range
-        ## For each client in both universes, define Race/Ethn categorization
-        ## For each enrollment in universe #1, set HH member HMI date to match later of HoH HMI and member's enroll date
-        ## calculate each count metric, grouped by Race/Ethn 
-          ## rows 2,4,5 = universe #1
-          ## row 3 = universe #2
-        ## pivot data to get matrix table
-      
-    
-      {
-        # Q22f_detail <- recent_program_enrollment %>%
           
-        
-        ## Q22f <- 
+      Q22f_moved_in <- Q22f_detail %>% 
+        filter(., (MoveInDateAdj >= report_start_date & MoveInDateAdj <= report_end_date))
+      
+      Q22f_moved_in_calcs <- Q22f_moved_in %>%
+        group_by(race_tabulation) %>%
+        summarise(
+          Persons.Moved.Into.Housing = n(),
+          Average.time.to.Move.In = round(mean(days_to_house, na.rm = TRUE), 0), 
+          Median.time.to.Move.In = round(median(days_to_house, na.rm = TRUE), 0)
+        ) %>% 
+        ungroup() 
+      
+      Q22f_exited_calc <- Q22f_detail[Q22f_detail$PersonalID %nin% Q22f_moved_in$PersonalID, ] %>% 
+        group_by(race_tabulation) %>%
+        summarise( Persons.Exited.Without.Move.In = n() ) %>% 
+        ungroup()
+      
+      Q22f_measures <- left_join(
+        x = Q22f_moved_in_calcs,
+        y = Q22f_exited_calc,
+        by = "race_tabulation"
+      ) %>% 
+        .[, c("race_tabulation",
+              "Persons.Moved.Into.Housing",
+              "Persons.Exited.Without.Move.In",
+              "Average.time.to.Move.In",
+              "Median.time.to.Move.In")
+          ]
+      
+      
+      Q22f <- c(names(race_columns), 
+                "At Least 1 Race and Hispanic/Latina/e/o", 
+                "Multi-racial (does not include Hispanic/Latina/e/o)",
+                "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)"
+                ) %>% 
+        as.data.frame(nm = "race_tabulation") %>% 
+        left_join(
+          Q22f_measures,
+          by = "race_tabulation"
+        ) %>% 
+        pivot_longer(!race_tabulation, names_to = "measure", values_to = "value") %>% 
+        replace(is.na(.), 0) %>%
+        pivot_wider(names_from = "race_tabulation", values_from = "value") %>% 
+        rename(" " = "measure")
       }
       
       # Q23c
