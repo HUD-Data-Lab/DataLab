@@ -11,8 +11,8 @@
 
 items_to_keep <- c(items_to_keep,
                    c("spm_2", "spm_2_dq"))
-# lookback <- 730
-lookback <- 90
+lookback <- 730
+
 spm_2_rows <- paste0("Exit.was.from.", c("SO", "ES", "TH", "SH", "PH"))
 spm_2_colnames <- c("spm_2_rows",
                     "Total.Number.of.Persons.who.Exited.to.a.Permanent.Housing.Destination.(2.Years.Prior)",
@@ -131,6 +131,10 @@ spm_2 <- as.data.frame(spm_2_rows) %>%
                 total_returns = returns_0_6 + returns_6_12 + returns_12_24,
                 total_percent_returns = round(
                   total_returns / total_permanent_exits * 100, 2)) %>%
+              select(spm_2_rows, total_permanent_exits, returns_0_6, 
+                     percent_returns_0_6, returns_6_12, percent_returns_6_12,
+                     returns_12_24, percent_returns_12_24, total_returns,
+                     total_percent_returns) %>%
               setNames(spm_2_colnames),
             by = "spm_2_rows") %>%
   ifnull(., 0)

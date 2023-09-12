@@ -51,8 +51,6 @@ spm_4_projects <- Funder %>%
   .$ProjectID %>%
   unique()
 
-spm_4_projects <- c("1555", "1561", "1562")
-
 ## Limit Enrollments to Active Client Method 1 and CoC-funded projects----
 
 M4_enrollment_u <- active_enrollments %>%

@@ -24,6 +24,9 @@ if (kit_type == "new_kit") {
 
 source("00_read_2024_csv.R")
 
+report_start_date <- ymd("2021-10-1")
+report_end_date <- ymd("2022-9-30")
+
 single_CoC_projects <- ProjectCoC %>%
   mutate(relevant_to_CoC = 
            str_sub(relevant_CoC, 4, 6) == str_sub(CoCCode, 4, 6)) %>%

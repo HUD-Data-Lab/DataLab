@@ -125,25 +125,25 @@ Q5M2_C4 <- Q5M2_C2 - Q5M2_C3
 ## build output tables ----
 
 ### row headers ----
-Q5M1_Col_A <- list(
+Q5M1_Col_A <- c(
   "Universe: Person with entries into ES-EE, ES-NbN, SH, or TH during the reporting period.",
   "Of persons above, count those who were in ES-EE, ES-NbN, SH, TH, or any PH within 24 months prior to their start during the reporting year.",
   "Of persons above, count those who did not have entries in ES-EE, ES-NbN, SH, TH or PH in the previous 24 months. (i.e. number of persons experiencing homelessness for the first time)"
 )
 
-Q5M2_Col_A <- list(
+Q5M2_Col_A <- c(
   "Universe: Person with entries into ES-EE, ES-NbN, SH, TH, or PH during the reporting period.",
   "Of persons above, count those who were in ES-EE, ES-NbN, SH, TH, or any PH within 24 months prior to their start during the reporting year.",
   "Of persons above, count those who did not have entries in ES-EE, ES-NbN, SH, TH or PH in the previous 24 months. (i.e. number of persons experiencing homelessness for the first time)"
 )
 
 ### empty columns ----
-Previous.FY <- c("", "", "")
-Difference <- c("", "", "")
+Previous.FY <- as.character(c("", "", ""))
+Difference <- as.character(c("", "", ""))
 
 ### measure value columns ----
-Current.FY.5.1 <- c(Q5M1_C2, Q5M1_C3, Q5M1_C4)
-Current.FY.5.2 <- c(Q5M2_C2, Q5M2_C3, Q5M2_C4 )
+Current.FY.5.1 <- as.character(c(Q5M1_C2, Q5M1_C3, Q5M1_C4))
+Current.FY.5.2 <- as.character(c(Q5M2_C2, Q5M2_C3, Q5M2_C4 ))
 
 ### table assembly ----
 spm_5.1 <- data.frame(cbind(Q5M1_Col_A, Previous.FY, Current.FY.5.1, Difference))

@@ -58,7 +58,7 @@ for (file in names(hmis_csvs)){
 }
 
 # start_date <- min(Exit$ExitDate)
-start_date <- ymd("2021-10-1")
+start_date <- ymd("2019-10-1")
 end_date <- ymd("2022-9-30")
 
 Export$ExportDate <- Sys.time()
