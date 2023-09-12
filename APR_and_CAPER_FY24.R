@@ -113,6 +113,7 @@ generate_new_kits <- TRUE
         left_join(chronicity_data, by = "EnrollmentID")
       }
       
+      
       # CEParticipation <- CEParticipation %>% 
       #   mutate(ProjectID = as.character(ProjectID)) #Changed data type because I was getting a join error in View(Program_information_table)
       
@@ -1685,7 +1686,7 @@ generate_new_kits <- TRUE
                   filter(days_prior_to_housing %in% c("Not yet moved into housing", "Data.Not.Collected", "Total")))
       }
       
-      # Q22f ----
+      # Q22f - new question | checked ---- 
       {
         Q22f_detail <- create_time_to_move_in(recent_program_enrollment) %>%
           #either move-in w/in report or exit w/in report
@@ -1746,6 +1747,106 @@ generate_new_kits <- TRUE
           pivot_longer(!race_tabulation, names_to = "measure", values_to = "value") %>% 
           pivot_wider(names_from = "race_tabulation", values_from = "value")
       
+      }
+      
+      # Q22g - new question | needs review ----
+      
+            # Note: this is similar to Q22e, with following differences:
+              # - broken out by race/ethn
+              # - no HH type grouping 
+              # - average/median calcs, not LoT groups
+              # - children entering post-HoH excluded entirely 
+              # - couldn't use create_time_to_move_in() b/c slightly different logic
+      
+      {
+      Q22g_detail <-recent_program_enrollment %>% 
+        filter(., 
+               # Date range filters
+               (EntryDate <= report_end_date &
+                 (is.na(ExitDate) | ExitDate >= report_start_date) 
+               ) & 
+               # Project type filter     
+               ProjectType %in% c(0,1,2,3,8,9,13) & 
+                 # Exclude children entering after HoH (per instruction 2c)
+                 (age_group != "Children" | EntryDate <= HoH_EntryDate) &
+                 # Exclude non-child cases where ApproxDateHomeless is missing
+                    # Note: further filtering for cases where ApproxDate > metric housing_date happens later
+                 (age_group == "Children" | !is.na(DateToStreetESSH))
+                 ) %>% 
+        mutate(
+          include_type = case_when( # this helps differentiate record subsets
+            is.na(MoveInDateAdj) & ProjectType %in% c(3,9,13) ~ "not_yet_housed",
+            ProjectType %in% c(3,9,13) ~ "housed",
+            TRUE ~ "sheltered"
+          ),
+          housing_date = case_when( # this sets single end date for all LoT measures
+            include_type == "housed" ~ MoveInDateAdj,
+            include_type == "sheltered" ~ EntryDate,
+            TRUE ~ NA
+          ), 
+          homeless_date = case_when( # this propagates HoH ADHS to children
+            age_group == "Children" ~ HoH_ADHS,
+            TRUE ~ DateToStreetESSH
+          ),
+          days_to_housing = as.integer(trunc((homeless_date %--% housing_date) / days(1)))
+          # couldn't use create_time_to_move_in() b/c slightly different logic
+        ) %>% 
+        select(c(
+          "HouseholdID", "ProjectType","PersonalID", "age_group", "EntryDate", 
+          "MoveInDateAdj", "HoH_ADHS", "include_type", "housing_date", "homeless_date", 
+          "days_to_housing")) %>% 
+        filter(., # secondary filtering step to satisfy instruction 5
+          homeless_date <= housing_date
+        ) %>%
+        # Get Race/Ethn info
+        left_join(Client %>%
+                    select(PersonalID, all_of(unname(race_columns)), RaceNone),
+                  by = "PersonalID") %>%
+        left_join(race_info, #Race_info created from DataLab_lists.R line 261
+                  by = all_of(unname(race_columns))) %>% 
+        mutate(across(
+          all_of(unname(race_columns)),
+          ~ as.numeric(.)),
+          race_count = rowSums(across(all_of(unname(race_columns))),
+                               na.rm = TRUE),
+          race_tabulation = case_when(
+            race_count == 1 ~ race_name_list,
+            race_count > 1 &
+              HispanicLatinaeo == 1 ~ "At Least 1 Race and Hispanic/Latina/e/o",
+            race_count > 1 ~ "Multi-racial (does not include Hispanic/Latina/e/o)",
+            TRUE ~ "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)")
+        )
+      
+      
+      
+      
+      Q22g_calcs <- Q22g_detail %>% 
+        group_by(race_tabulation) %>%
+        summarise(
+          Persons.Moved.Into.Housing = n_distinct(PersonalID[include_type %in% c("sheltered", "housed")], 
+                                                  na.rm = TRUE),
+          Persons.Not.Yet.Moved.Into.Housing = n_distinct(PersonalID[include_type == "not_yet_housed"], 
+                                                      na.rm = TRUE),
+          Average.time.to.Move.In =  mean(days_to_housing[include_type %in% c("sheltered", "housed")], 
+                                          na.rm = TRUE), 
+          Median.time.to.Move.In = median(days_to_housing[include_type %in% c("sheltered", "housed")], 
+                                          na.rm = TRUE)) %>% 
+        ungroup() 
+      
+      Q22g <- c(names(race_columns), 
+                "At Least 1 Race and Hispanic/Latina/e/o", 
+                "Multi-racial (does not include Hispanic/Latina/e/o)",
+                "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)"
+      ) %>% 
+        as.data.frame(nm = "race_tabulation") %>% 
+        left_join(Q22g_calcs,
+                  by = "race_tabulation") %>% 
+        ifnull(., 0) %>%
+        mutate(Average.time.to.Move.In = sprintf('%.4f', Average.time.to.Move.In),
+               Median.time.to.Move.In = sprintf('%.4f', Median.time.to.Move.In),
+               across(everything(), as.character)) %>%
+        pivot_longer(!race_tabulation, names_to = "measure", values_to = "value") %>% 
+        pivot_wider(names_from = "race_tabulation", values_from = "value")
       }
       
       # Q23c
