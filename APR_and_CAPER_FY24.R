@@ -1864,7 +1864,55 @@ generate_new_kits <- TRUE
       
       # Q23d new question not coded yet ----
       
-      # Q23e new question not coded yet ----
+      # Q23e new question | coding in progress [Zach] ----
+      
+        ## could create modified version of create_destination_groups function;
+          ## will require creating race-group equivalent of return_household_groups
+      
+      Q23e_detail <- recent_program_enrollment %>% 
+        # leavers in range
+        filter(., ExitDate >= report_start_date & ExitDate <= report_end_date) %>% 
+        select(., c("PersonalID", "ExitDate", "Destination")) %>%
+        # get APR destination categories 
+        left_join(select(ResidenceUses, c("Location", "APR_LocationOrder", "APR_LocationGroup")) ,
+                  join_by(Destination == Location)) %>%
+        # get race data 
+        left_join(Client %>%
+                    select(PersonalID, all_of(unname(race_columns)), RaceNone),
+                  by = "PersonalID") %>% 
+        left_join(race_info, #Race_info created from DataLab_lists.R line 261
+                  by = all_of(unname(race_columns))) %>% 
+        mutate(across(
+          all_of(unname(race_columns)),
+          ~ as.numeric(.)),
+          race_count = rowSums(across(all_of(unname(race_columns))),
+                               na.rm = TRUE),
+          race_tabulation = case_when(
+            race_count == 1 ~ race_name_list,
+            race_count > 1 &
+              HispanicLatinaeo == 1 ~ "At Least 1 Race and Hispanic/Latina/e/o",
+            race_count > 1 ~ "Multi-racial (does not include Hispanic/Latina/e/o)",
+            TRUE ~ "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)")
+        )
+      # Below still in progress
+      
+      # q23e_calc <- Q23e_detail %>% 
+      #   group_by(race_tabulation, APR_LocationGroup) %>%
+      #     summarise(measure = n_distinct(PersonalID)) %>% 
+      #   ungroup()
+        
+      
+      # q23e_destination_type_df <-  ResidenceUses %>% 
+      #   filter(., !is.na(APR_LocationGroup)) %>%
+      #   group_by(APR_LocationGroup) %>% 
+      #   summarise(., sort_order = min(APR_LocationOrder, na.rm = TRUE)) %>% 
+      #   ungroup() %>% 
+      #   arrange(., sort_order) %>% 
+      #   select(-sort_order)
+      
+      # Tested existing return_race_groups fx -- not quite what's needed...
+      # and not sure how to augment properly.
+      ### q23c_test <- return_race_groups(Q23c_detail, grouped_by = PersonalID, Q23c_detail$PersonalID)
       
       # Q24a Ready for QA ----
       # Changed the row headers
