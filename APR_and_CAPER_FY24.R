@@ -1687,76 +1687,65 @@ generate_new_kits <- TRUE
       
       # Q22f ----
       {
-      Q22f_detail <- create_time_to_move_in(recent_program_enrollment) %>%
-        ifnull(., 0)  %>%
-        filter(., #either move-in w/in report or exit w/in report
-               ((MoveInDateAdj >= report_start_date & MoveInDateAdj <= report_end_date) | 
-                 (ExitDate >= report_start_date & ExitDate <= report_end_date)) & 
-                 ProjectType %in% c(3, 13)
-        ) %>%
-        left_join(Client %>%
-                    select(PersonalID, all_of(unname(race_columns)), RaceNone),
-                  by = "PersonalID") %>%
-        left_join(race_info, #Race_info created from DataLab_lists.R line 261
-                  by = all_of(unname(race_columns))) %>% 
-        mutate(across(
-          all_of(unname(race_columns)),
-          ~ as.numeric(.)),
-          race_count = rowSums(across(all_of(unname(race_columns))),
-                               na.rm = TRUE),
-          race_tabulation = case_when(
-            race_count == 1 ~ race_name_list,
-            race_count > 1 &
-              HispanicLatinaeo == 1 ~ "At Least 1 Race and Hispanic/Latina/e/o",
-            race_count > 1 ~ "Multi-racial (does not include Hispanic/Latina/e/o)",
-            TRUE ~ "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)"
-          )
-        )
-          
-      Q22f_moved_in <- Q22f_detail %>% 
-        filter(., (MoveInDateAdj >= report_start_date & MoveInDateAdj <= report_end_date))
-      
-      Q22f_moved_in_calcs <- Q22f_moved_in %>%
-        group_by(race_tabulation) %>%
-        summarise(
-          Persons.Moved.Into.Housing = n(),
-          Average.time.to.Move.In = round(mean(days_to_house, na.rm = TRUE), 0), 
-          Median.time.to.Move.In = round(median(days_to_house, na.rm = TRUE), 0)
+        Q22f_detail <- create_time_to_move_in(recent_program_enrollment) %>%
+          #either move-in w/in report or exit w/in report
+          filter(((MoveInDateAdj >= report_start_date & 
+                     MoveInDateAdj <= report_end_date) | 
+                    (ExitDate >= report_start_date &
+                       ExitDate <= report_end_date &
+                       !is.na(ExitDate))) & 
+                   ProjectType %in% c(3, 13)) %>%
+          left_join(Client %>%
+                      select(PersonalID, all_of(unname(race_columns)), RaceNone),
+                    by = "PersonalID") %>%
+          left_join(race_info, #Race_info created from DataLab_lists.R line 261
+                    by = all_of(unname(race_columns))) %>% 
+          mutate(across(
+            all_of(unname(race_columns)),
+            ~ as.numeric(.)),
+            race_count = rowSums(across(all_of(unname(race_columns))),
+                                 na.rm = TRUE),
+            race_tabulation = case_when(
+              race_count == 1 ~ race_name_list,
+              race_count > 1 &
+                HispanicLatinaeo == 1 ~ "At Least 1 Race and Hispanic/Latina/e/o",
+              race_count > 1 ~ "Multi-racial (does not include Hispanic/Latina/e/o)",
+              TRUE ~ "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)"),
+            include_type = case_when(
+              MoveInDateAdj >= report_start_date & 
+                MoveInDateAdj <= report_end_date ~ "moved_in",
+              ExitDate >= report_start_date &
+                ExitDate <= report_end_date &
+                !is.na(ExitDate) ~ "exit_only"))
+        
+        Q22f_calcs <- Q22f_detail %>%
+          group_by(race_tabulation) %>%
+          summarise(
+            Persons.Moved.Into.Housing = n_distinct(PersonalID[include_type == "moved_in"], 
+                                                    na.rm = TRUE),
+            Persons.Exited.Without.Move.In = n_distinct(PersonalID[include_type == "exit_only"], 
+                                                        na.rm = TRUE),
+            Average.time.to.Move.In =  mean(days_to_house[include_type == "moved_in"], 
+                                            na.rm = TRUE), 
+            Median.time.to.Move.In = median(days_to_house[include_type == "moved_in"], 
+                                            na.rm = TRUE)) %>% 
+          ungroup() 
+        
+        Q22f <- c(names(race_columns), 
+                  "At Least 1 Race and Hispanic/Latina/e/o", 
+                  "Multi-racial (does not include Hispanic/Latina/e/o)",
+                  "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)"
         ) %>% 
-        ungroup() 
+          as.data.frame(nm = "race_tabulation") %>% 
+          left_join(Q22f_calcs,
+                    by = "race_tabulation") %>% 
+          ifnull(., 0) %>%
+          mutate(Average.time.to.Move.In = sprintf('%.4f', Average.time.to.Move.In),
+                 Median.time.to.Move.In = sprintf('%.4f', Median.time.to.Move.In),
+                 across(everything(), as.character)) %>%
+          pivot_longer(!race_tabulation, names_to = "measure", values_to = "value") %>% 
+          pivot_wider(names_from = "race_tabulation", values_from = "value")
       
-      Q22f_exited_calc <- Q22f_detail[Q22f_detail$PersonalID %nin% Q22f_moved_in$PersonalID, ] %>% 
-        group_by(race_tabulation) %>%
-        summarise( Persons.Exited.Without.Move.In = n() ) %>% 
-        ungroup()
-      
-      Q22f_measures <- left_join(
-        x = Q22f_moved_in_calcs,
-        y = Q22f_exited_calc,
-        by = "race_tabulation"
-      ) %>% 
-        .[, c("race_tabulation",
-              "Persons.Moved.Into.Housing",
-              "Persons.Exited.Without.Move.In",
-              "Average.time.to.Move.In",
-              "Median.time.to.Move.In")
-          ]
-      
-      
-      Q22f <- c(names(race_columns), 
-                "At Least 1 Race and Hispanic/Latina/e/o", 
-                "Multi-racial (does not include Hispanic/Latina/e/o)",
-                "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)"
-                ) %>% 
-        as.data.frame(nm = "race_tabulation") %>% 
-        left_join(
-          Q22f_measures,
-          by = "race_tabulation"
-        ) %>% 
-        pivot_longer(!race_tabulation, names_to = "measure", values_to = "value") %>% 
-        replace(is.na(.), 0) %>%
-        pivot_wider(names_from = "race_tabulation", values_from = "value") %>% 
-        rename(" " = "measure")
       }
       
       # Q23c
