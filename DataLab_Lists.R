@@ -455,7 +455,7 @@ vet_chronic_categories <- c("Chronically Homeless Veteran",
 
 chronic_categories <- c("Chronically Homeless",
                         "Not Chronically Homeless",
-                        "Client doesn’t know/Client refused",
+                        "Client doesn’t know/Prefers Not to Answer",
                         "Data not collected")
 
 

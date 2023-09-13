@@ -2094,7 +2094,7 @@
         Q25i <- create_destination_groups(recent_veteran_enrollment) %>%
           mutate(across(everything(), as.character))
         
-        Q25i[41, 2:6] <- as.list(decimal_format(as.numeric(Q25i[41, 2:6]), 4))
+        Q25i[41, 2:6] <- c(decimal_format(as.numeric(Q25i[41, 2:6]), 4))
       }
       
       #Q25j checked
@@ -2118,7 +2118,7 @@
         # rename()
         filter(chronic == "Y")
       
-      # Q26a Not Started ----
+      # Q26a checked
       {
         Q26b_detail <- recent_program_enrollment %>%
           mutate(category = case_when(
