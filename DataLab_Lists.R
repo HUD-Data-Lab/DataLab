@@ -270,7 +270,7 @@ SubsidyName <- c(
   "HCV voucher (tenant or project based) (not dedicated)",
   "Public housing unit",
   "Rental by client, with other ongoing housing subsidy",
-  "Emergency Housing Voucher",
+  "Housing Stability Voucher",
   "Family Unification Program Voucher (FUP)",
   "Foster Youth to Independence Initiative (FYI)",
   "Permanent Supportive Housing",
@@ -639,7 +639,7 @@ housing_program_detail_columns <- c("ProjectName", "HouseholdID",
                                     "PersonalID", "EnrollmentID",
                                     "RelationshipToHoH", "EntryDate", 
                                     "HoH_HMID", "MoveInDateAdj", 
-                                    "ExitDate", "household_type")
+                                    "ExitDate", "leaver", "household_type")
 
 
 # ------------------------------------------------------------------------------
@@ -701,3 +701,15 @@ CSV_columns <- read_excel("SupplementalTables.xlsx",
     str_detect(DataType, "M") ~ "d"
   )) %>%
   select(File, ColumnName, RDataType) 
+
+# ------------------------------------------------------------------------------
+# -------------------------- Sexual Orientation --------------------------------
+# ------------------------------------------------------------------------------
+
+sexual_orientation_columns <- data.frame(
+  name = c("Heterosexual", "Gay", "Lesbian",
+                                "Bisexual", "Questioning/Unsure",
+                                "Other", "Client Doesn’t Know/Prefers Not to Answer",
+                                "Client Doesn’t Know/Prefers Not to Answer",
+                                "Data not collected"),
+  value = c(1, 2, 3, 4, 5, 6, 8, 9, 99))

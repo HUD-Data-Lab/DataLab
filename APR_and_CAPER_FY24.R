@@ -111,7 +111,10 @@
                is.na(ExitDate)) ~ HoH_HMID,
           !is.na(HoH_HMID) &
             (HoH_HMID <= ExitDate |
-               is.na(ExitDate)) ~ EntryDate)) %>%
+               is.na(ExitDate)) ~ EntryDate),
+          leaver = ExitDate >= report_start_date &
+            ExitDate <= report_end_date & 
+            !is.na(ExitDate)) %>%
         left_join(chronicity_data, by = "EnrollmentID")
       }
       
@@ -1688,15 +1691,16 @@
                   filter(days_prior_to_housing %in% c("Not yet moved into housing", "Data.Not.Collected", "Total")))
       }
       
-      # Q22f - new question | checked ---- 
+      # Q22f checked
       {
-        Q22f_detail <- create_time_to_move_in(recent_program_enrollment) %>%
+        Q22f_detail <- recent_program_enrollment  %>%
+          select(c("ProjectType", "ProjectID", all_of(housing_program_detail_columns), "age",
+                   "HoH_EntryDate", "DateToStreetESSH", "HoH_ADHS")) %>%
+          create_time_to_move_in() %>%
           #either move-in w/in report or exit w/in report
           filter(((MoveInDateAdj >= report_start_date & 
                      MoveInDateAdj <= report_end_date) | 
-                    (ExitDate >= report_start_date &
-                       ExitDate <= report_end_date &
-                       !is.na(ExitDate))) & 
+                    leaver) & 
                    ProjectType %in% c(3, 13)) %>%
           left_join(Client %>%
                       select(PersonalID, all_of(unname(race_columns)), RaceNone),
@@ -1717,9 +1721,7 @@
             include_type = case_when(
               MoveInDateAdj >= report_start_date & 
                 MoveInDateAdj <= report_end_date ~ "moved_in",
-              ExitDate >= report_start_date &
-                ExitDate <= report_end_date &
-                !is.na(ExitDate) ~ "exit_only"))
+              leaver ~ "exit_only"))
         
         Q22f_calcs <- Q22f_detail %>%
           group_by(race_tabulation) %>%
@@ -1747,87 +1749,45 @@
       
       }
       
-      # Q22g - new question | needs review ----
-      
-            # Note: this is similar to Q22e, with following differences:
-              # - broken out by race/ethn
-              # - no HH type grouping 
-              # - average/median calcs, not LoT groups
-              # - children entering post-HoH excluded entirely 
-              # - couldn't use create_time_to_move_in() b/c slightly different logic
-      
+      # Q22g - checked
       {
-      Q22g_detail <-recent_program_enrollment %>% 
-        filter(., 
-               # Date range filters
-               (EntryDate <= report_end_date &
-                 (is.na(ExitDate) | ExitDate >= report_start_date) 
-               ) & 
-               # Project type filter     
-               ProjectType %in% c(0,1,2,3,8,9,13) & 
-                 # Exclude children entering after HoH (per instruction 2c)
-                 (age_group != "Children" | EntryDate <= HoH_EntryDate) &
-                 # Exclude non-child cases where ApproxDateHomeless is missing
-                    # Note: further filtering for cases where ApproxDate > metric housing_date happens later
-                 (age_group == "Children" | !is.na(DateToStreetESSH))
-                 ) %>% 
-        mutate(
-          include_type = case_when( # this helps differentiate record subsets
-            is.na(MoveInDateAdj) & ProjectType %in% c(3,9,13) ~ "not_yet_housed",
-            ProjectType %in% c(3,9,13) ~ "housed",
-            TRUE ~ "sheltered"
-          ),
-          housing_date = case_when( # this sets single end date for all LoT measures
-            include_type == "housed" ~ MoveInDateAdj,
-            include_type == "sheltered" ~ EntryDate,
-            TRUE ~ NA
-          ), 
-          homeless_date = case_when( # this propagates HoH ADHS to children
-            age_group == "Children" ~ HoH_ADHS,
-            TRUE ~ DateToStreetESSH
-          ),
-          days_to_housing = as.integer(trunc((homeless_date %--% housing_date) / days(1)))
-          # couldn't use create_time_to_move_in() b/c slightly different logic
-        ) %>% 
-        select(c(
-          "HouseholdID", "ProjectType","PersonalID", "age_group", "EntryDate", 
-          "MoveInDateAdj", "HoH_ADHS", "include_type", "housing_date", "homeless_date", 
-          "days_to_housing")) %>% 
-        filter(., # secondary filtering step to satisfy instruction 5
-          homeless_date <= housing_date
-        ) %>%
-        # Get Race/Ethn info
-        left_join(Client %>%
-                    select(PersonalID, all_of(unname(race_columns)), RaceNone),
-                  by = "PersonalID") %>%
-        left_join(race_info, #Race_info created from DataLab_lists.R line 261
-                  by = all_of(unname(race_columns))) %>% 
-        mutate(across(
-          all_of(unname(race_columns)),
-          ~ as.numeric(.)),
-          race_count = rowSums(across(all_of(unname(race_columns))),
-                               na.rm = TRUE),
-          race_tabulation = case_when(
-            race_count == 1 ~ race_name_list,
-            race_count > 1 &
-              HispanicLatinaeo == 1 ~ "At Least 1 Race and Hispanic/Latina/e/o",
-            race_count > 1 ~ "Multi-racial (does not include Hispanic/Latina/e/o)",
-            TRUE ~ "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)")
-        )
-      
-      
-      
-      
+        Q22g_detail <- recent_program_enrollment  %>%
+          select(c("ProjectType", "ProjectID", all_of(housing_program_detail_columns), "age",
+                   "HoH_EntryDate", "DateToStreetESSH", "HoH_ADHS")) %>%
+          create_time_prior_to_housing() %>%
+          filter(ProjectType %in% c(0, 1, 2, 3, 8, 9, 13) &
+                   days_prior_to_housing != "Data.Not.Collected") %>%
+          left_join(Client %>%
+                      select(PersonalID, all_of(unname(race_columns)), RaceNone),
+                    by = "PersonalID") %>%
+          left_join(race_info, #Race_info created from DataLab_lists.R line 261
+                    by = all_of(unname(race_columns))) %>% 
+          mutate(across(
+            all_of(unname(race_columns)),
+            ~ as.numeric(.)),
+            race_count = rowSums(across(all_of(unname(race_columns))),
+                                 na.rm = TRUE),
+            race_tabulation = case_when(
+              race_count == 1 ~ race_name_list,
+              race_count > 1 &
+                HispanicLatinaeo == 1 ~ "At Least 1 Race and Hispanic/Latina/e/o",
+              race_count > 1 ~ "Multi-racial (does not include Hispanic/Latina/e/o)",
+              TRUE ~ "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)"),
+            include_type = case_when(
+              MoveInDateAdj >= report_start_date & 
+                MoveInDateAdj <= report_end_date ~ "moved_in",
+              leaver ~ "exit_only"))
+        
       Q22g_calcs <- Q22g_detail %>% 
         group_by(race_tabulation) %>%
         summarise(
-          Persons.Moved.Into.Housing = n_distinct(PersonalID[include_type %in% c("sheltered", "housed")], 
+          Persons.Moved.Into.Housing = n_distinct(PersonalID[days_prior_to_housing != "Not yet moved into housing"], 
                                                   na.rm = TRUE),
-          Persons.Not.Yet.Moved.Into.Housing = n_distinct(PersonalID[include_type == "not_yet_housed"], 
+          Persons.Not.Yet.Moved.Into.Housing = n_distinct(PersonalID[days_prior_to_housing == "Not yet moved into housing"], 
                                                       na.rm = TRUE),
-          Average.time.to.Move.In =  mean(days_to_housing[include_type %in% c("sheltered", "housed")], 
+          Average.time.to.Move.In =  mean(number_of_days[days_prior_to_housing != "Not yet moved into housing"], 
                                           na.rm = TRUE), 
-          Median.time.to.Move.In = median(days_to_housing[include_type %in% c("sheltered", "housed")], 
+          Median.time.to.Move.In = median(number_of_days[days_prior_to_housing != "Not yet moved into housing"], 
                                           na.rm = TRUE)) %>% 
         ungroup() 
       
@@ -1843,7 +1803,7 @@
         pivot_wider(names_from = "race_tabulation", values_from = "value")
       }
       
-      # Q23c
+      # Q23c checked
       {
         Q23c_detail <- recent_program_enrollment %>%
           filter(!is.na(ExitDate)) %>%
@@ -1856,73 +1816,29 @@
         Q23c[41, 2:6] <- as.list(decimal_format(as.numeric(Q23c[41, 2:6]), 4))
       }
       
-      # Q23d ready for QA ----
-      #  
-      
+      # Q23d checked
       {
-
-        Q23d_detail <- recent_program_enrollment %>% 
-          filter(!is.na(ExitDate)) %>% 
-          mutate(SubsidyName = case_when(
-            DestinationSubsidyType == 428 ~ SubsidyName[1], #Subsidy names is a new list Grant added into DataLab_Lists
-            DestinationSubsidyType == 419 ~ SubsidyName[2],
-            DestinationSubsidyType==431 ~ SubsidyName[3],
-            DestinationSubsidyType==433 ~ SubsidyName[4],
-            DestinationSubsidyType==434 ~ SubsidyName[5],
-            DestinationSubsidyType==420 ~ SubsidyName[6],
-            DestinationSubsidyType==436 ~ SubsidyName[7],
-            DestinationSubsidyType==437 ~ SubsidyName[8],
-            DestinationSubsidyType==438 ~ SubsidyName[9],
-            DestinationSubsidyType==439 ~ SubsidyName[10],
-            DestinationSubsidyType==440 ~ SubsidyName[11]),
-            DestinationSubsidyType = as.character(DestinationSubsidyType) # This was added because of a join error with function "return_household_groups"
-            )
+        Q23d_detail <- recent_program_enrollment %>%
+          select(c("ProjectType", "ProjectID", all_of(housing_program_detail_columns),
+                   "Destination", "DestinationSubsidyType")) %>%
+          filter(.,
+                 ProjectType != 12 & 
+                   leaver & 
+                   Destination == 435) %>% 
+          left_join(subsidy_list, join_by(DestinationSubsidyType == Field))
         
-        
-        Q23d <- Q23d_detail %>%
-          return_household_groups(., SubsidyName, SubsidyName) %>%
-          filter(!is.na(SubsidyName)) %>% # couldn't figure out how to remove the NA row, so filtered it out here.
-          adorn_totals("row") %>%
+        Q23d <- Q23d_detail %>% 
+          return_household_groups(., Response, subsidy_list$Response) %>% 
+          adorn_totals("row") %>% 
           ifnull(., 0)
-      
       }
       
-      
-      
-      # Q23e new question not coded yet ----
-      
-      ## NOTE: Retained counts that didn't fit in any prescribed category.
-      ## If undesired, recommend spec revision to prescribe exclusion of these
-      ## cases. An exclusion step in the Q23d_detail definition is commented out 
-      ## but should be activated if "unknown" cases are meant to be excluded.
-      
-      {
-      Q23d_detail <- recent_program_enrollment %>%
-        filter(.,
-               ProjectType != 12 & 
-                 ExitDate >= report_start_date & ExitDate <= report_end_date & 
-                 Destination == 435) %>% 
-        left_join(subsidy_list, join_by(SubsidyInformation == Field)) %>% 
-        rename(., subsidy_type = Response)
-      # %>% 
-      # filter(., !is.na, subsidy_type)
-      
-      Q23d <- Q23d_detail %>% 
-        return_household_groups(., subsidy_type, subsidy_list$Response) %>% 
-        adorn_totals("row") %>% 
-        ifnull(., 0) %>% 
-        replace_na(list(subsidy_type ="Unknown Subsidy Type"))
-      }
-      
-      # Q23e new question | Ready for QA ----
-      
-        ## could create modified version of create_destination_groups function;
-          ## will require creating race-group equivalent of return_household_groups
+      # Q23e checked
       {
       Q23e_detail <- recent_program_enrollment %>% 
         # leavers in range
-        filter(., ExitDate >= report_start_date & ExitDate <= report_end_date) %>% 
-        select(., c("PersonalID", "ExitDate", "Destination")) %>%
+        filter(leaver) %>% 
+        select(., c(all_of(housing_program_detail_columns), "Destination")) %>%
         # get APR destination categories 
         left_join(select(ResidenceUses, c("Location", "APR_LocationOrder", "APR_LocationGroup")) ,
                   join_by(Destination == Location)) %>%
@@ -1973,24 +1889,17 @@
         ifnull(.,0)
       }
       
-      # Q24a Ready for QA ----
-      # Changed the row headers
+      # Q24a checked
       {
-        Q24_detail <- recent_program_enrollment %>%
-          filter(!is.na(ExitDate) &
+        Q24a_detail <- recent_program_enrollment %>%
+          filter(leaver &
                    ProjectType == 12) %>%
           select(ProjectType, all_of(standard_detail_columns), 
                  HousingAssessment, SubsidyInformation) %>%
           mutate(assessment_at_exit = case_when(
             HousingAssessment == 1 ~
-              case_when(SubsidyInformation == 1 ~
-                          assessment_outcomes[1],
-                        SubsidyInformation == 2 ~
-                          assessment_outcomes[2],
-                        SubsidyInformation == 3 ~
-                          assessment_outcomes[3],
-                        SubsidyInformation == 4 ~
-                          assessment_outcomes[4]),
+              case_when(SubsidyInformation %in% 1:4 ~
+                          assessment_outcomes[SubsidyInformation]),
             HousingAssessment == 2 ~
               case_when(SubsidyInformation == 1 ~
                           assessment_outcomes[5],
@@ -2005,16 +1914,44 @@
             HousingAssessment %in% c(8, 9) ~ assessment_outcomes[13],
             HousingAssessment == 99 ~ assessment_outcomes[14])) 
         
-        Q24 <- Q24_detail %>%
+        Q24a <- Q24a_detail %>%
           return_household_groups(., assessment_at_exit, assessment_outcomes) %>%
           adorn_totals("row") %>%
           ifnull(., 0)
         
       }
       
-      #Q24b New Question not coded yet ----
+      #Q24b checked
+      {
+        Q24b_detail <- recent_program_enrollment %>%
+          filter(RelationshipToHoH == 1 &
+                   ProjectType == 3) %>%
+          select(all_of(housing_program_detail_columns)) %>%
+          inner_join(Services %>% 
+                       filter(DateProvided >= report_start_date &
+                                DateProvided <= report_end_date &
+                                RecordType == 300) %>%
+                       select(EnrollmentID, TypeProvided) %>%
+                       distinct(),
+                     by = "EnrollmentID") 
+        
+        Q24b <- Q24b_detail %>%
+          full_join(moving_on_assistance,
+                    by = c("TypeProvided" = "Field")) %>%
+          return_household_groups(., Response, moving_on_assistance$Response) %>%
+          ifnull(., 0)
+      }
       
       #Q24c New Question not coded yet ----
+      {
+        Q24c_detail <- recent_program_enrollment %>%
+          # filter(ProjectType == 3) %>%
+          keep_adults_and_hoh_only() %>%
+          select(c(all_of(housing_program_detail_columns), 
+                   "SexualOrientation")) %>%
+          left_join(sexual_orientation_columns, 
+                    by = c("SexualOrientation" = "value"))
+      }
       
       #Q24d New Question not coded yet ----
       
@@ -2111,70 +2048,6 @@
           select(-With.Only.Children) %>%
           filter(detailed_age_group %nin% detailed_age_group_list[1:3])
       }
-      
-      # Q25e RETIRED ----
-      # {
-      #   Q25e_detail <- "See Q13a1.csv, Q13b1.csv, and Q13c1.csv respectively"
-      #   Q25e.1.and.2 <- recent_veteran_enrollment %>%
-      #     inner_join(disability_table %>%
-      #                  filter(DataCollectionStage %in% c(1, 3)), by ="EnrollmentID",
-      #                multiple = "all") %>%
-      #     group_by(disability_name) %>%
-      #     summarise(Conditions.At.Start = n_distinct(PersonalID[DataCollectionStage == 1], 
-      #                                                na.rm = TRUE),
-      #               Conditions.At.Exit.for.Leavers = n_distinct(
-      #                 PersonalID[DataCollectionStage == 3 & !is.na(ExitDate)], 
-      #                 na.rm = TRUE))
-      #   
-      #   Q25e.3 <- Q13c1_detail %>%
-      #     filter(EnrollmentID %in% recent_veteran_enrollment$EnrollmentID) %>%
-      #     group_by(disability_name) %>%
-      #     summarise(Conditions.At.Latest.Assessment.for.Stayers = n_distinct(PersonalID, 
-      #                                                                        na.rm = TRUE))
-      #   
-      #   Q25e <- as.data.frame(disability_list)  %>%
-      #     `colnames<-`(c("disability_name")) %>%
-      #     full_join(Q25e.1.and.2 %>%
-      #                 select(disability_name, Conditions.At.Start), 
-      #               by = "disability_name") %>%
-      #     full_join(Q25e.3, by = "disability_name") %>%
-      #     full_join(Q25e.1.and.2 %>%
-      #                 select(disability_name, Conditions.At.Exit.for.Leavers), 
-      #               by = "disability_name") %>%
-      #     ifnull(0)
-      # }
-      
-      # Q25f RETIRED ----
-      
-      # Q26f specifies that rows 11 and 12 are excluded intentionally, Q25f does
-      # not specify this but it also does not show these rows in the table
-      # {
-      #   Q25f_detail <- Q16_detail %>%
-      #     filter(new_veteran_status == 1)
-      #   
-      #   Q25f <- recent_veteran_enrollment %>%
-      #     create_income_categories(.) %>%
-      #     adorn_totals("row")
-      # }
-      
-      # Q25g RETIRED ----
-      # {
-      #   Q25g_detail <- Q17_detail %>%
-      #     filter(new_veteran_status == 1)
-      #   
-      #   Q25g <- recent_veteran_enrollment %>% 
-      #     create_income_sources(.)
-      # }
-      
-      # Q25h RETIRED ----
-      # {
-      #   Q25h_detail <- Q20a_detail %>%
-      #     filter(new_veteran_status == 1)
-      #   
-      #   Q25h <- create_benefit_groups(recent_veteran_enrollment)
-      # }
-      # 
-      
       
       # Q25i In progress ----
       # Match Q23c - SupplementalTables.xlsx
