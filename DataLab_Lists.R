@@ -405,6 +405,16 @@ assessment_outcomes = c("Able to maintain the housing they had at project start-
                                  "Data not collected (no exit interview completed)")
 
 # ------------------------------------------------------------------------------
+# ----------------------- Moving On Assistance ------------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   APR/CAPER - Q24b   
+
+moving_on_assistance <- read_excel("SupplementalTables.xlsx",
+                                   sheet = "MovingOnAssistance",
+                                   col_types = c("numeric", "text"))
+
+# ------------------------------------------------------------------------------
 # ----------------- Classification List: Veteran and Chronic -------------------
 # ------------------------------------------------------------------------------
 # used in:
