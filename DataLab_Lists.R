@@ -201,6 +201,17 @@ DestinationClassification <- read_excel("SupplementalTables.xlsx",
                                         col_types = c("numeric", "numeric", 
                                                       "text"))
 
+# ------------------------------------------------------------------------------
+# -------------------------- Subsidy List ----------------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   APR - Q23d
+
+subsidy_list <- read_excel("SupplementalTables.xlsx",
+                           sheet = "DestinationSubsidy",
+                           col_types = c("numeric", "text"))
+
+
 
 # ------------------------------------------------------------------------------
 # -------------------------- Income Type List ----------------------------------
@@ -315,6 +326,14 @@ for (col in unname(race_columns)) {
 #Why do we keep naming and then un-naming the variables?
 
 
+# used in APR 22f, 22g, 22e:
+
+race_list_expanded <- c(names(race_columns), 
+                        "At Least 1 Race and Hispanic/Latina/e/o", 
+                        "Multi-racial (does not include Hispanic/Latina/e/o)",
+                        "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)"
+                        )
+
 # ------------------------------------------------------------------------------
 # ------------------------ Simple Age Group List -------------------------------
 # ------------------------------------------------------------------------------
@@ -405,6 +424,15 @@ assessment_outcomes = c("Able to maintain the housing they had at project start-
                                  "Client doesn’t know/Prefers Not to Answer",
                                  "Data not collected (no exit interview completed)")
 
+# ------------------------------------------------------------------------------
+# ----------------------- Moving On Assistance ------------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   APR/CAPER - Q24b   
+
+moving_on_assistance <- read_excel("SupplementalTables.xlsx",
+                                   sheet = "MoveOnAssistance",
+                                   col_types = c("numeric", "text"))
 
 # ------------------------------------------------------------------------------
 # ----------------- Classification List: Veteran and Chronic -------------------
