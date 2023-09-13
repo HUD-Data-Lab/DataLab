@@ -682,7 +682,7 @@ create_benefit_groups <- function(included_enrollments) {
 
 # create destination table for APR/CAPER
 create_destination_groups <- function(included_enrollments) {
-  for(residence_type in c("Permanent", "Temporary", "Institutional", 
+  for(residence_type in c("Permanent", "Temporary", "Institutional",
                           "Homeless", "Other")) {
     residences_to_include <- ResidenceUses %>%
       filter(APR_LocationGroup == residence_type &

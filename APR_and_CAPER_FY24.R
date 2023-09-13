@@ -823,7 +823,9 @@ generate_new_kits <- TRUE
       }
       
       
-      # Q10d checked
+      # Q10d checked / Grant Updated ----
+      #Updated the column headers to match age categories
+
       {
         Q10d_detail <- recent_program_enrollment %>%
           select(all_of(standard_detail_columns), "age", "detailed_age_group") %>%
@@ -861,8 +863,8 @@ generate_new_kits <- TRUE
               summarise(Total = n_distinct(PersonalID, na.rm = TRUE),
                         Under.Age.18 = n_distinct(PersonalID[Q10d_age_group == "Under18"], na.rm = TRUE),
                         Age.18.to.24 = n_distinct(PersonalID[Q10d_age_group == "18-24"], na.rm = TRUE),
-                        Age.25.to.61 = n_distinct(PersonalID[Q10d_age_group == "25-64"], na.rm = TRUE),
-                        Age.62.and.over = n_distinct(PersonalID[Q10d_age_group == "65+"], na.rm = TRUE),
+                        Age.25.to.64 = n_distinct(PersonalID[Q10d_age_group == "25-64"], na.rm = TRUE),
+                        Age.65.and.over = n_distinct(PersonalID[Q10d_age_group == "65+"], na.rm = TRUE),
                         Client.Does.Not.Know.or.Prefers.Not.to.Answer = n_distinct(PersonalID[Q10d_age_group == "Client.Does.Not.Know.or.Declined"], na.rm = TRUE),
                         Data.Not.Collected = n_distinct(PersonalID[Q10d_age_group == "Data.Not.Collected"], na.rm = TRUE)),
             by = "gender_tabulation") %>%
@@ -1761,13 +1763,14 @@ generate_new_kits <- TRUE
         Q23c[41, 2:6] <- as.list(decimal_format(as.numeric(Q23c[41, 2:6]), 4))
       }
       
-      # Q23d ready for QA ----
+      # Q23d ready for QA / Compare with Zach ----
       #  
       
       {
 
         Q23d_detail <- recent_program_enrollment %>% 
-          filter(!is.na(ExitDate)) %>% 
+          filter(!is.na(ExitDate),
+                 Destination == 435) %>% 
           mutate(SubsidyName = case_when(
             DestinationSubsidyType == 428 ~ SubsidyName[1], #Subsidy names is a new list Grant added into DataLab_Lists
             DestinationSubsidyType == 419 ~ SubsidyName[2],
@@ -1786,7 +1789,7 @@ generate_new_kits <- TRUE
         
         Q23d <- Q23d_detail %>%
           return_household_groups(., SubsidyName, SubsidyName) %>%
-          filter(!is.na(SubsidyName)) %>% # couldn't figure out how to remove the NA row, so filtered it out here.
+          filter(!is.na(SubsidyName)) %>% # Handled the NA by removing them from the measure. No guidance given on how to handle NAs in specs
           adorn_totals("row") %>%
           ifnull(., 0)
       
@@ -1911,7 +1914,7 @@ generate_new_kits <- TRUE
           ifnull(., 0)
       }
       
-      # Q25c Ready for QA Pending Gwen follow up on Q10 ----
+      # Q25c Ready for QA ----
       {
         Q25c_detail <- recent_veteran_enrollment %>%
           select(c(all_of(standard_detail_columns))) %>%
@@ -1924,7 +1927,7 @@ generate_new_kits <- TRUE
           select(-With.Only.Children)
       }
       
-      # Q25d In porgress / re-run instance to check age_category change ----
+      # Q25d ready for QA ----
       {
         Q25d_detail <- Q11_detail %>%
           filter(PersonalID %in% recent_veteran_enrollment$PersonalID)
@@ -2008,7 +2011,7 @@ generate_new_kits <- TRUE
         Q25i <- create_destination_groups(recent_veteran_enrollment) %>%
           mutate(across(everything(), as.character))
         
-        Q25i[45, 2:6] <- as.list(decimal_format(as.numeric(Q25i[45, 2:6]), 4))
+        #Q25i[45, 2:6] <- as.list(decimal_format(as.numeric(Q25i[45, 2:6]), 4))
       }
       
       #Q25j New question ready for QA ----
