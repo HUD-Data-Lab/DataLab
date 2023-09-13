@@ -1856,9 +1856,32 @@
         Q23c[41, 2:6] <- as.list(decimal_format(as.numeric(Q23c[41, 2:6]), 4))
       }
       
-      # Q23d new question | not coded yet ----
+      # Q23d new question | Ready for QA ----
       
+      ## NOTE: There doesn't appear to be available data to produce valid test counts.
       
+      ## NOTE: Retained counts that didn't fit in any prescribed category.
+      ## If undesired, recommend spec revision to prescribe exclusion of these
+      ## cases. An exclusion step in the Q23d_detail definition is commented out 
+      ## but should be activated if "unknown" cases are meant to be excluded.
+      
+      {
+      Q23d_detail <- recent_program_enrollment %>%
+        filter(.,
+               ProjectType != 12 & 
+                 ExitDate >= report_start_date & ExitDate <= report_end_date & 
+                 Destination == 435) %>% 
+        left_join(subsidy_list, join_by(SubsidyInformation == Field)) %>% 
+        rename(., subsidy_type = Response)
+      # %>% 
+      # filter(., !is.na, subsidy_type)
+      
+      Q23d <- Q23d_detail %>% 
+        return_household_groups(., subsidy_type, subsidy_list$Response) %>% 
+        adorn_totals("row") %>% 
+        ifnull(., 0) %>% 
+        replace_na(list(subsidy_type ="Unknown Subsidy Type"))
+      }
       
       # Q23e new question | Ready for QA ----
       
@@ -1897,7 +1920,7 @@
           summarise(measure = n_distinct(PersonalID)) %>%
         ungroup()
 
-      # This is used to provide a Destination-Race/Ethn category scaffold for final output table
+      # provides a Destination-Race/Ethn category scaffold for final output table
       Q23e_scaffold <-  ResidenceUses %>%
         filter(., !is.na(APR_LocationGroup)) %>%
         group_by(APR_LocationGroup) %>%

@@ -201,6 +201,17 @@ DestinationClassification <- read_excel("SupplementalTables.xlsx",
                                         col_types = c("numeric", "numeric", 
                                                       "text"))
 
+# ------------------------------------------------------------------------------
+# -------------------------- Subsidy List ----------------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   APR - Q23d
+
+subsidy_list <- read_excel("SupplementalTables.xlsx",
+                           sheet = "DestinationSubsidy",
+                           col_types = c("numeric", "text"))
+
+
 
 # ------------------------------------------------------------------------------
 # -------------------------- Income Type List ----------------------------------
@@ -392,7 +403,6 @@ assessment_outcomes = c("Able to maintain the housing they had at project start-
                                  "Deceased",
                                  "Client doesn’t know/Prefers Not to Answer",
                                  "Data not collected (no exit interview completed)")
-
 
 # ------------------------------------------------------------------------------
 # ----------------- Classification List: Veteran and Chronic -------------------
