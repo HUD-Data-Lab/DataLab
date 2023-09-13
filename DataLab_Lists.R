@@ -713,3 +713,15 @@ sexual_orientation_columns <- data.frame(
                                 "Client Doesn’t Know/Prefers Not to Answer",
                                 "Data not collected"),
   value = c(1, 2, 3, 4, 5, 6, 8, 9, 99))
+
+# ------------------------------------------------------------------------------
+# -------------------------- Language Supplement -------------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   APR/CAPER - 
+
+possible_languages <- read_excel("HMIS-C4-Translation-Assistance-Needed-Supplement-2024.xlsx",
+                                 range = "A1:B328")
+
+# data.frame(`Response Option Number` = 21,
+#            `Response Option Name` = "Different Preferred Language")

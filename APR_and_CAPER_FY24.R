@@ -1820,9 +1820,8 @@
       {
         Q23d_detail <- recent_program_enrollment %>%
           select(c("ProjectType", "ProjectID", all_of(housing_program_detail_columns),
-                   "Destination", "DestinationSubsidyType")) %>%
-          filter(.,
-                 ProjectType != 12 & 
+                   "Destination", "DestinationSubsidyType", "new_veteran_status")) %>%
+          filter(ProjectType != 12 & 
                    leaver & 
                    Destination == 435) %>% 
           left_join(subsidy_list, join_by(DestinationSubsidyType == Field))
@@ -1942,18 +1941,56 @@
           ifnull(., 0)
       }
       
-      #Q24c New Question not coded yet ----
+      #Q24c checked
       {
         Q24c_detail <- recent_program_enrollment %>%
-          # filter(ProjectType == 3) %>%
+          filter(ProjectType == 3) %>%
           keep_adults_and_hoh_only() %>%
           select(c(all_of(housing_program_detail_columns), 
-                   "SexualOrientation")) %>%
-          left_join(sexual_orientation_columns, 
-                    by = c("SexualOrientation" = "value"))
+                   "SexualOrientation")) 
+        
+        Q24c <- Q24c_detail %>%
+          inner_join(sexual_orientation_columns, 
+                    by = c("SexualOrientation" = "value")) %>%
+          return_household_groups(., name, 
+                                  unique(sexual_orientation_columns$name)) %>%
+          adorn_totals("row") %>%
+          ifnull(., 0)
       }
       
-      #Q24d New Question not coded yet ----
+      #Q24d checked
+      {
+        Q24d_detail <- recent_program_enrollment %>%
+          filter(RelationshipToHoH == 1) %>%
+          select(c(all_of(housing_program_detail_columns), 
+                   "PreferredLanguage")) %>%
+          left_join(possible_languages, 
+                     by = c("PreferredLanguage" = "Response Option Number")) %>%
+          filter(PreferredLanguage == 21 |
+                   !is.na(`Response Option Name`))
+        
+        preferred_languages <- Q24d_detail %>%
+          filter(!is.na(`Response Option Name`)) %>%
+          group_by(`Response Option Name`) %>%
+          summarise(count = n_distinct(PersonalID)) %>%
+          ungroup() %>%
+          arrange(desc(count), `Response Option Name`) %>%
+          slice_head(n = 20)
+        
+        different_language <- Q24d_detail %>%
+          filter(PreferredLanguage == 21) %>%
+          summarise(count = n_distinct(PersonalID)) %>%
+          mutate(`Response Option Name` = "Different Preferred Language")
+        
+        Q24d <- preferred_languages %>%
+            full_join(different_language, 
+                      by = colnames(preferred_languages)) %>%
+          rename(
+            "Language Response (Top 20 Languages Selected)" = `Response Option Name`,
+            "Total Persons Requiring Translation Assistance" = count) %>%
+          adorn_totals("row") %>%
+          ifnull(., 0)
+      }
       
       
       #-------------------------------------------------------------
@@ -1963,7 +2000,7 @@
       recent_veteran_enrollment <- recent_program_enrollment %>%
         filter(new_veteran_status == 1)
       
-      # Q25a Ready for QA / needs review ----
+      # Q25a checked
       # Updated categories - NOTE did not follow up on the comment below
       {
         
@@ -1996,7 +2033,7 @@
           ifnull(., 0)
         }
       
-      # Q25b Ready for QA / needs review ----
+      # Q25b checked
       # Refer to comment above for Q25a
       {
         Q25b_detail <- recent_program_enrollment %>%
@@ -2025,7 +2062,7 @@
           ifnull(., 0)
       }
       
-      # Q25c Ready for QA Pending Gwen follow up on Q10 ----
+      # Q25c checked
       {
         Q25c_detail <- recent_veteran_enrollment %>%
           select(c(all_of(standard_detail_columns))) %>%
@@ -2038,7 +2075,7 @@
           select(-With.Only.Children)
       }
       
-      # Q25d In porgress / re-run instance to check age_category change ----
+      # Q25d checked
       {
         Q25d_detail <- Q11_detail %>%
           filter(PersonalID %in% recent_veteran_enrollment$PersonalID)
@@ -2049,8 +2086,7 @@
           filter(detailed_age_group %nin% detailed_age_group_list[1:3])
       }
       
-      # Q25i In progress ----
-      # Match Q23c - SupplementalTables.xlsx
+      # Q25i checked
       {
         Q25i_detail <- Q23c_detail %>%
           filter(new_veteran_status == 1)
@@ -2058,33 +2094,28 @@
         Q25i <- create_destination_groups(recent_veteran_enrollment) %>%
           mutate(across(everything(), as.character))
         
-        Q25i[45, 2:6] <- as.list(decimal_format(as.numeric(Q25i[45, 2:6]), 4))
+        Q25i[41, 2:6] <- as.list(decimal_format(as.numeric(Q25i[41, 2:6]), 4))
       }
       
-      #Q25j New question ready for QA ----
+      #Q25j checked
       
       {
         Q25j_detail <- Q23d_detail %>%
           filter(new_veteran_status == 1)
         
-        Q25j <- Q25j_detail %>%
-          return_household_groups(., SubsidyName, SubsidyName) %>%
-          filter(!is.na(SubsidyName)) %>% # couldn't figure out how to remove the NA row, so filtered it out here.
-          select(-With.Only.Children) %>% 
-          adorn_totals("row") %>%
+        Q25j <- Q25j_detail %>% 
+          return_household_groups(., Response, subsidy_list$Response) %>% 
+          adorn_totals("row") %>% 
           ifnull(., 0)
-
       }
       
 
-      
-      
       #-------------------------------------------------------------
       #------------------- Chronic Questions -----------------------
       #-------------------------------------------------------------
       
       recent_chronic_enrollment <- recent_program_enrollment %>%
-        rename()
+        # rename()
         filter(chronic == "Y")
       
       # Q26a Not Started ----
