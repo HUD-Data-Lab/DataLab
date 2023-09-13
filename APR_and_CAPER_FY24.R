@@ -1860,7 +1860,7 @@
       
       
       
-      # Q23e new question | coding in progress [Zach] ----
+      # Q23e new question | Ready for QA ----
       
         ## could create modified version of create_destination_groups function;
           ## will require creating race-group equivalent of return_household_groups
@@ -1914,7 +1914,9 @@
           join_by(APR_LocationGroup, race_tabulation)
           ) %>% 
         ifnull(., 0) %>% 
-        pivot_wider(names_from = "race_tabulation", values_from = "measure")
+        pivot_wider(names_from = "race_tabulation", values_from = "measure") %>% 
+        adorn_totals("row") %>% 
+        ifnull(.,0)
       }
       
       # Q24a Ready for QA ----
