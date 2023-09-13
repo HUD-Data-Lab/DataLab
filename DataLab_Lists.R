@@ -411,7 +411,7 @@ assessment_outcomes = c("Able to maintain the housing they had at project start-
 #   APR/CAPER - Q24b   
 
 moving_on_assistance <- read_excel("SupplementalTables.xlsx",
-                                   sheet = "MovingOnAssistance",
+                                   sheet = "MoveOnAssistance",
                                    col_types = c("numeric", "text"))
 
 # ------------------------------------------------------------------------------
