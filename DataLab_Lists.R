@@ -247,8 +247,28 @@ EventTypes <- read_excel("SupplementalTables.xlsx",
 
 
 # ------------------------------------------------------------------------------
-# ------------------------------ Race Columns -------------------------------- #Look into expand.grid for another way to do this: 
-# ------------------------------------------------------------------------------#https://stackoverflow.com/questions/18705153/generate-list-of-all-possible-combinations-of-elements-of-vector
+# ------------------------------ Subsidy Type List -----------------------------  
+# ------------------------------------------------------------------------------
+# used in:
+#   APR/CAPER
+
+SubsidyName <- c(
+  "GPD TIP housing subsidy ",
+  "VASH housing subsidy",
+  "RRH or equivalent subsidy",
+  "HCV voucher (tenant or project based) (not dedicated)",
+  "Public housing unit",
+  "Rental by client, with other ongoing housing subsidy",
+  "Emergency Housing Voucher",
+  "Family Unification Program Voucher (FUP)",
+  "Foster Youth to Independence Initiative (FYI)",
+  "Permanent Supportive Housing",
+  "Other permanent housing dedicated for formerly homeless persons")
+
+
+# ------------------------------------------------------------------------------
+# ------------------------------ Race Columns --------------------------------  
+# ------------------------------------------------------------------------------
 # used in:
 #   APR/CAPER
 

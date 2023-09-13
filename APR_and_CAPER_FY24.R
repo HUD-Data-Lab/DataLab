@@ -1761,7 +1761,38 @@ generate_new_kits <- TRUE
         Q23c[41, 2:6] <- as.list(decimal_format(as.numeric(Q23c[41, 2:6]), 4))
       }
       
-      # Q23d new question not coded yet ----
+      # Q23d ready for QA ----
+      #  
+      
+      {
+
+        Q23d_detail <- recent_program_enrollment %>% 
+          filter(!is.na(ExitDate)) %>% 
+          mutate(SubsidyName = case_when(
+            DestinationSubsidyType == 428 ~ SubsidyName[1], #Subsidy names is a new list Grant added into DataLab_Lists
+            DestinationSubsidyType == 419 ~ SubsidyName[2],
+            DestinationSubsidyType==431 ~ SubsidyName[3],
+            DestinationSubsidyType==433 ~ SubsidyName[4],
+            DestinationSubsidyType==434 ~ SubsidyName[5],
+            DestinationSubsidyType==420 ~ SubsidyName[6],
+            DestinationSubsidyType==436 ~ SubsidyName[7],
+            DestinationSubsidyType==437 ~ SubsidyName[8],
+            DestinationSubsidyType==438 ~ SubsidyName[9],
+            DestinationSubsidyType==439 ~ SubsidyName[10],
+            DestinationSubsidyType==440 ~ SubsidyName[11]),
+            DestinationSubsidyType = as.character(DestinationSubsidyType) # This was added because of a join error with function "return_household_groups"
+            )
+        
+        
+        Q23d <- Q23d_detail %>%
+          return_household_groups(., SubsidyName, SubsidyName) %>%
+          filter(!is.na(SubsidyName)) %>% # couldn't figure out how to remove the NA row, so filtered it out here.
+          adorn_totals("row") %>%
+          ifnull(., 0)
+      
+      }
+      
+      
       
       # Q23e new question not coded yet ----
       
@@ -1980,7 +2011,23 @@ generate_new_kits <- TRUE
         Q25i[45, 2:6] <- as.list(decimal_format(as.numeric(Q25i[45, 2:6]), 4))
       }
       
-      #Q25j New question not coded yet ----
+      #Q25j New question ready for QA ----
+      
+      {
+        Q25j_detail <- Q23d_detail %>%
+          filter(new_veteran_status == 1)
+        
+        Q25j <- Q25j_detail %>%
+          return_household_groups(., SubsidyName, SubsidyName) %>%
+          filter(!is.na(SubsidyName)) %>% # couldn't figure out how to remove the NA row, so filtered it out here.
+          select(-With.Only.Children) %>% 
+          adorn_totals("row") %>%
+          ifnull(., 0)
+
+      }
+      
+
+      
       
       #-------------------------------------------------------------
       #------------------- Chronic Questions -----------------------
@@ -2199,7 +2246,7 @@ generate_new_kits <- TRUE
           ifnull(., 0)
       }
       
-      # Q27f Not Started ----
+      # Q27f1 Not Started ----
       {
         Q27f_detail <- Q23c_detail %>%
           filter(youth == 1)
@@ -2209,6 +2256,21 @@ generate_new_kits <- TRUE
         
         Q27f[45, 2:6] <- as.list(decimal_format(as.numeric(Q27f[45, 2:6]), 4))
       }
+        
+        # Q27f2 New Question Ready for QA ----
+        {
+          Q27f2_detail <- Q23d_detail %>%
+            filter(youth == 1)
+          
+          Q27f2 <- Q27f2_detail %>%
+            return_household_groups(., SubsidyName, SubsidyName) %>%
+            filter(!is.na(SubsidyName)) %>% # couldn't figure out how to remove the NA row, so filtered it out here.
+            adorn_totals("row") %>%
+            ifnull(., 0)
+
+        }
+        
+        
       
       # Q27g Not Started ----
       # label for A17 specifies adults like the other uses of this logic, but
