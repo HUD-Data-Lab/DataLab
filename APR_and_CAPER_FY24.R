@@ -10,13 +10,15 @@
 # <https://www.gnu.org/licenses/>. 
 
 
-# This is a global parameter that should be changed if desired and then run FIRST
-generate_new_kits <- TRUE
+
 # this bracket will run everything; use with care!
 {
   
   # run this bracket to set up environment for test kit
   {
+    # This is a global parameter that should be changed if desired
+    generate_new_kits <- TRUE
+    
     source("DataLab.R")
   
   # used for building and testing APR on specific projects or groups of projects. To run full test kit use full_project_list
@@ -1732,11 +1734,7 @@ generate_new_kits <- TRUE
                                             na.rm = TRUE)) %>% 
           ungroup() 
         
-        Q22f <- c(names(race_columns), 
-                  "At Least 1 Race and Hispanic/Latina/e/o", 
-                  "Multi-racial (does not include Hispanic/Latina/e/o)",
-                  "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)"
-        ) %>% 
+        Q22f <- race_list_expanded %>% 
           as.data.frame(nm = "race_tabulation") %>% 
           left_join(Q22f_calcs,
                     by = "race_tabulation") %>% 
@@ -1833,11 +1831,7 @@ generate_new_kits <- TRUE
                                           na.rm = TRUE)) %>% 
         ungroup() 
       
-      Q22g <- c(names(race_columns), 
-                "At Least 1 Race and Hispanic/Latina/e/o", 
-                "Multi-racial (does not include Hispanic/Latina/e/o)",
-                "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)"
-      ) %>% 
+      Q22g <- race_list_expanded %>% 
         as.data.frame(nm = "race_tabulation") %>% 
         left_join(Q22g_calcs,
                   by = "race_tabulation") %>% 
@@ -1862,13 +1856,15 @@ generate_new_kits <- TRUE
         Q23c[41, 2:6] <- as.list(decimal_format(as.numeric(Q23c[41, 2:6]), 4))
       }
       
-      # Q23d new question not coded yet ----
+      # Q23d new question | not coded yet ----
+      
+      
       
       # Q23e new question | coding in progress [Zach] ----
       
         ## could create modified version of create_destination_groups function;
           ## will require creating race-group equivalent of return_household_groups
-      
+      {
       Q23e_detail <- recent_program_enrollment %>% 
         # leavers in range
         filter(., ExitDate >= report_start_date & ExitDate <= report_end_date) %>% 
@@ -1894,25 +1890,32 @@ generate_new_kits <- TRUE
             race_count > 1 ~ "Multi-racial (does not include Hispanic/Latina/e/o)",
             TRUE ~ "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)")
         )
-      # Below still in progress
       
-      # q23e_calc <- Q23e_detail %>% 
-      #   group_by(race_tabulation, APR_LocationGroup) %>%
-      #     summarise(measure = n_distinct(PersonalID)) %>% 
-      #   ungroup()
-        
+      # Gets counts by destination and race/ethn category
+      Q23e_calcs <- Q23e_detail %>%
+        group_by(race_tabulation, APR_LocationGroup) %>%
+          summarise(measure = n_distinct(PersonalID)) %>%
+        ungroup()
+
+      # This is used to provide a Destination-Race/Ethn category scaffold for final output table
+      Q23e_scaffold <-  ResidenceUses %>%
+        filter(., !is.na(APR_LocationGroup)) %>%
+        group_by(APR_LocationGroup) %>%
+        summarise(., sort_order = min(APR_LocationOrder, na.rm = TRUE)) %>%
+        ungroup() %>%
+        arrange(., sort_order) %>%
+        select(-sort_order) %>% 
+        cross_join(race_list_expanded %>% 
+                     as.data.frame(nm = "race_tabulation"))
       
-      # q23e_destination_type_df <-  ResidenceUses %>% 
-      #   filter(., !is.na(APR_LocationGroup)) %>%
-      #   group_by(APR_LocationGroup) %>% 
-      #   summarise(., sort_order = min(APR_LocationOrder, na.rm = TRUE)) %>% 
-      #   ungroup() %>% 
-      #   arrange(., sort_order) %>% 
-      #   select(-sort_order)
-      
-      # Tested existing return_race_groups fx -- not quite what's needed...
-      # and not sure how to augment properly.
-      ### q23c_test <- return_race_groups(Q23c_detail, grouped_by = PersonalID, Q23c_detail$PersonalID)
+      Q23e <- Q23e_scaffold %>% 
+        left_join(
+          Q23e_calcs,
+          join_by(APR_LocationGroup, race_tabulation)
+          ) %>% 
+        ifnull(., 0) %>% 
+        pivot_wider(names_from = "race_tabulation", values_from = "measure")
+      }
       
       # Q24a Ready for QA ----
       # Changed the row headers

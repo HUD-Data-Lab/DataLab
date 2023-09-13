@@ -295,6 +295,14 @@ for (col in unname(race_columns)) {
 #Why do we keep naming and then un-naming the variables?
 
 
+# used in APR 22f, 22g, 22e:
+
+race_list_expanded <- c(names(race_columns), 
+                        "At Least 1 Race and Hispanic/Latina/e/o", 
+                        "Multi-racial (does not include Hispanic/Latina/e/o)",
+                        "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)"
+                        )
+
 # ------------------------------------------------------------------------------
 # ------------------------ Simple Age Group List -------------------------------
 # ------------------------------------------------------------------------------
