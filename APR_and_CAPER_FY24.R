@@ -1813,7 +1813,7 @@
         Q23c <- create_destination_groups(Q23c_detail) %>%
           mutate(across(everything(), as.character))
         
-        Q23c[41, 2:6] <- as.list(decimal_format(as.numeric(Q23c[41, 2:6]), 4))
+        Q23c[41, 2:6] <- c(decimal_format(as.numeric(Q23c[41, 2:6]), 4))
       }
       
       # Q23d checked
@@ -2335,7 +2335,7 @@
         Q27f <- create_destination_groups(recent_youth_enrollment)  %>%
           mutate(across(everything(), as.character))
         
-        Q27f[45, 2:6] <- as.list(decimal_format(as.numeric(Q27f[45, 2:6]), 4))
+        Q27f[41, 2:6] <- c(decimal_format(as.numeric(Q27f[41, 2:6]), 4))
       }
         
         # Q27f2 New Question Ready for QA ----
