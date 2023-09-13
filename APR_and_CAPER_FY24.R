@@ -829,7 +829,9 @@
       }
       
       
-      # Q10d checked
+      # Q10d checked / Grant Updated ----
+      #Updated the column headers to match age categories
+
       {
         Q10d_detail <- recent_program_enrollment %>%
           select(all_of(standard_detail_columns), "age", "detailed_age_group") %>%
@@ -867,8 +869,8 @@
               summarise(Total = n_distinct(PersonalID, na.rm = TRUE),
                         Under.Age.18 = n_distinct(PersonalID[Q10d_age_group == "Under18"], na.rm = TRUE),
                         Age.18.to.24 = n_distinct(PersonalID[Q10d_age_group == "18-24"], na.rm = TRUE),
-                        Age.25.to.61 = n_distinct(PersonalID[Q10d_age_group == "25-64"], na.rm = TRUE),
-                        Age.62.and.over = n_distinct(PersonalID[Q10d_age_group == "65+"], na.rm = TRUE),
+                        Age.25.to.64 = n_distinct(PersonalID[Q10d_age_group == "25-64"], na.rm = TRUE),
+                        Age.65.and.over = n_distinct(PersonalID[Q10d_age_group == "65+"], na.rm = TRUE),
                         Client.Does.Not.Know.or.Prefers.Not.to.Answer = n_distinct(PersonalID[Q10d_age_group == "Client.Does.Not.Know.or.Declined"], na.rm = TRUE),
                         Data.Not.Collected = n_distinct(PersonalID[Q10d_age_group == "Data.Not.Collected"], na.rm = TRUE)),
             by = "gender_tabulation") %>%
