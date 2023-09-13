@@ -1853,7 +1853,7 @@
         Q23c <- create_destination_groups(Q23c_detail) %>%
           mutate(across(everything(), as.character))
         
-        Q23c[41, 2:6] <- as.list(decimal_format(as.numeric(Q23c[41, 2:6]), 4))
+        Q23c[41, 2:6] <- c(decimal_format(as.numeric(Q23c[41, 2:6]), 4))
       }
       
       # Q23d new question | Ready for QA ----
@@ -1983,6 +1983,13 @@
       
       #Q24b New Question not coded yet ----
       
+      # Started by Zach but paused b/c not assigned
+      # Q24b_detail <- recent_program_enrollment %>% 
+      #   filter(.,
+      #          RelationshipToHoH == 1, # HoH only
+      #          ProjectType == 3, # PSH only
+      #          )
+      # 
       #Q24c New Question not coded yet ----
       
       #Q24d New Question not coded yet ----
@@ -2154,7 +2161,7 @@
         Q25i <- create_destination_groups(recent_veteran_enrollment) %>%
           mutate(across(everything(), as.character))
         
-        Q25i[45, 2:6] <- as.list(decimal_format(as.numeric(Q25i[45, 2:6]), 4))
+        Q25i[41, 2:6] <- c(decimal_format(as.numeric(Q25i[41, 2:6]), 4))
       }
       
       #Q25j New question not coded yet ----
@@ -2384,7 +2391,7 @@
         Q27f <- create_destination_groups(recent_youth_enrollment)  %>%
           mutate(across(everything(), as.character))
         
-        Q27f[45, 2:6] <- as.list(decimal_format(as.numeric(Q27f[45, 2:6]), 4))
+        Q27f[41, 2:6] <- c(decimal_format(as.numeric(Q27f[41, 2:6]), 4))
       }
       
       # Q27g Not Started ----
