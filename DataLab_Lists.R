@@ -723,5 +723,11 @@ sexual_orientation_columns <- data.frame(
 possible_languages <- read_excel("HMIS-C4-Translation-Assistance-Needed-Supplement-2024.xlsx",
                                  range = "A1:B328")
 
-# data.frame(`Response Option Number` = 21,
-#            `Response Option Name` = "Different Preferred Language")
+# ------------------------------------------------------------------------------
+# ------------------------ Youth Education Labels ------------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   APR/CAPER - 
+
+youth_education_labels <- read_excel("SupplementalTables.xlsx",
+                          sheet = "YouthEducationStatus")

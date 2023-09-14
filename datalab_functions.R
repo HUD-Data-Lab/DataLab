@@ -1069,7 +1069,7 @@ write_csvs_for <- function(project_ids, zip_title, write_to) {
     filter(ProjectID %in% project_ids) %>%
     select(OrganizationID)
   
-  for (file in names(hmis_csvs)) {
+  for (file in names(hmis_csvs_fy24)) {
     
     data <- get(file)
     

@@ -300,6 +300,17 @@ for (simple_table in c("Exit", "Disabilities", "EmploymentEducation",
   assign(simple_table, data)
 }
 
+# youth_education_27m$CurrentSchoolAttend <- sample(c(0, 1, 2, 9, 99),
+#                                                   nrow(youth_education_27m),
+#                                                   replace = TRUE)
+# 
+# youth_education_27m$MostRecentEdStatus[youth_education_27m$CurrentSchoolAttend == 0] <- sample(c(0, 1, 2, 3, 4, 5, 6, 7, 9, 99),
+#                                                                                                length(youth_education_27m$MostRecentEdStatus[youth_education_27m$CurrentSchoolAttend == 0]),
+#                                                                                                replace = TRUE)
+# youth_education_27m$CurrentEdStatus[youth_education_27m$CurrentSchoolAttend %in% 1:2] <- sample(c(0, 1, 2, 3, 4, 9, 99),
+#                                                                                                length(youth_education_27m$CurrentEdStatus[youth_education_27m$CurrentSchoolAttend %in% 1:2]),
+#                                                                                                replace = TRUE)
+
 # hashing Client file
 {
   ssns <- Client %>%

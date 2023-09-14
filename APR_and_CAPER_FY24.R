@@ -891,15 +891,15 @@
           create_age_groups(.)
       }
        
-      # Q12a checked
+      # Q12 checked
       {
-        Q12a_detail <- recent_program_enrollment %>%
+        Q12_detail <- recent_program_enrollment %>%
           select(all_of(standard_detail_columns), age_group, HoH_HMID) %>%
           left_join(Client %>%
                       select(PersonalID, all_of(unname(race_columns)), RaceNone),
                     by = "PersonalID")
         
-        Q12a <- Q12a_detail %>%
+        Q12 <- Q12_detail %>%
           ifnull(., 0) %>%
           left_join(race_info, #Race_info created from DataLab_lists.R line 261
                     by = all_of(unname(race_columns))) %>% 
@@ -1529,8 +1529,6 @@
       
       # Q22a1 checked
       {
-        # groups in specs include Data.Not.Collected, what does that mean in length of stay? <- Update we removed Data.Not.Collected from specs
-        # it's not defined in the reporting glossary
         Q22a1_detail <- create_lot_table(recent_program_enrollment)  
         
         Q22a1_total <- Q22a1_detail %>%
@@ -1822,7 +1820,8 @@
       {
         Q23d_detail <- recent_program_enrollment %>%
           select(c("ProjectType", "ProjectID", all_of(housing_program_detail_columns),
-                   "Destination", "DestinationSubsidyType", "new_veteran_status")) %>%
+                   "Destination", "DestinationSubsidyType", "new_veteran_status",
+                   "youth")) %>%
           filter(ProjectType != 12 & 
                    leaver & 
                    Destination == 435) %>% 
@@ -2138,7 +2137,7 @@
           ifnull(., 0)
         }
       
-      # Q26b Not Started ----
+      # Q26b checked
       {
         Q26b <- Q26b_detail %>%
           return_household_groups(., category, chronic_categories) %>%
@@ -2146,7 +2145,7 @@
           ifnull(., 0)
       }
       
-      # Q26c Not Started ----
+      # Q26c checked
       {
         Q26c_detail <- recent_chronic_enrollment %>%
           select(c(all_of(standard_detail_columns))) %>%
@@ -2158,7 +2157,7 @@
           create_gender_groups(.)
       }
       
-      # Q26d Not Started ----
+      # Q26d checked
       {
         Q26d_detail <- Q11_detail %>%
           filter(PersonalID %in% recent_chronic_enrollment$PersonalID)
@@ -2167,7 +2166,7 @@
           create_age_groups(., chronic = TRUE) 
       }
       
-      # Q26e Not Started ----
+      # Q26e checked
       {
         Q26e_detail <- "See Q13a1.csv, Q13b1.csv, and Q13c1.csv respectively"
         Q26e.1.and.2 <- recent_chronic_enrollment %>%
@@ -2199,35 +2198,6 @@
           ifnull(0)
       }
       
-      # Q26f Not Started ----
-      {
-        Q26f_detail <- Q16_detail %>%
-          filter(chronic == "Y")
-        
-        Q26f <- recent_chronic_enrollment %>%
-          keep_adults_only() %>%
-          create_income_categories(.) %>%
-          adorn_totals("row")
-      }
-      
-      # Q26g Not Started ----
-      {
-        Q26g_detail <- Q17_detail %>%
-          filter(chronic == "Y")
-        
-        Q26g <- recent_chronic_enrollment %>%
-          keep_adults_only() %>%
-          create_income_sources(.)
-      }
-      
-      # Q26h Not Started ----
-      {
-        Q26h_detail <- Q20a_detail %>%
-          filter(chronic == "Y") 
-        
-        Q26h <- create_benefit_groups(recent_chronic_enrollment)
-      }
-      
       
       #-------------------------------------------------------------
       #-------------------- Youth Questions ------------------------
@@ -2236,7 +2206,7 @@
       recent_youth_enrollment <- recent_program_enrollment %>%
         filter(youth == 1)
       
-      # Q27a Not Started ----
+      # Q27a checked
       {
         Q27a_detail <- Q11_detail %>%
           filter(PersonalID %in% recent_youth_enrollment$PersonalID) 
@@ -2246,7 +2216,7 @@
           filter(detailed_age_group %nin% detailed_age_group_list[c(1:2, 5:9)])
         }
       
-      # Q27b Not Started ----
+      # Q27b checked
       {
         Q27b_headers <- as.data.frame(c("Parent youth < 18", "Parent youth 18 to 24"))  %>%
           `colnames<-`(c("household_type"))
@@ -2279,7 +2249,7 @@
           ifnull(., 0)
       }
       
-      # Q27c Not Started ----
+      # Q27c checked
       {
         Q27c_detail <- recent_youth_enrollment %>%
           select(c(all_of(standard_detail_columns))) %>%
@@ -2291,7 +2261,7 @@
           create_gender_groups(.)
       }
       
-      # Q27d Not Started ----
+      # Q27d checked
       {
         Q27d_detail <- Q15_detail %>%
           filter(PersonalID %in% recent_youth_enrollment$PersonalID &
@@ -2301,7 +2271,7 @@
           create_prior_residence_groups(.)
       }
       
-      # Q27e Not Started ----
+      # Q27e checked
       {
         Q27e_detail <- create_lot_table(recent_youth_enrollment)  
         
@@ -2323,39 +2293,35 @@
           left_join(Q27e_total, by = "APR_enrollment_length_group") %>%
           left_join(Q27e_leavers, by = "APR_enrollment_length_group") %>%
           left_join(Q27e_stayers, by = "APR_enrollment_length_group") %>%
-          full_join(data.frame(APR_enrollment_length_group = c("Data Not Collected")),
-                    by = "APR_enrollment_length_group") %>%
           adorn_totals("row") %>%
           ifnull(., 0)
       }
       
-      # Q27f1 Not Started ----
+      # Q27f1 checked
       {
-        Q27f_detail <- Q23c_detail %>%
+        Q27f1_detail <- Q23c_detail %>%
           filter(youth == 1)
         
-        Q27f <- create_destination_groups(recent_youth_enrollment)  %>%
+        Q27f1 <- create_destination_groups(recent_youth_enrollment)  %>%
           mutate(across(everything(), as.character))
         
-        Q27f[41, 2:6] <- c(decimal_format(as.numeric(Q27f[41, 2:6]), 4))
+        Q27f1[41, 2:6] <- c(decimal_format(as.numeric(Q27f1[41, 2:6]), 4))
       }
         
-        # Q27f2 New Question Ready for QA ----
+        # Q27f2 checked
         {
           Q27f2_detail <- Q23d_detail %>%
             filter(youth == 1)
           
           Q27f2 <- Q27f2_detail %>%
-            return_household_groups(., SubsidyName, SubsidyName) %>%
-            filter(!is.na(SubsidyName)) %>% # couldn't figure out how to remove the NA row, so filtered it out here.
-            adorn_totals("row") %>%
+            return_household_groups(., Response, subsidy_list$Response) %>% 
+            adorn_totals("row") %>% 
             ifnull(., 0)
-
         }
         
         
       
-      # Q27g Not Started ----
+      # Q27g checked
       # label for A17 specifies adults like the other uses of this logic, but
       # this question is unique in that it includes HoHs who are minors
       {
@@ -2364,10 +2330,11 @@
         
         Q27g <- recent_youth_enrollment %>%
           keep_adults_and_hoh_only() %>%
-          create_income_sources(.)
+          create_income_sources(.) %>%
+          mutate(IncomeGroup = str_replace(IncomeGroup, 'Adults', 'Youth'))
       }
       
-      # Q27h Not Started ----
+      # Q27h checked
       {
         Q27h_detail <- Q16_detail %>%
           filter(youth == 1)
@@ -2377,7 +2344,6 @@
           create_income_categories(.) %>%
           adorn_totals("row")
         
-        
         has_income <- Q27h_data %>%
           filter(income_category %in% c("Adults with Only Earned Income (i.e., Employment Income)", 
                                         "Adults with Only Other Income", 
@@ -2386,13 +2352,13 @@
           colSums()
         
         Q27h <- Q27h_data %>%
-          mutate(income_category = as.character(income_category)) %>%
+          mutate(income_category = str_replace(income_category, 'Adults', 'Youth')) %>%
           rbind(., c("1 or more source of income", has_income)) %>%
           rbind(., c("Youth with Income Information at Start and Annual Assessment/Exit",
                      income_information_present(recent_youth_enrollment)[2:4]))
       }
       
-      # Q27i Not Started ----
+      # Q27i checked
       {
         Q27i_detail <- Q19b_detail %>%
           filter(PersonalID %in% recent_youth_enrollment$PersonalID)
@@ -2403,7 +2369,7 @@
         Q27i[, c(5, 9, 13, 17)] <- decimal_format(Q27i[, c(5, 9, 13, 17)], 4)
       }
       
-      # Q27j Not Started ----
+      # Q27j checked
       {
         Q27j_detail <- "See Q27e_detail.csv"
         Q27j <- Q27e_detail %>%
@@ -2420,7 +2386,7 @@
                             Stayers = median(days_enrolled[is.na(ExitDate)])))
       }
       
-      # Q27k Not Started ----
+      # Q27k checked
       {
         Q27k_detail <- create_time_to_move_in(recent_youth_enrollment)
         
@@ -2478,7 +2444,7 @@
                     by = colnames(exited_without_move_in_data))
       }
       
-      # Q27l Not Started ----
+      # Q27l checked
       {
         Q27l_detail <- recent_youth_enrollment %>%
           select(c("ProjectType", all_of(housing_program_detail_columns), "age",
@@ -2500,6 +2466,101 @@
             TRUE ~ days_prior_to_housing)) %>%
           union(Q27l_groups %>%
                   filter(days_prior_to_housing %in% c("Not yet moved into housing", "Data.Not.Collected", "Total")))
+      }
+      
+      # Q27m
+      {
+        Q27m_projects <- Funder %>%
+          filter(Funder == 43 &
+                   StartDate <= report_end_date &
+                   (is.na(EndDate) |
+                      EndDate >= report_start_date)) %>%
+          select(ProjectID) %>%
+          distinct()
+        
+        Q27m_setup <- recent_youth_enrollment %>%
+          filter(leaver & 
+                   RelationshipToHoH == 1 &
+                   ProjectID %in% Q27m_projects$ProjectID) 
+        
+        youth_education_27m <- YouthEducationStatus %>%
+          filter(DataCollectionStage %in% c(1, 3) &
+                   EnrollmentID %in% Q27m_setup$EnrollmentID) %>%
+          select(EnrollmentID, InformationDate, DataCollectionStage,
+                 CurrentSchoolAttend, MostRecentEdStatus, CurrentEdStatus) %>%
+          mutate(across(
+            c(CurrentSchoolAttend, MostRecentEdStatus, CurrentEdStatus),
+            ~ case_when(. == 8 ~ 9, TRUE ~ .))) %>%
+          group_by(EnrollmentID, DataCollectionStage) %>%
+          arrange(desc(InformationDate)) %>%
+          slice(1L) %>%
+          ungroup()
+        
+        Q27m_detail <- Q27m_setup %>%
+          select(all_of(standard_detail_columns)) %>%
+          left_join(youth_education_27m %>%
+                      filter(DataCollectionStage == 1) %>%
+                      setNames(paste0("entry_", colnames(youth_education_27m))),
+                    by = c("EnrollmentID" = "entry_EnrollmentID")) %>%
+          left_join(youth_education_27m %>%
+                      filter(DataCollectionStage == 3) %>%
+                      setNames(paste0("exit_", colnames(youth_education_27m))),
+                    by = c("EnrollmentID" = "exit_EnrollmentID"))
+       
+        current_school_attend <- youth_education_27m %>%
+          group_by(CurrentSchoolAttend) %>%
+          summarise(
+            At.Project.Start = n_distinct(EnrollmentID[DataCollectionStage == 1],
+                                          na.rm = TRUE),
+            At.Project.Exit = n_distinct(EnrollmentID[DataCollectionStage == 3],
+                                         na.rm = TRUE),
+            Question = "C3.2") %>%
+          ungroup()
+        
+        most_recent_ed <- youth_education_27m %>%
+          group_by(MostRecentEdStatus) %>%
+          summarise(
+            At.Project.Start = n_distinct(EnrollmentID[DataCollectionStage == 1],
+                                          na.rm = TRUE),
+            At.Project.Exit = n_distinct(EnrollmentID[DataCollectionStage == 3],
+                                         na.rm = TRUE),
+            Question = "C3.A") %>%
+          ungroup()
+        
+        current_ed <- youth_education_27m %>%
+          group_by(CurrentEdStatus) %>%
+          summarise(
+            At.Project.Start = n_distinct(EnrollmentID[DataCollectionStage == 1],
+                                          na.rm = TRUE),
+            At.Project.Exit = n_distinct(EnrollmentID[DataCollectionStage == 3],
+                                         na.rm = TRUE),
+            Question = "C3.B") %>%
+          ungroup()
+        
+        total_ed <- youth_education_27m %>%
+          summarise(
+            At.Project.Start = n_distinct(EnrollmentID[DataCollectionStage == 1],
+                                          na.rm = TRUE),
+            At.Project.Exit = n_distinct(EnrollmentID[DataCollectionStage == 3],
+                                         na.rm = TRUE),
+            Response = "Total persons") %>%
+          ungroup()
+        
+        Q27m <- youth_education_labels %>%
+          left_join(bind_rows(current_school_attend, most_recent_ed) %>%
+                      bind_rows(., current_ed) %>%
+                      mutate(Value = case_when(
+                        !is.na(CurrentSchoolAttend) ~ CurrentSchoolAttend,
+                        !is.na(MostRecentEdStatus) ~ MostRecentEdStatus,
+                        !is.na(CurrentEdStatus) ~ CurrentEdStatus
+                      )), 
+                    by = c("Value", "Question")) %>%
+          full_join(total_ed,
+                by = colnames(total_ed)) %>%
+          select(Response, At.Project.Start, At.Project.Exit) %>%
+          ifnull(., 0)
+        
+        Q27m[c(6, 17), 2:3] <- NA
       }
     }
     
@@ -2629,5 +2690,5 @@
     rm(list = ls()[ls() %nin% items_to_keep]) 
     
   }
-d}
+}
 
