@@ -1093,7 +1093,8 @@
           select(all_of(standard_detail_columns), LivingSituation)
         
         Q15 <- Q15_detail %>%
-          create_prior_residence_groups(.) 
+          create_prior_residence_groups(.) %>%
+          filter(LocationDescription != "Other Situations")
       }
       
       
@@ -1862,31 +1863,30 @@
         )
       
       # Gets counts by destination and race/ethn category
-      Q23e_calcs <- Q23e_detail %>%
+      Q23e_calcs <- race_list_expanded %>% 
+        as.data.frame(nm = "race_tabulation") %>% 
+        left_join(Q23e_detail,
+                  by = "race_tabulation") %>%
         group_by(race_tabulation, APR_LocationGroup) %>%
-          summarise(measure = n_distinct(PersonalID)) %>%
-        ungroup()
-
-      # provides a Destination-Race/Ethn category scaffold for final output table
-      Q23e_scaffold <-  ResidenceUses %>%
-        filter(., !is.na(APR_LocationGroup)) %>%
-        group_by(APR_LocationGroup) %>%
-        summarise(., sort_order = min(APR_LocationOrder, na.rm = TRUE)) %>%
-        ungroup() %>%
-        arrange(., sort_order) %>%
-        select(-sort_order) %>% 
-        cross_join(race_list_expanded %>% 
-                     as.data.frame(nm = "race_tabulation"))
+          summarise(measure = n_distinct(PersonalID, na.rm = TRUE)) %>%
+        ungroup()  %>% 
+        pivot_wider(names_from = "race_tabulation", values_from = "measure") %>%
+        filter(!is.na(APR_LocationGroup)) %>%
+        mutate(APR_LocationGroup = paste(APR_LocationGroup, "Situations"))
       
-      Q23e <- Q23e_scaffold %>% 
-        left_join(
-          Q23e_calcs,
-          join_by(APR_LocationGroup, race_tabulation)
-          ) %>% 
+      Q23e <- Q23c %>%
+        select(LocationDescription, Total) %>%
+        filter(str_detect(LocationDescription, "Subtotal")) %>%
+        mutate(LocationDescription = str_replace(LocationDescription, 
+                                                 "Subtotal", "Situations"),
+               Total = as.numeric(Total)) %>%
+        left_join(Q23e_calcs, 
+                  by = c("LocationDescription" = "APR_LocationGroup")) %>% 
+        untabyl() %>%
+        adorn_totals("row") %>%
         ifnull(., 0) %>% 
-        pivot_wider(names_from = "race_tabulation", values_from = "measure") %>% 
-        adorn_totals("row") %>% 
-        ifnull(.,0)
+        select(c("LocationDescription", "Total", all_of(race_list_expanded)))
+      
       }
       
       # Q24a checked
@@ -1984,7 +1984,7 @@
           mutate(`Response Option Name` = "Different Preferred Language")
         
         Q24d <- preferred_languages %>%
-            full_join(different_language, 
+            full_join(different_language,
                       by = colnames(preferred_languages)) %>%
           rename(
             "Language Response (Top 20 Languages Selected)" = `Response Option Name`,
@@ -2106,6 +2106,7 @@
         
         Q25j <- Q25j_detail %>% 
           return_household_groups(., Response, subsidy_list$Response) %>% 
+          select(-With.Only.Children) %>%
           adorn_totals("row") %>% 
           ifnull(., 0)
       }
@@ -2268,7 +2269,8 @@
                    RelationshipToHoH == 1) 
         
         Q27d <- Q27d_detail %>%
-          create_prior_residence_groups(.)
+          create_prior_residence_groups(.) %>%
+          filter(LocationDescription != "Other Situations")
       }
       
       # Q27e checked

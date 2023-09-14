@@ -690,14 +690,15 @@ create_destination_groups <- function(included_enrollments) {
                Destination) %>%
       mutate(LocationDescription = case_when(
         Location %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
-        Location %in% c(30, 99) ~ "Data.Not.Collected",
+        # Location %in% c(30, 99) ~ "Data.Not.Collected",
         TRUE ~ LocationDescription))
     
     group_of_residences <- included_enrollments %>%
       inner_join(residences_to_include, by = c("Destination" = "Location"))  %>%
       return_household_groups(., LocationDescription, unique(residences_to_include$LocationDescription)) %>%
       full_join(residences_to_include %>%
-                  filter(Location %nin% c(9, 30)), 
+                  # filter(Location %nin% c(9, 30)), 
+                  filter(Location != 9), 
                 by = "LocationDescription") %>%
       arrange(APR_LocationOrder) %>%
       adorn_totals("row") %>%
@@ -1350,8 +1351,8 @@ create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Cl
       NameDataQuality %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer", # Changed from Client.Does.Not.Know.or.Prefers.Not.to.Answer
       NameDataQuality == 99 |
         is.na(FirstName) |
-        is.na(LastName) ~ "Information Missing",
-      NameDataQuality == 2 ~ "Data Issues",
+        is.na(LastName) ~ "Information.Missing",
+      NameDataQuality == 2 ~ "Data.Issues",
       TRUE ~ "OK")) %>%
     select(PersonalID, FirstName, LastName, NameDataQuality, dq_flag)
   
@@ -1506,27 +1507,43 @@ create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Cl
 }
 
 # Q8a on the CoC APR, CAPER, and CE APR
-households_served_table <- function(filtered_enrollments) {
-  hh_served_detail <- filtered_enrollments %>%
-    select(all_of(housing_program_detail_columns)) %>%
-    mutate(count_as_household = RelationshipToHoH == 1,
-           count_as_move_in_household = RelationshipToHoH == 1 &
-             HoH_HMID <= report_end_date)
+households_served_table <- function(filtered_enrollments,
+                                    type = NULL) {
   
-  hh_served_all <- hh_served_detail %>%
-    filter(count_as_household) %>% 
-    mutate(client_group = "Total Households") %>%
-    return_household_groups(., client_group, "Total Households") 
-  
-  hh_served_moved_in <- hh_served_detail %>%
-    filter(count_as_move_in_household) %>% 
-    mutate(client_group = "For PSH & RRH – the total households 
+  if (type == "CE APR") {
+    hh_served_detail <- filtered_enrollments %>%
+      select(all_of(standard_detail_columns)) %>%
+      mutate(count_as_household = RelationshipToHoH == 1)
+    
+    hh_served <- hh_served_detail %>%
+      filter(count_as_household) %>% 
+      mutate(client_group = "Total Households") %>%
+      return_household_groups(., client_group, "Total Households") 
+    
+    hh_served[2,1] <- "For PSH & RRH – the total households served who moved into housing"
+    
+  } else {
+    hh_served_detail <- filtered_enrollments %>%
+      select(all_of(housing_program_detail_columns)) %>%
+      mutate(count_as_household = RelationshipToHoH == 1,
+             count_as_move_in_household = RelationshipToHoH == 1 &
+               HoH_HMID <= report_end_date)
+    
+    hh_served_all <- hh_served_detail %>%
+      filter(count_as_household) %>% 
+      mutate(client_group = "Total Households") %>%
+      return_household_groups(., client_group, "Total Households") 
+    
+    hh_served_moved_in <- hh_served_detail %>%
+      filter(count_as_move_in_household) %>% 
+      mutate(client_group = "For PSH & RRH – the total households 
 served who moved into housing") %>%
-    return_household_groups(., client_group, "For PSH & RRH – the total households 
+      return_household_groups(., client_group, "For PSH & RRH – the total households 
 served who moved into housing") 
-  
-  hh_served <- hh_served_all %>%
-    union(hh_served_moved_in)
+    
+    hh_served <- hh_served_all %>%
+      union(hh_served_moved_in)
+  }
   
   hh_served_results <- list()
   hh_served_results[[1]] <- hh_served

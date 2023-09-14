@@ -27,7 +27,6 @@ hold_ProjectCoC <- ProjectCoC
 #   union(ProjectCoC %>%
 #           filter(ProjectID == 1428))
 
-
 multi_CoC_projects <- ProjectCoC %>%
   mutate(relevant_to_CoC = relevant_CoC == CoCCode) %>%
   group_by(ProjectID) %>%
@@ -35,68 +34,63 @@ multi_CoC_projects <- ProjectCoC %>%
             relevant_to_CoC = max(relevant_to_CoC)) %>%
   ungroup()
 
-
-enrollment_coc_plus <- EnrollmentCoC %>%
-  # include folks without location records, they can be included if
-  # that project only serves one CoC
-  full_join(Enrollment %>%
-              select(EnrollmentID, EntryDate, ProjectID, HouseholdID) %>%
-              rename(InformationDate = EntryDate),
-            by = c("EnrollmentID", "InformationDate", "ProjectID", 
-                   "HouseholdID")) %>%
+enrollment_coc_plus <- Enrollment %>%
   left_join(multi_CoC_projects, by = "ProjectID") %>%
   # confirmed by Fran 12.21.22, issue #2
   mutate(filter_CoC_code = case_when(
     relevant_to_CoC & num_of_CoCs == 1 ~ relevant_CoC,
-    num_of_CoCs > 1 ~ CoCCode)) %>%
-  select(EnrollmentID, InformationDate, filter_CoC_code,
-         HouseholdID)
+    num_of_CoCs > 1 ~ EnrollmentCoC)) %>%
+  select(EnrollmentID, filter_CoC_code, HouseholdID)
 
+valid_assessments <- Assessment %>%
+  select(AssessmentID, EnrollmentID, AssessmentDate) %>%
+  inner_join(Enrollment %>%
+               select(EnrollmentID, ProjectID),
+             by = "EnrollmentID") %>%
+  inner_join(CEParticipation,
+             by = "ProjectID") %>%
+  filter(AccessPoint == 1 &
+           CEParticipationStatusStartDate <= AssessmentDate &
+           (is.na(CEParticipationStatusEndDate) |
+              CEParticipationStatusEndDate >= AssessmentDate))
 
 relevant_assessments <- Assessment %>%
   inner_join(enrollment_coc_plus, 
             by = "EnrollmentID") %>%
   filter(AssessmentDate >= report_start_date &
-           AssessmentDate <= report_end_date & 
-           (InformationDate <= AssessmentDate |
-              is.na(InformationDate))) %>%
-  group_by(AssessmentID) %>%
-  arrange(desc(InformationDate)) %>%
-  slice(1L) %>%
-  ungroup() %>%
-  # okay to filter events and assessments prior to
-  # identifying which one is more recent
-  # verified by Fran 12.21.22, issue #3
-  filter(filter_CoC_code == relevant_CoC)
+           AssessmentDate <= report_end_date &
+           filter_CoC_code == relevant_CoC &
+           AssessmentID %in% valid_assessments$AssessmentID)
 
+valid_events <- Event %>%
+  select(EventID, EnrollmentID, EventDate) %>%
+  inner_join(Enrollment %>%
+               select(EnrollmentID, ProjectID),
+             by = "EnrollmentID") %>%
+  inner_join(CEParticipation,
+             by = "ProjectID") %>%
+  filter(AccessPoint == 1 &
+           CEParticipationStatusStartDate <= EventDate &
+           (is.na(CEParticipationStatusEndDate) |
+              CEParticipationStatusEndDate >= EventDate))
 
 relevant_events <- Event %>%
   inner_join(enrollment_coc_plus, 
             by = "EnrollmentID") %>%
   filter(EventDate >= report_start_date &
            EventDate <= report_end_date + days(90) &
-           (InformationDate <= EventDate |
-              is.na(InformationDate))) %>%
-  group_by(EventID) %>%
-  arrange(desc(InformationDate)) %>%
-  slice(1L) %>%
-  ungroup() %>%
-  filter(filter_CoC_code == relevant_CoC)
-
+           filter_CoC_code == relevant_CoC &
+           EventID %in% valid_events$EventID)
 
 CE_element_projects <- Project %>%
   filter(ContinuumProject == 1) %>%
-  inner_join(Enrollment %>%
-               filter(EnrollmentID %in%
-                        # okay to filter projects based on whether
-                        # they contain CE data in the report period
-                        # verified by Fran 12.21.22, issue #1 
-                        union(relevant_assessments$EnrollmentID, 
-                              relevant_events$EnrollmentID)) %>%
+  inner_join(CEParticipation %>%
+               filter(CEParticipationStatusStartDate <= report_end_date &
+                        (is.na(CEParticipationStatusEndDate) |
+                                 CEParticipationStatusEndDate >= report_start_date)) %>%
                select(ProjectID) %>%
                distinct(),
              by = "ProjectID") 
-
 
 # enrollment_CoC_over_time <- Enrollment %>%
 #   select(EnrollmentID, HouseholdID, EntryDate) %>%
@@ -133,7 +127,7 @@ enrollment_data <- Enrollment %>%
               select(-PersonalID),
             by = "EnrollmentID") %>%
   inner_join(CE_element_projects %>%
-               select(ProjectID, ProjectType, TrackingMethod, ProjectName),
+               select(ProjectID, ProjectType, ProjectName),
              by = "ProjectID") 
 
 
@@ -185,7 +179,10 @@ enrollment_recent_assessment <- enrollment_recent_assessment %>%
                 is.na(ExitDate)),
            active_at_event = max(active_at_event)) %>%
     ungroup() %>%
-    filter(active_at_event == 1)
+    filter(active_at_event == 1) %>%
+    right_join(CE_element_projects %>%
+                 select(ProjectName, ProjectID),
+               by = c("ProjectName", "ProjectID"))
     
   Q4a <- program_information_table(Q4a_detail$ProjectID,
                                    Q4a_detail)
@@ -244,7 +241,8 @@ enrollment_recent_assessment <- enrollment_recent_assessment %>%
 
 # Q8
 {
-  Q8a_data <- households_served_table(enrollment_recent_assessment)
+  Q8a_data <- households_served_table(enrollment_recent_assessment,
+                                      type = "CE APR")
   Q8a <- Q8a_data[[1]]
   Q8a_detail <- Q8a_data[[2]]
   Q8a[2, 2:6] <- NA
