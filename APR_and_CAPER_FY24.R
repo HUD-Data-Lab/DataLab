@@ -28,27 +28,78 @@
       # 93#,	#"DataLab - ES-NbN ESG",
       # 1409#,	"DataLab - HP ESG",
       # 780#,	#"DataLab - PSH CoC I",
-     1428,	#"DataLab - RRH CoC I", #Commented out because Project ID did not exist
-     1495#,	#"DataLab - RRH CoC II", #Commented out because project ID did not exist
-      # 1554, #DataLab - RRH CoC I", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
-      # 1555 #, #"DataLab - RRH CoC II", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
+     # 1428,	#"DataLab - RRH CoC I", #Commented out because Project ID did not exist
+     # 1495#,	#"DataLab - RRH CoC II", #Commented out because project ID did not exist
+      1554, #DataLab - RRH CoC I", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
+      1555 #, #"DataLab - RRH CoC II", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
       # 1060#,	#"DataLab - RRH ESG I",
-      # 1647#,	#"DataLab - SO CoC",
       # 1419,	#"DataLab - SO ESG",
       # 1615#,	#"DataLab - SSO CoC",
-      # 388#,	#"DataLab - TH CoC",
-      # 340,	#"DataLab - TH ESG"
+      # 388#,	#"DataLab - TH CoC"
     )
     }
   
   
   # used for running all reports for all projects. Use project_list for running specific projects.
   {
-    full_project_list <- c(Project$ProjectID[Project$ProjectID %in% Funder$ProjectID[Funder$Funder %in% 1:11]]) # Funding source HUD-CoC or HUD-ESG
-    full_project_list <- full_project_list[full_project_list %nin% c(1647, 340)] #Copied from old test kit, but those are invalid funding sources for those project types. This shouldn't exist.
+    # full_project_list <- c(Project$ProjectID[Project$ProjectID %in% Funder$ProjectID[Funder$Funder %in% 1:11]]) # Funding source HUD-CoC or HUD-ESG
+    # full_project_list <- full_project_list[full_project_list %nin% c(1647, 340)] #Copied from old test kit, but those are invalid funding sources for those project types. This shouldn't exist.
     #project_list <- full_project_list #if you want to run full test kit undo the comment for this line
-  
-    }
+    # full_project_list <- Funder %>%
+    #   filter(ProjectID %in% Enrollment$ProjectID &
+    #            .$Funder %in% 1:11 &
+    #            StartDate <= report_end_date &
+    #            (is.na(EndDate) |
+    #               EndDate >= report_start_date)) %>%
+    #   .$ProjectID
+    # 
+    # full_project_list <- c(Project$ProjectID[Project$ProjectID %in% Funder$ProjectID[Funder$Funder %in% 1:11] & #]) # Funding source HUD-CoC or HUD-ESG
+    #                                            Project$ProjectID %in% Enrollment$ProjectID])
+    # 
+    check <- Project %>%
+      filter(
+        # ProjectID %in% full_project_list
+        OperatingStartDate <= report_end_date &
+          (is.na(OperatingEndDate) |
+             OperatingEndDate >= report_start_date)
+        ) %>%
+      inner_join(Funder %>%
+                  filter(ProjectID %in% Enrollment$ProjectID &
+                           .$Funder %in% 1:11 &
+                           StartDate <= report_end_date &
+                           (is.na(EndDate) |
+                              EndDate >= report_start_date)), by = "ProjectID") %>%
+      inner_join(Enrollment %>%
+                   filter(EntryDate >= report_start_date) %>%
+                   group_by(ProjectID) %>%
+                   summarise(enrollments = n()) %>%
+                   filter(enrollments > 10),
+                 by = "ProjectID") %>%
+      # left_join(funder_list %>%
+      #             select(Value, Text),
+      #           by = c("Funder" = "Value")) %>%
+      select(ProjectID, ProjectName, OrganizationID, ProjectType, RRHSubType,
+             Funder, enrollments
+             # , Text
+             )
+    # funder_list <- as.data.frame(read.table(file = "clipboard", 
+    #                           header = T, 
+    #                           sep = "\t"))
+    # write.table(check, "clipboard", sep="\t", row.names=FALSE)
+    
+    full_project_list <- c(
+      234,	#"DataLab - ES-EE ESG I",
+      93,	#"DataLab - ES-NbN ESG",
+      1002,	#"DataLab - HP ESG",
+      1625,	#"DataLab - PSH CoC I",
+      1343,	#"DataLab - RRH CoC I",
+      1492,	#"DataLab - RRH CoC II", # set this to RRH-SSO
+      1051,	#"DataLab - RRH ESG I",
+      1647,	#"DataLab - SO ESG",
+      1615,	#"DataLab - SSO CoC",
+      389	#"DataLab - TH CoC" # update the funding source to 5
+    )
+  }
   
   items_to_keep <- c("items_to_keep", ls()) #Keep all functions and objects created up to this point. Why is this here? What is the purpose of this?
   
@@ -844,7 +895,7 @@
             TRUE ~ detailed_age_group)) 
         
         Q10d_setup <- gender_info %>%
-          left_join(Q10d_detail,
+          full_join(Q10d_detail,
                     by = all_of(names(gender_columns)),
                     multiple = "all") %>%
           mutate(across(
@@ -1572,7 +1623,7 @@
           group_by(CAPER_enrollment_length_group) %>%
           summarise(Stayers = n_distinct(PersonalID, na.rm = TRUE))
         
-        Q22a2 <- length_of_time_groups("CAPER", "CAPER_enrollment_length_group") %>%
+        Q22a2 <- length_of_time_groups(column_name = "CAPER_enrollment_length_group") %>%
           left_join(Q22a2_total, by = "CAPER_enrollment_length_group") %>%
           left_join(Q22a2_leavers, by = "CAPER_enrollment_length_group") %>%
           left_join(Q22a2_stayers, by = "CAPER_enrollment_length_group") %>%
@@ -1660,6 +1711,10 @@
         Q22d_detail <- "See Q22a2_detail.csv"
         
         Q22d <- Q22a1_detail %>%
+          mutate(
+            CAPER_enrollment_length_group = case_when(
+              days_enrolled >= 731 ~ "731 days or more",
+              TRUE ~ CAPER_enrollment_length_group)) %>%
           return_household_groups(., CAPER_enrollment_length_group, 
                                   length_of_participation$enrollment_length_group) %>%
           adorn_totals("row") %>%
@@ -1814,7 +1869,7 @@
         Q23c <- create_destination_groups(Q23c_detail) %>%
           mutate(across(everything(), as.character))
         
-        Q23c[41, 2:6] <- c(decimal_format(as.numeric(Q23c[41, 2:6]), 4))
+        Q23c[42, 2:6] <- c(decimal_format(as.numeric(Q23c[42, 2:6]), 4))
       }
       
       # Q23d checked
@@ -1901,9 +1956,9 @@
               case_when(SubsidyInformation %in% 1:4 ~
                           assessment_outcomes[SubsidyInformation]),
             HousingAssessment == 2 ~
-              case_when(SubsidyInformation == 1 ~
+              case_when(SubsidyInformation == 11 ~
                           assessment_outcomes[5],
-                        SubsidyInformation == 2 ~
+                        SubsidyInformation == 12 ~
                           assessment_outcomes[6]),
             HousingAssessment == 3 ~ assessment_outcomes[7],
             HousingAssessment == 4 ~ assessment_outcomes[8],
@@ -1915,6 +1970,7 @@
             HousingAssessment == 99 ~ assessment_outcomes[14])) 
         
         Q24a <- Q24a_detail %>%
+          filter(!is.na(assessment_at_exit)) %>%
           return_household_groups(., assessment_at_exit, assessment_outcomes) %>%
           adorn_totals("row") %>%
           ifnull(., 0)
@@ -1972,7 +2028,7 @@
         
         preferred_languages <- Q24d_detail %>%
           filter(!is.na(`Response Option Name`)) %>%
-          group_by(`Response Option Name`) %>%
+          group_by(`Response Option Name`, PreferredLanguage) %>%
           summarise(count = n_distinct(PersonalID)) %>%
           ungroup() %>%
           arrange(desc(count), `Response Option Name`) %>%
@@ -1981,14 +2037,18 @@
         different_language <- Q24d_detail %>%
           filter(PreferredLanguage == 21) %>%
           summarise(count = n_distinct(PersonalID)) %>%
-          mutate(`Response Option Name` = "Different Preferred Language")
+          mutate(`Response Option Name` = "Different Preferred Language",
+                 PreferredLanguage = 21)
         
         Q24d <- preferred_languages %>%
             full_join(different_language,
                       by = colnames(preferred_languages)) %>%
           rename(
-            "Language Response (Top 20 Languages Selected)" = `Response Option Name`,
+            # "Language Response (Top 20 Languages Selected)" = `Response Option Name`,
+            "Language Response (Top 20 Languages Selected)" = PreferredLanguage,
             "Total Persons Requiring Translation Assistance" = count) %>%
+          # remove below line when Sage is updated
+          select(-`Response Option Name`) %>%
           adorn_totals("row") %>%
           ifnull(., 0)
       }
@@ -2095,7 +2155,7 @@
         Q25i <- create_destination_groups(recent_veteran_enrollment) %>%
           mutate(across(everything(), as.character))
         
-        Q25i[41, 2:6] <- c(decimal_format(as.numeric(Q25i[41, 2:6]), 4))
+        Q25i[42, 2:6] <- c(decimal_format(as.numeric(Q25i[42, 2:6]), 4))
       }
       
       #Q25j checked
@@ -2307,7 +2367,7 @@
         Q27f1 <- create_destination_groups(recent_youth_enrollment)  %>%
           mutate(across(everything(), as.character))
         
-        Q27f1[41, 2:6] <- c(decimal_format(as.numeric(Q27f1[41, 2:6]), 4))
+        Q27f1[42, 2:6] <- c(decimal_format(as.numeric(Q27f1[42, 2:6]), 4))
       }
         
         # Q27f2 checked

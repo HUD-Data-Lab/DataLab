@@ -52,8 +52,13 @@ FY24_residence_types <- ResidenceUses %>%
           TrackingMethod != 3 ~ 0,
         TRUE ~ ProjectType),
       # If FY22 2.02.06 = 13, then require FY24 2.02.06A
-      RRHSubType = case_when(
-        ProjectType == 13 ~ 2),
+      RRHSubType = as.integer(case_when(
+        # below single line is for data cleaning
+        ProjectID == 1492 ~ 1,
+        ProjectType == 13 ~ 2)),
+      ResidentialAffiliation = as.integer(case_when(
+        ProjectType == 6 |
+          RRHSubType == 1 ~ 0)),
       # If 2.02.06 = 0,1,2,3,8,9,10,15 or 13 and Dependent A, = 2, then require 2.02.06D
       HousingType = ifelse(
         !(ProjectType == 13 & RRHSubType == 1), HousingType, NA)
@@ -197,8 +202,8 @@ FY24_residence_types <- ResidenceUses %>%
   # Responses in Appendix A--Living Situation Option List reconfigured
   # If 3.12.01 = 435, then "Rental Subsidy Type" option list
   Exit <- Exit %>% 
-    left_join(FY24_residence_types,
-              by = c("Destination" = "Location_FY22")) %>%
+    # left_join(FY24_residence_types,
+    #           by = c("Destination" = "Location_FY22")) %>%
     mutate(
       Destination = Destination + FY24_type_numeric,
       # need to confirm mapping of "Permanent housing for formerly homeless persons"
@@ -206,7 +211,17 @@ FY24_residence_types <- ResidenceUses %>%
         Destination == psh_residence ~ 440,
         Destination %in% subsidized_residences ~ Destination),
       Destination = if_else(!is.na(DestinationSubsidyType),
-                            435, Destination)) %>%
+                            435, Destination),
+      # following 9 lines are for data clean up
+      HousingAssessment = as.integer(case_when(
+        !is.na(HousingAssessment) ~ HousingAssessment,
+        EnrollmentID %in% 
+          Enrollment$EnrollmentID[Enrollment$ProjectID %in% Project$ProjectID[Project$ProjectType == 12]] ~ 
+          sample(c(1:10, 99), nrow(Exit), replace = TRUE))),
+      SubsidyInformation = as.integer(case_when(
+        !is.na(SubsidyInformation) ~ SubsidyInformation,
+        HousingAssessment == 1 ~ sample(c(1:4), nrow(Exit), replace = TRUE),
+        HousingAssessment == 2 ~ sample(c(11:12), nrow(Exit), replace = TRUE)))) %>%
      #only required if loading in from DataLab.R
     rename(
          # DateCreated = exit_DateCreated,
@@ -225,6 +240,11 @@ FY24_residence_types <- ResidenceUses %>%
 }
 {
   Funder <- Funder %>%
+    # this mutate is for data cleaning
+    mutate(
+      Funder = as.integer(case_when(
+        ProjectID == 389 ~ 5,
+        TRUE ~ Funder))) %>%
     select(all_of(funder_columns))
 }
 {
@@ -240,6 +260,8 @@ FY24_residence_types <- ResidenceUses %>%
 }
 {
   Inventory <- Inventory %>%
+    # this filter is for data cleaning
+    filter(ProjectID != 1492) %>%
     select(all_of(inventory_columns))
 }
 {
@@ -252,8 +274,22 @@ FY24_residence_types <- ResidenceUses %>%
 }
 {
   Services <- Services %>%
-    mutate(FAStartDate = NA,
-           FAEndDate = NA) %>%
+    # this mutate is for data cleaning
+    mutate(
+      FAStartDate = case_when(
+        RecordType %in% 151:152 ~ DateProvided),
+      FAEndDate = case_when(
+        RecordType %in% 151:152 &
+          TypeProvided == 1 ~ DateProvided %m+% days(
+            sample(c(0, 30, 60), nrow(Services), replace = TRUE)),
+        RecordType %in% 151:152 ~ DateProvided),
+      SubTypeProvided = as.integer(case_when(
+        RecordType == 144 &
+          TypeProvided %in% 3:5 &
+          is.na(SubTypeProvided) ~ sample(1:4,
+                                          nrow(Services),
+                                          replace = TRUE),
+        TRUE ~ SubTypeProvided))) %>%
     select(all_of(services_columns))
 }
 {
@@ -282,18 +318,25 @@ FY24_residence_types <- ResidenceUses %>%
     select(all_of(event_columns))
 }
 
+# write to zipped folder
+{
+  for (file in unique(CSV_columns$File)) {
+    write.csv(get(file) %>%
+                mutate(
+                  across(where(is.POSIXt),
+                         ~ format(., format = "%Y-%m-%d %H:%M:%S")),
+                  across(where(is.numeric) & !where(is.integer),
+                         ~ if_else(. > 0, sprintf("%.2f", .), NA))), 
+              file.path(paste0("created_files/", file, ".csv")),
+              row.names=FALSE, na = "",
+              quote = which(as.character(lapply(get(file), class)) %nin% 
+                              c("integer", "numeric")))
+  }
 
-# # write to zipped folder
-# {
-#   for (file in unique(CSV_columns$File)) {
-#     write.csv(get(file), file.path(paste0("created_files/", file, ".csv")), 
-#               row.names=FALSE, na="")
-#   }
-#   
-#   archive_write_dir(paste0("DataLab - 2024 Zips.zip"),
-#                     paste0(getwd(), "/created_files"))
-#   
-#   unlink(paste0(getwd(), "/created_files/*"))
-# }
+  archive_write_dir(paste0("DataLab - 2024 Zips ", Sys.Date(), ".zip"),
+                    paste0(getwd(), "/created_files"))
+
+  unlink(paste0(getwd(), "/created_files/*"))
+}
 
 

@@ -491,7 +491,8 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type,
 }
 
 # also used in Q22 questions
-length_of_time_groups <- function(report_type, column_name) {
+length_of_time_groups <- function(report_type = "", 
+                                  column_name) {
   if(report_type == "APR") {
     rows <- c("30 days or less", "31 to 60 days", "61 to 90 days", "91 to 180 days", 
       "181 to 365 days", "366 to 730 days (1-2 Yrs)", "731 to 1,095 days (2-3 Yrs)",
@@ -509,10 +510,11 @@ length_of_time_groups <- function(report_type, column_name) {
   } else {
     rows <- c("0 to 7 days", "8 to 14 days", "15 to 21 days", "22 to 30 days",  #This is for CAPER Specific age categories. 
               "31 to 60 days", "61 to 90 days", "91 to 180 days", 
-              "181 to 365 days", "366 to 730 days (1-2 Yrs)", "731 days or more")
-    #"731 to 1,095 days (2-3 Yrs)",
-    #"1,096 to 1,460 days (3-4 Yrs)", "1,461 to 1,825 days (4-5 Yrs)",
-    #"More than 1,825 days (>5 Yrs)")
+              "181 to 365 days", "366 to 730 days (1-2 Yrs)", 
+              # "731 days or more",
+    "731 to 1,095 days (2-3 Yrs)",
+    "1,096 to 1,460 days (3-4 Yrs)", "1,461 to 1,825 days (4-5 Yrs)",
+    "More than 1,825 days (>5 Yrs)")
     }
   
   as.data.frame(rows) %>%
@@ -1508,7 +1510,7 @@ create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Cl
 
 # Q8a on the CoC APR, CAPER, and CE APR
 households_served_table <- function(filtered_enrollments,
-                                    type = NULL) {
+                                    type = "CoC APR") {
   
   if (type == "CE APR") {
     hh_served_detail <- filtered_enrollments %>%

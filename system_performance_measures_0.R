@@ -9,10 +9,10 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
+library(plyr)
 library(lubridate)    ## used anywhere we do date math
 library(ivs)          ## used in spm 14
 library(writexl)
-library(plyr)
 
 kit_type <- "new_kit"
 
@@ -206,10 +206,10 @@ spm_tables <- llply(
 
 write_xlsx(
   mget(dq_tables),
-  "SPM_dq.xlsx"
+  paste0("SPM_dq ", Sys.Date(), ".xlsx")
 )
 
 write_xlsx(
   spm_tables,
-  "SPM_tables.xlsx"
+  paste0("SPM_tables ", Sys.Date(), ".xlsx")
 )

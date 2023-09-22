@@ -56,9 +56,11 @@ spm_2_possible_ph_returns <- spm_2_enrollments %>%
                          paste0("R_", colnames(spm_2_enrollments)[2:7]))),
             by = "PersonalID",
             relationship = "many-to-many") %>%
-  filter(EnrollmentID != R_EnrollmentID &
-           (EntryDate <= R_EntryDate |
-              EntryDate > R_ExitDateAdj %m+% days(14))) %>%
+  filter(
+    EnrollmentID == R_EnrollmentID |
+      (EnrollmentID != R_EnrollmentID &
+         (EntryDate <= R_EntryDate |
+            EntryDate > R_ExitDateAdj %m+% days(14)))) %>%
   select(colnames(spm_2_enrollments))
 
 spm_2_possible_other_returns <- spm_2_enrollments %>%

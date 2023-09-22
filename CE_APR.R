@@ -146,7 +146,11 @@ enrollment_recent_assessment <- enrollment_data %>%
              by = "HouseholdID") %>%
   filter(AssessmentDate >= EntryDate &
            (AssessmentDate <= ExitDate |
-              is.na(ExitDate))) 
+              is.na(ExitDate))) %>%
+  group_by(PersonalID) %>%
+  arrange(desc(AssessmentDate), desc(EntryDate)) %>%
+  slice(1L) %>%
+  ungroup()
 
 
 # get additional client information (age for reporting)

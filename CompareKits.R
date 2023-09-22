@@ -10,6 +10,7 @@
 # <https://www.gnu.org/licenses/>. 
 
 source("datalab_functions.R")
+library(readr)
 
 new_dir <-  choose.dir()
 compare_to_dir <- choose.dir()
@@ -45,6 +46,11 @@ for (report in union(new_zips, compare_to_zips)) {
         compare_to_data <- suppressMessages(
           read_csv(unzip(paste0(compare_to_dir, "\\", report), question),
                    show_col_types = FALSE))
+        
+        # this compares just the numbers
+        new_data <- unname(new_data[2:nrow(new_data), 2:ncol(new_data)])
+        compare_to_data <- unname(compare_to_data[2:nrow(compare_to_data), 2:ncol(compare_to_data)])
+        
         file.remove(question)
         
         difference <- !isTRUE(all.equal(new_data, compare_to_data))
@@ -65,3 +71,20 @@ for (report in union(new_zips, compare_to_zips)) {
 }
 
 write.csv(differences, paste0("differences ", Sys.Date(), ".csv"))
+
+
+
+new_tables <- ls()[sapply(ls(),function(t) is.data.frame(get(t))) &
+                    str_detect(ls(), "csv_N_APR")]
+
+for (i in 1:length(new_tables)) {
+  if(is.na(sum(get(new_tables[i])[1]))) {
+    print(
+      paste(
+        new_tables[i],
+        sum(get(new_tables[i])[1])
+      )
+    )
+  }
+}
+
