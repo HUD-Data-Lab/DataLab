@@ -16,42 +16,45 @@ items_to_keep <- c(items_to_keep,
 
 ## Metric 7a.1 ----  
 {
-  df_7a1_clientDetail <- enrollment_data %>% 
-    filter(ProjectType == 4) %>% 
+  df_7a1_clientDetail <- active_enrollments %>%
+    filter(
+      Method1 == TRUE & 
+        ProjectType == 4) %>% 
     mutate(
-      "m1_active.clients" = EntryDate <= report_end_date & (is.na(ExitDate) | ExitDate > report_start_date),
-      "exclude_enrollment" = (ExitDate > report_end_date | is.na(ExitDate)) | Destination %in% c(206,329,24), 
-      "leaver.stayer" = ifelse(is.na(ExitDate) | ExitDate>report_end_date , "Stayer","Leaver" ),
+      "leaver.stayer" = ifelse(is.na(ExitDate) | ExitDate > report_end_date , 
+                               "Stayer", "Leaver"),
       "Destination_category" = case_when(
-        Destination %in% c(200:399) ~ "Temporary or Institutional",
+        Destination %in% c(100:399) &
+          Destination %nin% c(116, 207) ~ "Temporary or Institutional",
         Destination %in% c(400:499) ~ "Permanent"))
   
-  df_7a1_sliced.LatestExit <- df_7a1_clientDetail %>%
-    filter(PersonalID %nin% df_7a1_clientDetail$PersonalID[df_7a1_clientDetail$ExitDate > report_end_date | is.na(df_7a1_clientDetail$ExitDate)]) %>% # removes all clients who are a stayer.
-    group_by(PersonalID) %>% 
-    arrange(desc(EnrollmentID), .by_group = TRUE) %>%
-    mutate(rank = row_number()) %>% 
-    slice(which.max(ExitDate)) %>%  #Keeps the most recent exit information. If the exit dates are the same it will keep first in DF
+  spm_7a1_dq <- df_7a1_clientDetail %>%
+    filter(PersonalID %nin% df_7a1_clientDetail$PersonalID[df_7a1_clientDetail$leaver.stayer == "Stayer"]) %>% # removes all clients who are a stayer.
+    group_by(PersonalID) %>%
+    arrange(desc(ExitDate)) %>%
+    slice(1L) %>%  #Keeps the most recent exit information. If the exit dates are the same it will keep first in DF
     ungroup()
   
-  spm_7a1_dq<-  df_7a1_sliced.LatestExit %>% 
-    select(PersonalID,EntryDate,ExitDate,ProjectType,leaver.stayer,Destination,Destination_category) %>% 
-    filter(PersonalID %nin% df_7a1_sliced.LatestExit$PersonalID[df_7a1_sliced.LatestExit$Destination %in% c(206,329,24)])
+  spm_7a1_exits <- spm_7a1_dq %>% 
+    filter(Destination %nin% c(206, 329, 24)) %>% 
+    select(PersonalID, EntryDate, ExitDate, ProjectType, leaver.stayer,
+          Destination, Destination_category)
   
   # Metric 7a1 variable calculations
   
-  
-  Count_7a.1_universe <- spm_7a1_dq %>% n_distinct(.$PersonalID)
-  
-  Count_7a.1_temp.inst.exts <- spm_7a1_dq %>% 
-    filter(Destination %in% c(100:115,117:206,208:399)) %>% # Don't include 207 and 116
+  Count_7a.1_temp.inst.exts <- spm_7a1_exits %>% 
+    filter(
+      Destination %in% c(100:399) &
+        Destination %nin% c(116, 207)) %>% # Don't include 207 and 116
     {n_distinct(.$PersonalID)}
   
-  Count_7a.1_PH.exts <- spm_7a1_dq %>% 
+  Count_7a.1_PH.exts <- spm_7a1_exits %>% 
     filter(Destination %in% c(400:499)) %>% 
     {n_distinct(.$PersonalID)}
   
-  Percent_7a.1_successful <- round(((Count_7a.1_temp.inst.exts + Count_7a.1_PH.exts) / Count_7a.1_universe )*100,2)
+  Percent_7a.1_successful <- round(
+    ((Count_7a.1_temp.inst.exts + Count_7a.1_PH.exts) / 
+       nrow(spm_7a1_exits)) * 100, 2)
   
   spm_7a1 <- data.frame(
     "row_names" =c(
@@ -60,17 +63,20 @@ items_to_keep <- c(items_to_keep,
       "Of the persons above, those who exited to permanent housing destinations",
       "% Successful exits"),
     "Previous.FY"= c(NA,NA,NA,NA),
-    "Current.FY"= as.character(c(Count_7a.1_universe,Count_7a.1_temp.inst.exts,Count_7a.1_PH.exts,Percent_7a.1_successful)),
+    "Current.FY"= as.character(c(nrow(spm_7a1_exits),
+                                 Count_7a.1_temp.inst.exts,
+                                 Count_7a.1_PH.exts,
+                                 Percent_7a.1_successful)),
     "Percent.Difference"= c(NA,NA,NA,NA))
   
   
   ## Metric 7b ----
   
-  
   df_7b_baseline <- enrollment_data %>% 
-    filter(ProjectType %in% c(0,1,2,3,8,9,10,13), #leaving SO out of this. Could be duplicates between 7a and 7b
-           EntryDate <= report_end_date & (is.na(ExitDate) | ExitDate >= report_start_date) #includes stayers for metric 7b.2 | added >= report_start_date to allow for people exiting on start date to be included in report
-    ) %>% 
+    filter(
+      ProjectType %in% c(0, 1, 2, 3, 8, 9, 10, 13), #leaving SO out of this. Could be duplicates between 7a and 7b
+      EntryDate <= report_end_date & 
+        (is.na(ExitDate) | ExitDate >= report_start_date)) %>%  #includes stayers for metric 7b.2 | added >= report_start_date to allow for people exiting on start date to be included in report
     group_by(HouseholdID) %>%
     mutate(
       HoH_HMID = suppressWarnings(min(case_when(RelationshipToHoH == 1 ~ MoveInDate), na.rm = TRUE)),

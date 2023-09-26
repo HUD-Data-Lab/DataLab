@@ -27,20 +27,22 @@ source("00_read_2024_csv.R")
 report_start_date <- ymd("2021-10-1")
 report_end_date <- ymd("2022-9-30")
 
-single_CoC_projects <- ProjectCoC %>%
+project_CoC_information <- ProjectCoC %>%
   mutate(relevant_to_CoC = 
            str_sub(relevant_CoC, 4, 6) == str_sub(CoCCode, 4, 6)) %>%
   group_by(ProjectID) %>%
   summarise(num_of_CoCs = uniqueN(CoCCode),
             relevant_to_CoC = max(relevant_to_CoC)) %>%
   ungroup() %>%
-  filter(num_of_CoCs == 1 &
-           relevant_to_CoC == 1)
+  filter(relevant_to_CoC == 1 &
+           ProjectID %in% Project$ProjectID[Project$ContinuumProject == 1])
 
 relevant_household_ids <- Enrollment %>%
+  inner_join(project_CoC_information,
+            by = "ProjectID") %>%
   filter(RelationshipToHoH == 1 &
            (str_sub(relevant_CoC, 4, 6) == str_sub(EnrollmentCoC, 4, 6) |
-              (is.na(EnrollmentCoC) & ProjectID %in% single_CoC_projects$ProjectID))) %>%
+              (is.na(EnrollmentCoC) & num_of_CoCs == 1))) %>%
   select(HouseholdID) %>%
   distinct()
 
