@@ -60,37 +60,36 @@ M4_enrollment_u <- active_enrollments %>%
 
 ## Split into stayer & leaver universes & limit to adults----
 
-# stayer clients (unique list of clients active on report_end_date)
+# stayer clients (list of clients active on report_end_date)
 
 M4_stayer_clients <- M4_enrollment_u %>% 
-  filter(is.na(ExitDate) | ExitDate > report_end_date) %>%
-  .$PersonalID %>%
-  unique()
+  filter(is.na(ExitDate) | ExitDate > report_end_date)
 
 # stayers
 
 spm_4.1_4.2_4.3_dq <- M4_enrollment_u %>%
   filter(
-    PersonalID %in% M4_stayer_clients, 
+    EnrollmentID %in% M4_stayer_clients$EnrollmentID, 
     difftime( report_end_date , EntryDate, units = "days") >= 365
     ) %>%
-  arrange(PersonalID, desc(EntryDate), EnrollmentID) %>%
+  arrange(desc(EntryDate), EnrollmentID) %>%
   group_by(PersonalID) %>%
   slice(1L) %>%
   ungroup() %>% 
-  filter(age >= 18) %>% #end universe filtering
+  filter(age >= 18 |
+           is.na(age)) %>% #end universe filtering
   # start prep calculations for income lookup
   mutate(
     years_enrolled = trunc((EntryDate %--% report_end_date) / years(1)),
     report_anniversary = EntryDate %m+% years(years_enrolled),
     report_anniversary_start = report_anniversary %m-% days(30),
-    report_anniversary_end = report_anniversary %m+% days(30),
-    annual_deadline_in_report = (report_anniversary_end %m+% days(1)) <= report_end_date 
+    report_anniversary_end = report_anniversary %m+% days(30) 
   )
   
 stayer_income <- IncomeBenefits %>%
   filter(
-    EnrollmentID %in% spm_4.1_4.2_4.3_dq$EnrollmentID
+    EnrollmentID %in% spm_4.1_4.2_4.3_dq$EnrollmentID &
+      InformationDate <= report_end_date
   ) 
 
 stayer_income_annuals <- stayer_income %>% 
@@ -124,9 +123,6 @@ stayer_income_annuals <- stayer_income %>%
   slice(1L) %>% 
   ungroup() %>%
   group_by(EnrollmentID) %>%
-  mutate(
-    count_annuals_by_EE = n()
-  ) %>%
   ungroup()
 
 ### stayer start and endpoint incomes ----
@@ -151,8 +147,10 @@ stayer_start_incomes <- stayer_income %>%
               select(EnrollmentID, InformationDate) %>%
               rename(LaterInformationDate = InformationDate),
             by = "EnrollmentID") %>%
-  filter(IncomeBenefitsID %nin% stayer_end_incomes$IncomeBenefitsID &
-           InformationDate < LaterInformationDate) %>%
+  filter(
+    IncomeBenefitsID %nin% stayer_end_incomes$IncomeBenefitsID &
+           (InformationDate < LaterInformationDate |
+              is.na(LaterInformationDate))) %>%
   arrange(desc(InformationDate)) %>%
   group_by(EnrollmentID) %>%
   slice(1L) %>%
@@ -182,9 +180,9 @@ spm_4.1_4.2_4.3_dq <- spm_4.1_4.2_4.3_dq %>%
 
 spm_4.4_4.5_4.6_dq <- M4_enrollment_u %>%
   filter(
-    PersonalID %nin% M4_stayer_clients,
+    PersonalID %nin% M4_stayer_clients$PersonalID,
     ExitDate >= report_start_date & ExitDate <= report_end_date) %>%
-  arrange(PersonalID, desc(EntryDate), EnrollmentID) %>%
+  arrange(desc(EntryDate), EnrollmentID) %>%
   group_by(PersonalID) %>%
   slice(1L) %>%
   ungroup() %>% 
