@@ -13,6 +13,7 @@ hold.R
 *.Rproj
 Data Lab.Rproj
 /GT test scripts
+<<<<<<< HEAD
 *.docx
 SPM_dq 2023-09-25.xlsx
 
@@ -29,3 +30,7 @@ SPM_tables.xlsx
 Test Kit 09.20.23/SPM_dq 2023-09-20.xlsx
 
 Test Kit 09.20.23/SPM_tables 2023-09-20.xlsx
+=======
+/GT Exploratory
+*.docx
+>>>>>>> Branch_GT
