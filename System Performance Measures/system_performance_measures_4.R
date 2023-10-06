@@ -180,7 +180,7 @@ spm_4.1_4.2_4.3_dq <- spm_4.1_4.2_4.3_dq %>%
 
 spm_4.4_4.5_4.6_dq <- M4_enrollment_u %>%
   filter(
-    PersonalID %nin% M4_stayer_clients$PersonalID,
+    PersonalID %nin% M4_stayer_clients$PersonalID &
     ExitDate >= report_start_date & ExitDate <= report_end_date) %>%
   arrange(desc(EntryDate), EnrollmentID) %>%
   group_by(PersonalID) %>%
