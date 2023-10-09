@@ -68,12 +68,13 @@ chronic_individual <- Enrollment %>%
   left_join(Project %>%
               select(ProjectID, ProjectType),
             by = "ProjectID") %>%
-  mutate(disabling_condition_for_chronic = case_when(
-    DisablingCondition == 1 |
-      has_disability == 1 ~ "Y",
-    DisablingCondition == 0 ~ "N",
-    DisablingCondition %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
-    TRUE ~ "Information.Missing"),
+  mutate(
+    disabling_condition_for_chronic = case_when(
+      DisablingCondition == 1 |
+        has_disability == 1 ~ "Y",
+      DisablingCondition == 0 ~ "N",
+      DisablingCondition %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
+      TRUE ~ "Information.Missing"),
     homeless_year_prior = trunc((DateToStreetESSH %--% EntryDate) / years(1)) >= 1 &
       !is.na(DateToStreetESSH),
     four_or_more_times = case_when(
@@ -83,40 +84,30 @@ chronic_individual <- Enrollment %>%
       TRUE ~ "Information.Missing"),
     twelve_or_more_months = case_when(
       MonthsHomelessPastThreeYears >= 112 ~ "Y",
-      MonthsHomelessPastThreeYears %in% c(101, 102, 103, 104, 
-                                          105, 106, 107, 108, 
-                                          109, 110, 111) ~ "N",
+      MonthsHomelessPastThreeYears %in% 101:111 ~ "N",
       MonthsHomelessPastThreeYears %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
       TRUE ~ "Information.Missing"
     ),
     chronic = case_when(
       disabling_condition_for_chronic != "Y" ~ disabling_condition_for_chronic,
+      ProjectType %in% c(0, 1, 4, 8) ~ case_when(
+        homeless_year_prior ~ "Y",
+        four_or_more_times != "Y" ~ four_or_more_times,
+        TRUE ~ twelve_or_more_months),
       is.na(LivingSituation) ~ "Information.Missing",
-      ProjectType %in% c(0, 1, 4, 8) |
-        LivingSituation %in% na.omit(ResidenceUses$Location[ResidenceUses$PriorResidenceType_Chronicity == "homeless"]) ~
-        case_when(
-          homeless_year_prior ~ "Y",
-          four_or_more_times != "Y" ~ four_or_more_times,
-          TRUE ~ twelve_or_more_months
-        ),
-      LivingSituation %in% na.omit(ResidenceUses$Location[ResidenceUses$PriorResidenceType_Chronicity == "institution"]) ~
-        case_when(
-          LOSUnderThreshold == 0 |
-            DateToStreetESSH == 0 ~ "N",
-          homeless_year_prior ~ "Y",
-          four_or_more_times != "Y" ~ four_or_more_times,
-          TRUE ~ twelve_or_more_months
-        ),
-      LivingSituation %in% na.omit(ResidenceUses$Location[ResidenceUses$PriorResidenceType_Chronicity == "other"]) ~
-        case_when(
-          LOSUnderThreshold == 0 |
-            DateToStreetESSH == 0 ~ "N",
-          homeless_year_prior ~ "Y",
-          four_or_more_times != "Y" ~ four_or_more_times,
-          TRUE ~ twelve_or_more_months
-        )
-    )
-  ) %>%
+      LivingSituation %in% 100:199 ~ case_when(
+        homeless_year_prior ~ "Y",
+        four_or_more_times != "Y" ~ four_or_more_times,
+        TRUE ~ twelve_or_more_months),
+      LivingSituation %in% c(0:99, 200:499) ~ case_when(
+        is.na(LOSUnderThreshold) ~ "Information.Missing",
+        LOSUnderThreshold == 0 ~ "N",
+        is.na(PreviousStreetESSH) ~ "Information.Missing",
+        PreviousStreetESSH == 0 ~ "N",
+        homeless_year_prior ~ "Y",
+        four_or_more_times != "Y" ~ four_or_more_times,
+        TRUE ~ twelve_or_more_months),
+      TRUE ~ "ERROR")) %>%
   select(EnrollmentID, chronic)
 
 chronic_household <- Enrollment %>%
