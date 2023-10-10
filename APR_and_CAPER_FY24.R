@@ -563,7 +563,7 @@
             days_for_exit = case_when(!is.na(ExitDate) ~ floor(
               interval(ExitDate, floor_date(exit_DateCreated, "day")) / days(1))),
             TimeForExitEntry = case_when(
-              days_for_exit < 0 ~ "Error",
+              days_for_exit < 0 ~ "< 0 days",
               days_for_exit == 0 ~ "0 days",
               days_for_exit <= 3 ~ "1-3 days",
               days_for_exit <= 6 ~ "4-6 days",
