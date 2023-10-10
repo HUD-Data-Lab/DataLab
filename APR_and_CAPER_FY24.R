@@ -166,7 +166,7 @@
           leaver = ExitDate >= report_start_date &
             ExitDate <= report_end_date & 
             !is.na(ExitDate)) %>%
-        left_join(chronicity_data, by = "EnrollmentID")
+        add_chronicity_data(.)
       }
       
       

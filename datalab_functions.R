@@ -1635,3 +1635,125 @@ return_race_groups <- function(APR_dataframe, grouped_by = grouped_by,
   # potential_table
   
 }
+
+# adds chronic information to a dataframe 
+# column `chronic` includes levels Y, N, Information.Missing,
+#   and Client.Does.Not.Know.or.Prefers.Not.to.Answer
+
+add_chronicity_data <- function(df_of_active_enrollments) {
+  
+  additional_disability_check <- disability_table %>%
+    filter(DataCollectionStage == 1 &
+             indefinite_and_impairs &
+             EnrollmentID %in% df_of_active_enrollments$EnrollmentID) %>%
+    group_by(EnrollmentID) %>%
+    summarise() %>%
+    ungroup() %>%
+    mutate(has_disability = 1)
+  
+  chronic_individual <- Enrollment %>%
+    filter(EnrollmentID %in% df_of_active_enrollments$EnrollmentID) %>%
+    select(EnrollmentID, DisablingCondition, ProjectID, EntryDate,
+           LivingSituation, LOSUnderThreshold, PreviousStreetESSH,
+           DateToStreetESSH, TimesHomelessPastThreeYears,
+           MonthsHomelessPastThreeYears) %>%
+    left_join(additional_disability_check, 
+              by = "EnrollmentID") %>%
+    left_join(Project %>%
+                select(ProjectID, ProjectType),
+              by = "ProjectID") %>%
+    mutate(
+      disabling_condition_for_chronic = case_when(
+        DisablingCondition == 1 |
+          has_disability == 1 ~ "Y",
+        DisablingCondition == 0 ~ "N",
+        DisablingCondition %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
+        TRUE ~ "Information.Missing"),
+      homeless_year_prior = trunc((DateToStreetESSH %--% EntryDate) / years(1)) >= 1 &
+        !is.na(DateToStreetESSH),
+      four_or_more_times = case_when(
+        TimesHomelessPastThreeYears == 4 ~ "Y",
+        TimesHomelessPastThreeYears %in% c(1, 2, 3) ~ "N",
+        TimesHomelessPastThreeYears %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
+        TRUE ~ "Information.Missing"),
+      twelve_or_more_months = case_when(
+        MonthsHomelessPastThreeYears >= 112 ~ "Y",
+        MonthsHomelessPastThreeYears %in% 101:111 ~ "N",
+        MonthsHomelessPastThreeYears %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
+        TRUE ~ "Information.Missing"
+      ),
+      chronic = case_when(
+        disabling_condition_for_chronic != "Y" ~ disabling_condition_for_chronic,
+        ProjectType %in% c(0, 1, 4, 8) ~ case_when(
+          homeless_year_prior ~ "Y",
+          four_or_more_times != "Y" ~ four_or_more_times,
+          TRUE ~ twelve_or_more_months),
+        is.na(LivingSituation) ~ "Information.Missing",
+        LivingSituation %in% 100:199 ~ case_when(
+          homeless_year_prior ~ "Y",
+          four_or_more_times != "Y" ~ four_or_more_times,
+          TRUE ~ twelve_or_more_months),
+        LivingSituation %in% c(0:99, 200:499) ~ case_when(
+          is.na(LOSUnderThreshold) ~ "Information.Missing",
+          LOSUnderThreshold == 0 ~ "N",
+          is.na(PreviousStreetESSH) ~ "Information.Missing",
+          PreviousStreetESSH == 0 ~ "N",
+          homeless_year_prior ~ "Y",
+          four_or_more_times != "Y" ~ four_or_more_times,
+          TRUE ~ twelve_or_more_months),
+        TRUE ~ "ERROR")) %>%
+    select(EnrollmentID, chronic)
+  
+  chronic_household <- Enrollment %>%
+    filter(EnrollmentID %in% df_of_active_enrollments$EnrollmentID) %>%
+    select(PersonalID, EnrollmentID, HouseholdID, EntryDate, RelationshipToHoH) %>%
+    left_join(Client %>%
+                select(-ExportID), 
+              by = "PersonalID") %>%
+    mutate(date_for_age = (if_else(
+      EntryDate <= report_start_date,
+      report_start_date,
+      EntryDate)),
+      age = trunc((DOB %--% date_for_age) / years(1)),
+      chronic_age_group = case_when(age >= 18 ~ "adult",
+                                    age < 18 ~ "child",
+                                    TRUE ~ "unknown")) %>%
+    left_join(chronic_individual %>%
+                mutate(numeric_chronic = case_when(
+                  chronic == "Y" ~ 1,
+                  chronic == "N" ~ 2,
+                  chronic == "Client.Does.Not.Know.or.Prefers.Not.to.Answer" ~ 3,
+                  chronic == "Information.Missing" ~ 4
+                )), 
+              by = "EnrollmentID") %>%
+    group_by(HouseholdID) %>%
+    mutate(first_entry_date = min(EntryDate),
+           min_chronicity = min(numeric_chronic),
+           HoH_chronicity = min(case_when(RelationshipToHoH == 1 ~ numeric_chronic), 
+                                na.rm = TRUE),
+           HoH_or_adult_chronicity = min(case_when(RelationshipToHoH == 1 |
+                                                     chronic_age_group == "adult" ~ numeric_chronic), 
+                                         na.rm = TRUE),
+           new_chronic = factor(
+             case_when(
+               min_chronicity == 1 ~ 1,
+               HoH_or_adult_chronicity %in% c(3, 4) ~ HoH_chronicity,
+               TRUE ~ numeric_chronic
+             ), 
+             levels = c(1, 2, 3, 4),
+             labels = c("Y", "N", "Client.Does.Not.Know.or.Prefers.Not.to.Answer", "Information.Missing"))) %>%
+    ungroup() %>%
+    filter(EntryDate == first_entry_date) %>%
+    select(EnrollmentID, new_chronic)
+  
+  chronicity_data <- chronic_household %>%
+    full_join(chronic_individual,
+              by = "EnrollmentID") %>%
+    mutate(chronic = if_else(is.na(new_chronic), chronic, as.character(new_chronic))) %>%
+    select(-new_chronic)
+  
+  df_of_active_enrollments %>%
+    left_join(chronicity_data,
+              by = "EnrollmentID")
+  
+}
