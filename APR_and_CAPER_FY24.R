@@ -101,7 +101,7 @@
     )
   }
   
-  items_to_keep <- c("items_to_keep", ls()) #Keep all functions and objects created up to this point. Why is this here? What is the purpose of this?
+  items_to_keep <- c("items_to_keep", ls())
   
   Exit <- Exit %>%
     rename(exit_DateCreated = DateCreated)
