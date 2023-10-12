@@ -175,7 +175,8 @@ enrollment_recent_assessment <- enrollment_recent_assessment %>%
              ProjectID)) %>%
     left_join(assessment_and_event_dates %>%
                 filter(activity_date <= report_end_date), 
-              by = "HouseholdID") %>%
+              by = "HouseholdID",
+              relationship = "many-to-many") %>%
     group_by(EnrollmentID) %>%
     mutate(active_at_event = !is.na(activity_date) &
              activity_date >= EntryDate &
