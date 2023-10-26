@@ -23,9 +23,9 @@ items_to_keep <- c(items_to_keep,
 
 ### 5.1 (ES, SH, TH, PH) ----
 Q5M1_report <- active_enrollments %>%
-  filter(ProjectType %in% c(0, 1, 2, 8) & 
-           EntryDate >= report_start_date & 
-           EntryDate <= report_end_date) %>%
+  filter(ProjectType %in% c(0, 1, 2, 8) & (EntryDate <= report_start_date)) %>% #added this line to see what happens if I change the filter a little bit.
+           #EntryDate >= report_start_date & # This seems to be filtering out everyone who was not enrolled and exited between the start and end date
+           #EntryDate <= report_end_date) %>%# Don't we want the people who entered the project before the entry date and with a null exit date?
   group_by(PersonalID) %>%
   arrange(EntryDate, EnrollmentID) %>% 
   slice(1L) %>%
@@ -39,7 +39,7 @@ Q5M1_report <- active_enrollments %>%
 ### 5.2 (ES, SH, TH, PH) ----
 Q5M2_report <- active_enrollments %>%
   filter(ProjectType %in% c(0, 1, 2, 8, 3, 9, 10, 13) & 
-           EntryDate >= report_start_date & 
+           EntryDate >= report_start_date & #Same flag as Q5M1_report.
            EntryDate <= report_end_date) %>%
   group_by(PersonalID) %>%
   arrange(EntryDate, EnrollmentID) %>%
@@ -61,7 +61,8 @@ spm_5.1_dq <- Q5M1_report %>%
                                            ExitDate)) %>%
               filter(ProjectType %in% c(0, 1, 2, 8, 3, 9, 10, 13)),
             join_by(PersonalID,
-                    client_startdate > EntryDate,
+                    client_startdate <= EntryDate,#added this line to see test what happens if I changed the filter a little bit
+                    #client_startdate > EntryDate, # Same question as above, is this leaving out people who are enrolled previous to start date?
                     client_lookbackdate <= capped_exit_date)) 
 
 spm_5.2_dq <- Q5M2_report %>%
@@ -72,7 +73,7 @@ spm_5.2_dq <- Q5M2_report %>%
                                            ExitDate)) %>%
               filter(ProjectType %in% c(0, 1, 2, 8, 3, 9, 10, 13)),
             join_by(PersonalID,
-                    client_startdate > EntryDate,
+                    client_startdate > EntryDate, #Same flag as spm_5.1_dq
                     client_lookbackdate <= capped_exit_date))  
 
 ### counts of report persons ----
