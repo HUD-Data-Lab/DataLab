@@ -187,8 +187,13 @@ FY24_residence_types <- ResidenceUses %>%
         LivingSituation %in% subsidized_residences ~ LivingSituation),
       LivingSituation = if_else(!is.na(RentalSubsidyType),
                                 435, LivingSituation),
-      TranslationNeeded = 0,
-      PreferredLanguage = 171,
+      TranslationNeeded = sample(c(rep(0, 20), 1), nrow(Enrollment), replace = TRUE),
+      TranslationNeeded = case_when(
+        RelationshipToHoH == 1 &
+          !is.na(RelationshipToHoH) ~ TranslationNeeded),
+      PreferredLanguage = case_when(
+        TranslationNeeded == 1 &
+          !is.na(TranslationNeeded) ~ sample(100:426, nrow(Enrollment), replace = TRUE)),
       PreferredLanguageDifferent = NA) %>%
     rename(EnrollmentCoC = CoCCode
            # ,
