@@ -1702,6 +1702,7 @@
           ifnull(., 0)
         
         Q22c_detail <- Q22c_detail %>%
+          filter(EnrollmentID %nin% exited_without_move_in_data$EnrollmentID) %>%
           full_join(exited_without_move_in_data,
                     by = colnames(exited_without_move_in_data))
       }
@@ -2477,9 +2478,6 @@
                              colnames(Q27k_detail)),
                    "housing_length_group"))
         
-        Q27k_detail <- Q27k_detail %>%
-          filter(EnrollmentID %nin% exited_without_move_in_data$EnrollmentID)
-        
         exited_without_move_in <- exited_without_move_in_data %>%
           return_household_groups(., housing_length_group, "Persons who were exited without move-in") 
         
@@ -2488,8 +2486,10 @@
                                               "Not yet moved into housing",
                                               "Data.Not.Collected"))
         
-        Q27k <- Q27k_detail %>%
-          return_household_groups(., housing_length_group, time_to_house_groups$housing_length_group) %>%
+        Q27k <- data.frame(time_to_house_groups) %>%
+          left_join(Q27k_detail %>%
+                      return_household_groups(., housing_length_group, time_to_house_groups$housing_length_group),
+                    by = "housing_length_group") %>%
           adorn_totals("row") %>%
           mutate(housing_length_group = case_when(
             housing_length_group == "Total" ~ "Total (persons moved into housing)",
@@ -2502,6 +2502,7 @@
           ifnull(., 0)
         
         Q27k_detail <- Q27k_detail %>%
+          filter(EnrollmentID %nin% exited_without_move_in_data$EnrollmentID) %>%
           full_join(exited_without_move_in_data,
                     by = colnames(exited_without_move_in_data))
       }
