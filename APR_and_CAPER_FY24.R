@@ -984,7 +984,8 @@
           select(all_of(standard_detail_columns), "age_group", 
                  "new_veteran_status", "chronic") %>%
           inner_join(disability_table %>%
-                       filter(DataCollectionStage == 1), by ="EnrollmentID",
+                       filter(DataCollectionStage == 1 &
+                                DisabilityResponse != 0), by ="EnrollmentID",
                      multiple = "all")
         
         Q13a1 <- Q13a1_detail %>%
@@ -999,7 +1000,8 @@
                  "new_veteran_status", "chronic") %>%
           filter(!is.na(ExitDate)) %>%
           inner_join(disability_table %>%
-                       filter(DataCollectionStage == 3), by ="EnrollmentID",
+                       filter(DataCollectionStage == 3 &
+                                DisabilityResponse != 0), by ="EnrollmentID",
                      multiple = "all")
         
         Q13b1 <- Q13b1_detail %>%
@@ -1021,13 +1023,14 @@
                        ungroup() %>%
                        select(EnrollmentID, last_date) %>%
                        distinct() %>%
-                       left_join(disability_table, 
+                       inner_join(disability_table, 
                                  by = c("EnrollmentID", "last_date" = "InformationDate"),
                                  multiple = "all"), 
                      by ="EnrollmentID",
                      multiple = "all")
         
-        Q13c1 <- Q13c1_detail %>%
+        Q13c1 <- Q13c1_detail  %>%
+          filter(DisabilityResponse != 0) %>%
           return_household_groups(., disability_name, disability_list,
                                   split_by_age = TRUE)
       }
@@ -2184,6 +2187,7 @@
       # Q26a checked
       {
         Q26b_detail <- recent_program_enrollment %>%
+          select(c(all_of(standard_detail_columns), "chronic")) %>%
           mutate(category = case_when(
             chronic == "Y" ~ chronic_categories[1],
             chronic == "N" ~ chronic_categories[2],
@@ -2233,7 +2237,8 @@
         Q26e_detail <- "See Q13a1.csv, Q13b1.csv, and Q13c1.csv respectively"
         Q26e.1.and.2 <- recent_chronic_enrollment %>%
           inner_join(disability_table %>%
-                       filter(DataCollectionStage %in% c(1, 3)), by ="EnrollmentID",
+                       filter(DataCollectionStage %in% c(1, 3) &
+                                DisabilityResponse != 0), by ="EnrollmentID",
                      multiple = "all") %>%
           group_by(disability_name) %>%
           summarise(Conditions.At.Start = n_distinct(PersonalID[DataCollectionStage == 1], 

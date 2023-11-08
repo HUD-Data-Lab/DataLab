@@ -1644,6 +1644,7 @@ add_chronicity_data <- function(df_of_active_enrollments) {
   
   additional_disability_check <- disability_table %>%
     filter(DataCollectionStage == 1 &
+             DisabilityResponse != 0 &
              indefinite_and_impairs &
              EnrollmentID %in% df_of_active_enrollments$EnrollmentID) %>%
     group_by(EnrollmentID) %>%
@@ -1705,10 +1706,10 @@ add_chronicity_data <- function(df_of_active_enrollments) {
     select(EnrollmentID, chronic)
   
   chronic_household <- Enrollment %>%
-    filter(EnrollmentID %in% df_of_active_enrollments$EnrollmentID) %>%
+    filter(HouseholdID %in% df_of_active_enrollments$HouseholdID) %>%
     select(PersonalID, EnrollmentID, HouseholdID, EntryDate, RelationshipToHoH) %>%
     left_join(Client %>%
-                select(-ExportID), 
+                select(PersonalID, DOB), 
               by = "PersonalID") %>%
     mutate(date_for_age = (if_else(
       EntryDate <= report_start_date,
@@ -1736,7 +1737,7 @@ add_chronicity_data <- function(df_of_active_enrollments) {
                                          na.rm = TRUE),
            new_chronic = factor(
              case_when(
-               min_chronicity == 1 ~ 1,
+               min_chronicity %in% c(1, 2) ~ min_chronicity,
                HoH_or_adult_chronicity %in% c(3, 4) ~ HoH_chronicity,
                TRUE ~ numeric_chronic
              ), 

@@ -32,7 +32,7 @@ Enrollment <- Enrollment %>%
            EnrollmentID %in% bed_nights_in_report$EnrollmentID)
 
 disability_table <- Disabilities %>% 
-  filter(DisabilityResponse == 1 |
+  filter(DisabilityResponse %in% c(0, 1) |
            (DisabilityType == 10 &
               DisabilityResponse %in% c(2, 3))) %>%
   mutate(disability_name = case_when(DisabilityType == 5 ~ "Physical Disability",
@@ -43,10 +43,14 @@ disability_table <- Disabilities %>%
                                      DisabilityResponse == 1 ~ "Alcohol Use Disorder",
                                      DisabilityResponse == 2 ~ "Drug Use Disorder",
                                      DisabilityResponse == 3 ~ "Both Alcohol and Drug Use Disorders"),
-         disabilities = if_else(disability_name == "Both Alcohol and Drug Use Disorders", 2, 1),
-         indefinite_and_impairs = (DisabilityType %in% c(6, 8) |
-                                     (DisabilityType %in% c(5, 7, 9, 10) &
+         disabilities = case_when(
+           DisabilityResponse %in% 1:3 ~
+             if_else(disability_name == "Both Alcohol and Drug Use Disorders", 2, 1)),
+         indefinite_and_impairs = ((DisabilityResponse == 1 &
+                                     DisabilityType %in% c(6, 8)) |
+                                     (DisabilityResponse %in% c(2, 3) &
+                                        DisabilityType %in% c(5, 7, 9, 10) &
                                         IndefiniteAndImpairs == 1))) %>%
   select(EnrollmentID, DataCollectionStage, InformationDate, disability_name, 
-         indefinite_and_impairs, disabilities)
+         DisabilityResponse, indefinite_and_impairs, disabilities)
 
