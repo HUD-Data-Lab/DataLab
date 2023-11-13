@@ -1073,6 +1073,7 @@
         Q13c2 <- recent_program_enrollment %>%
           filter(is.na(ExitDate)) %>%
           left_join(Q13c1_detail %>%
+                      filter(DisabilityResponse != 0) %>%
                       # earlier data lab logic did not account for the following step
                       group_by(PersonalID) %>%
                       summarise(disability_count = sum(disabilities)) %>%
@@ -1418,16 +1419,7 @@
                      by = "EnrollmentID")
         
         Q19b <- exit_income %>%
-          income_hh_type_disabling_condition_table(.) %>%
-          left_join(IncomeTypes,
-                    by = c("name" = "IncomeGroup")) %>%
-          mutate(name = case_when(
-            !is.na(OfficialIncomeName) ~ OfficialIncomeName,
-            TRUE ~ name
-          )) %>%
-          select(-OfficialIncomeName)
-        
-        Q19b[, c(5, 9, 13)] <- decimal_format(Q19b[, c(5, 9, 13)], 4)
+          income_hh_type_disabling_condition_table(.)
       }
       
       # Q20a checked
@@ -2248,7 +2240,8 @@
                       na.rm = TRUE))
         
         Q26e.3 <- Q13c1_detail %>%
-          filter(EnrollmentID %in% recent_chronic_enrollment$EnrollmentID) %>%
+          filter(DisabilityResponse != 0 &
+                   EnrollmentID %in% recent_chronic_enrollment$EnrollmentID) %>%
           group_by(disability_name) %>%
           summarise(Conditions.At.Latest.Assessment.for.Stayers = n_distinct(PersonalID, 
                                                                              na.rm = TRUE))
@@ -2433,8 +2426,6 @@
         
         Q27i <- exit_income %>%
           income_hh_type_disabling_condition_table(., youth = TRUE)
-        
-        Q27i[, c(5, 9, 13, 17)] <- decimal_format(Q27i[, c(5, 9, 13, 17)], 4)
       }
       
       # Q27j checked

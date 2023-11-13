@@ -49,8 +49,8 @@ for (report in union(new_zips, compare_to_zips)) {
                    show_col_types = FALSE))
         
         # this compares just the numbers
-        new_data <- unname(new_data[2:nrow(new_data), 2:ncol(new_data)])
-        compare_to_data <- unname(compare_to_data[2:nrow(compare_to_data), 2:ncol(compare_to_data)])
+        new_data <- unname(as.matrix(new_data[, 2:ncol(new_data)]))
+        compare_to_data <- unname(as.matrix(compare_to_data[, 2:ncol(compare_to_data)]))
         
         file.remove(question)
         

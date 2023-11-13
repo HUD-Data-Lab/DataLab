@@ -26,6 +26,7 @@ subsidized_residences <- c(419, 428, 431, 433, 434, 420,
                            psh_residence)
 
 FY24_residence_types <- ResidenceUses %>%
+  filter(!is.na(Location_FY22)) %>%
   mutate(FY24_type_numeric = case_when(
     str_length(as.character(Location)) == 3 ~ floor(Location/100) * 100,
     !is.na(Location) ~ 0,
@@ -207,8 +208,8 @@ FY24_residence_types <- ResidenceUses %>%
   # Responses in Appendix A--Living Situation Option List reconfigured
   # If 3.12.01 = 435, then "Rental Subsidy Type" option list
   Exit <- Exit %>% 
-    # left_join(FY24_residence_types,
-    #           by = c("Destination" = "Location_FY22")) %>%
+    left_join(FY24_residence_types,
+              by = c("Destination" = "Location_FY22")) %>%
     mutate(
       Destination = Destination + FY24_type_numeric,
       # need to confirm mapping of "Permanent housing for formerly homeless persons"
@@ -324,24 +325,31 @@ FY24_residence_types <- ResidenceUses %>%
 }
 
 # write to zipped folder
-{
-  for (file in unique(CSV_columns$File)) {
-    write.csv(get(file) %>%
-                mutate(
-                  across(where(is.POSIXt),
-                         ~ format(., format = "%Y-%m-%d %H:%M:%S")),
-                  across(where(is.numeric) & !where(is.integer),
-                         ~ if_else(. > 0, sprintf("%.2f", .), NA))), 
-              file.path(paste0("created_files/", file, ".csv")),
-              row.names=FALSE, na = "",
-              quote = which(as.character(lapply(get(file), class)) %nin% 
-                              c("integer", "numeric")))
-  }
-
-  archive_write_dir(paste0("DataLab - 2024 Zips ", Sys.Date(), ".zip"),
-                    paste0(getwd(), "/created_files"))
-
-  unlink(paste0(getwd(), "/created_files/*"))
-}
-
+# {
+#   for (file in unique(CSV_columns$File)) {
+#     write.csv(get(file) %>%
+#                 mutate(
+#                   across(colnames(file)[str_locate_all(pattern = "T", 
+#                                                          get(file, 
+#                                                              hmis_csvs_fy24))[[1]][,1]],
+#                          ~ format(., format = "%Y-%m-%d %H:%M:%S")),
+#                   across(colnames(file)[str_locate_all(pattern = "D", 
+#                                                        get(file, 
+#                                                            hmis_csvs_fy24))[[1]][,1]],
+#                          ~ format(., format = "%Y-%m-%d")),
+#                   across(colnames(file)[str_locate_all(pattern = "d", 
+#                                                        get(file, 
+#                                                            hmis_csvs_fy24))[[1]][,1]],
+#                          ~ if_else(. > 0, sprintf("%.2f", .), NA))), 
+#               file.path(paste0("created_files/", file, ".csv")),
+#               row.names=FALSE, na = "",
+#               quote = which(as.character(lapply(get(file), class)) %nin% 
+#                               c("integer", "numeric")))
+#   }
+# 
+#   archive_write_dir(paste0("DataLab - 2024 Zips ", Sys.Date(), ".zip"),
+#                     paste0(getwd(), "/created_files"))
+# 
+#   unlink(paste0(getwd(), "/created_files/*"))
+# }
 

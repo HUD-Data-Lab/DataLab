@@ -92,6 +92,7 @@ sequential_ssn <- function(test_ssn) {
 return_household_groups <- function(APR_dataframe, grouped_by = grouped_by, 
                                     group_list = group_list,
                                     split_by_age = FALSE) {
+  # browser()
 
   potential_table <- APR_dataframe %>%
     group_by({{grouped_by}})
@@ -818,30 +819,41 @@ create_prior_residence_groups <- function(included_enrollments) {
   income_hh_type_disabling_condition_table <- function(exit_income,
                                                        youth = FALSE) {
     
+    hh_type_labels <- c(AO = "Without.Children", 
+                      AC = "With.Children.And.Adults", 
+                      CO = "With.Only.Children", 
+                      UK = "Unknown.Household.Type")
+    
     selected_cols <- c()
     if (youth) {
-      hh_type_groups <- c("Without.Children", "With.Children.And.Adults", 
-                          "With.Only.Children", "Unknown.Household.Type")
+      hh_type_groups <- unname(hh_type_labels)
+      hh_types_to_keep <- names(hh_type_labels)
       exit_income <- exit_income %>%
         filter(youth == 1)
+      group_label <- "Youth"
     } else {
-      hh_type_groups <- c("Without.Children", "With.Children.And.Adults", 
-                          "Unknown.Household.Type")
+      hh_type_groups <- unname(hh_type_labels)[c(1, 2, 4)]
+      hh_types_to_keep <- names(hh_type_labels)[c(1, 2, 4)]
       exit_income <- exit_income %>%
         keep_adults_only()
+      group_label <- "Adult"
     }
     
-    for(condition_presence in c("disabling_condition",
-                                "no_disabling_condition",
-                                "all")) {
+    condition_presence_list <- c(paste(group_label, "with Disabling Condition"),
+                                 paste(group_label, "without Disabling Condition"),
+                                 paste0("Total ", group_label, "s"))
+    
+    total_label <- paste0("Unduplicated.Total.", group_label, "s")
+    
+    for(condition_presence in condition_presence_list) {
       
       filtered_income_information <- exit_income %>%
         filter(IncomeFromAnySource %in% c(0, 1) &
-                 ((condition_presence == "disabling_condition" &
+                 ((condition_presence == condition_presence_list[1] &
                      DisablingCondition == 1) |
-                    (condition_presence == "no_disabling_condition" &
+                    (condition_presence == condition_presence_list[2] &
                        DisablingCondition == 0) |
-                    (condition_presence == "all" &
+                    (condition_presence == condition_presence_list[3] &
                        DisablingCondition %in% c(0, 1)))) %>%
         mutate(Other.Source = if_else(
           Unemployment == 1 |
@@ -849,13 +861,14 @@ create_prior_residence_groups <- function(included_enrollments) {
             GA == 1 |
             Alimony == 1 |
             OtherIncomeSource == 1, 1, 0)) %>%
-        select(c(PersonalID, household_type, IncomeFromAnySource, all_of(IncomeTypes$IncomeGroup))) 
+        select(c(PersonalID, household_type, IncomeFromAnySource, 
+                 all_of(IncomeTypes$IncomeGroup))) 
       
       long_income_information <- filtered_income_information %>%
         pivot_longer(!c(PersonalID, household_type, IncomeFromAnySource)) %>%
         mutate(row_name = "row")
       
-      unduplicated_total <- cbind(name = "Unduplicated.Total.Adults", 
+      unduplicated_total <- cbind(name = total_label, 
                                   long_income_information %>%
                                     mutate(row_name = "total") %>%
                                     return_household_groups(., row_name, "total") %>%
@@ -880,10 +893,11 @@ create_prior_residence_groups <- function(included_enrollments) {
                   by = "name") %>%
         rbind(., unduplicated_without_income) %>%
         rbind(., unduplicated_total) %>%
-        `colnames<-`(c("name", paste0(condition_presence, "_", colnames(.)[2:6]))) %>%
+        `colnames<-`(c("name", "Total", paste0(names(hh_type_labels), ": ", 
+                                      condition_presence))) %>%
         ifnull(., 0)
       
-      if(condition_presence == "disabling_condition") {
+      if(condition_presence == condition_presence_list[1]) {
         income_hh_type_disabling_condition <- income_hh_type_disabling_condition_data
       } else {
         income_hh_type_disabling_condition <- income_hh_type_disabling_condition %>%
@@ -891,22 +905,17 @@ create_prior_residence_groups <- function(included_enrollments) {
       }
     }
     
-    for(household_type in hh_type_groups) {
+    for(household_type in hh_types_to_keep) {
       income_hh_type_disabling_condition <- income_hh_type_disabling_condition %>%
-        mutate(!!paste0(household_type, "_percent") := ifnull(
-          get(paste0("disabling_condition_", household_type)) / 
-            get(paste0("all_", household_type)), 0)
+        mutate(!!paste0(household_type, ": % with Disabling Condition by Source") := ifnull(
+          get(paste0(household_type, ": ", condition_presence_list[1])) / 
+            get(paste0(household_type, ": ", condition_presence_list[3])), 0)
         )
       
-      for (disabling_condition_present in c("disabling_condition", "no_disabling_condition",
-                                            "all", "percent")) {
-        if (disabling_condition_present == "percent") {
-          selected_cols <- c(selected_cols, paste0(household_type, "_",
+      for (disabling_condition_present in c(condition_presence_list, 
+                                            "% with Disabling Condition by Source")) {
+          selected_cols <- c(selected_cols, paste0(household_type, ": ",
                                                    disabling_condition_present))
-        } else {
-          selected_cols <- c(selected_cols, paste0(disabling_condition_present, "_",
-                                                   household_type))
-        }
       }
     }
     
@@ -914,12 +923,24 @@ create_prior_residence_groups <- function(included_enrollments) {
       select(c(name, all_of(selected_cols)) )
     
     no_income_row <- match(TRUE, income_hh_type_disabling_condition$name == "No.Sources")
-    total_row <- match(TRUE, income_hh_type_disabling_condition$name == "Unduplicated.Total.Adults")
+    total_row <- match(TRUE, income_hh_type_disabling_condition$name == total_label)
     
-    income_hh_type_disabling_condition[income_hh_type_disabling_condition$name == "Unduplicated.Total.Adults", 
-                                       c("Without.Children_percent",
-                                         "With.Children.And.Adults_percent",
-                                         "Unknown.Household.Type_percent")] <- NA
+
+    
+    income_hh_type_disabling_condition <- income_hh_type_disabling_condition %>%
+      left_join(IncomeTypes,
+                by = c("name" = "IncomeGroup")) %>%
+      mutate(name = case_when(
+        !is.na(OfficialIncomeName) ~ OfficialIncomeName,
+        TRUE ~ name)) %>%
+      select(-OfficialIncomeName)
+    
+    income_hh_type_disabling_condition[, grep("%", 
+                                              colnames(income_hh_type_disabling_condition))] <- decimal_format(
+                                                income_hh_type_disabling_condition[, grep("%", 
+                                                                                          colnames(income_hh_type_disabling_condition))], 4)
+    income_hh_type_disabling_condition[income_hh_type_disabling_condition$name == total_label, 
+                                       grep("%", colnames(income_hh_type_disabling_condition))] <- NA
     
     income_hh_type_disabling_condition
   }
@@ -1039,16 +1060,19 @@ create_inactive_table <- function(dq_enrollments,
 }
 
 # used to write files with correct formatting
-set_hud_format <- function(data_for_csv) {
+set_hud_format <- function(data_for_csv,
+                           ignore_row_names = FALSE) {
   
   first_col_name <- names(data_for_csv)[1]
-  data_for_csv <- data_for_csv %>%
-    mutate(!!first_col_name := gsub(".", " ", get(first_col_name), fixed = TRUE),
-      !!first_col_name := case_when(
+  if(!ignore_row_names) {
+    data_for_csv <- data_for_csv %>%
+      mutate(!!first_col_name := gsub(".", " ", get(first_col_name), fixed = TRUE),
+             !!first_col_name := case_when(
                get(first_col_name) == "Client Does Not Know or Refused" ~
                  "Client Doesn't Know/Refused",
                TRUE ~ get(first_col_name)))
-  
+  }
+
   new_header <- names(data_for_csv)[2:length(data_for_csv)]
   new_header[new_header == "Client.Does.Not.Know.or.Prefers.Not.to.Answer"] <- "Client Doesn't Know/Refused" # Flagging this for follow-up: FY2024 removed refused ----
   
@@ -1728,23 +1752,27 @@ add_chronicity_data <- function(df_of_active_enrollments) {
                 )), 
               by = "EnrollmentID") %>%
     group_by(HouseholdID) %>%
-    mutate(first_entry_date = min(EntryDate),
-           min_chronicity = min(numeric_chronic),
-           HoH_chronicity = min(case_when(RelationshipToHoH == 1 ~ numeric_chronic), 
-                                na.rm = TRUE),
-           HoH_or_adult_chronicity = min(case_when(RelationshipToHoH == 1 |
-                                                     chronic_age_group == "adult" ~ numeric_chronic), 
-                                         na.rm = TRUE),
-           new_chronic = factor(
-             case_when(
-               min_chronicity %in% c(1, 2) ~ min_chronicity,
-               HoH_or_adult_chronicity %in% c(3, 4) ~ HoH_chronicity,
-               TRUE ~ numeric_chronic
-             ), 
-             levels = c(1, 2, 3, 4),
-             labels = c("Y", "N", "Client.Does.Not.Know.or.Prefers.Not.to.Answer", "Information.Missing"))) %>%
-    ungroup() %>%
+    mutate(first_entry_date = min(EntryDate)) %>%
     filter(EntryDate == first_entry_date) %>%
+    mutate(
+      min_chronicity = min(numeric_chronic, na.rm = TRUE),
+      HoH_chronicity = min(case_when(RelationshipToHoH == 1 ~ numeric_chronic), 
+                           na.rm = TRUE),
+      HoH_or_adult_chronicity = min(case_when(
+        RelationshipToHoH == 1 |
+          chronic_age_group == "adult" ~ numeric_chronic), 
+        na.rm = TRUE),
+      new_chronic = factor(
+        case_when(
+          min_chronicity == 1 ~ min_chronicity,
+          (HoH_or_adult_chronicity == 2 &
+             chronic_age_group == "child") ~ HoH_or_adult_chronicity,
+          HoH_or_adult_chronicity %in% c(3, 4) ~ HoH_chronicity,
+          TRUE ~ numeric_chronic
+        ), 
+        levels = c(1, 2, 3, 4),
+        labels = c("Y", "N", "Client.Does.Not.Know.or.Prefers.Not.to.Answer", "Information.Missing"))) %>%
+    ungroup() %>%
     select(EnrollmentID, new_chronic)
   
   chronicity_data <- chronic_household %>%

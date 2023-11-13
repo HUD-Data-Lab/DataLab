@@ -51,6 +51,13 @@ for (file in names(hmis_csvs)){
       mutate(LocationDetails = NA)
   }
   
+  if (file == "Exit") {
+    data <- data %>%
+      mutate(days_to_shift = sample(1:14, nrow(data), replace = TRUE),
+             DateCreated = as.POSIXct(ExitDate + days_to_shift)) %>%
+      select(-days_to_shift)
+  }
+  
   assign(file, data)
   
   # write.csv(data, file = paste0(save_to, "\\", file, ".csv"), row.names = FALSE)

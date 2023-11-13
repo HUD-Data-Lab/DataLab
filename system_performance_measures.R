@@ -16,7 +16,7 @@ if(!require(tidyverse)) {
 }
 
 # parameters
-lookback_stop_date <- ymd("2013-10-1") #switch from 2013-10-1 (old Kit) to 2014-10-1 (New Kit)
+lookback_stop_date <- ymd("2014-10-1") #switch from 2013-10-1 (old Kit) to 2014-10-1 (New Kit)
 
 system_performance_measures <- TRUE
 
