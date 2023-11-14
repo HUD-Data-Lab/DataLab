@@ -1284,6 +1284,7 @@
                                             earned_income < calculated_total_income,
                                           calculated_total_income - earned_income, 0)) %>%
             select(c(PersonalID, all_of(needed_columns))) %>%
+            filter(!is.na(calculated_total_income)) %>%
             `colnames<-`(c("PersonalID", paste0(period, "_", needed_columns[1:2]), 
                            paste0(period, "_total_amount"))) %>%
             ifnull(., 0)
@@ -1295,8 +1296,8 @@
           select(all_of(standard_detail_columns)) %>%
           keep_adults_only() %>%
           filter(PersonalID %in% intersect(
-            entry_income$PersonalID[entry_income$IncomeFromAnySource %in% c(0, 1)],
-            annual_income$PersonalID[annual_income$IncomeFromAnySource %in% c(0, 1)])) %>%
+            entry_income_for_changes$PersonalID,
+            annual_income_for_changes$PersonalID)) %>%
           left_join(entry_income_for_changes, by = "PersonalID") %>%
           left_join(annual_income_for_changes, by = "PersonalID")
         
@@ -1304,6 +1305,7 @@
           titles <- paste(c("Number of Adults with", "Average Change in"), 
                           str_to_title(row), "Income")
           data <- entry_income_for_changes %>%
+            filter(PersonalID %in% Q19a1_detail$PersonalID) %>%
             get_income_type_changes(., row, "annual") %>%
             cbind(titles, .)
           
@@ -1343,9 +1345,6 @@
         for(period in entry_annual_exit[c(1, 3)]) {
           income_for_changes <- get(paste0(period, "_income")) %>%
             keep_adults_only() %>%
-            filter(PersonalID %in% intersect(
-              entry_income$PersonalID[entry_income$IncomeFromAnySource %in% c(0, 1)],
-              exit_income$PersonalID[exit_income$IncomeFromAnySource %in% c(0, 1)])) %>%
             determine_total_income(., annual = period == "annual") %>%
             mutate(earned_amount = if_else(calculated_total_income > 0 &
                                              earned_income > 0, 
@@ -1354,6 +1353,7 @@
                                             earned_income < calculated_total_income,
                                           calculated_total_income - earned_income, 0)) %>%
             select(c(PersonalID, all_of(needed_columns))) %>%
+            filter(!is.na(calculated_total_income)) %>%
             `colnames<-`(c("PersonalID", paste0(period, "_", needed_columns[1:2]), 
                            paste0(period, "_total_amount"))) %>%
             ifnull(., 0)
@@ -1366,8 +1366,8 @@
           select(all_of(standard_detail_columns)) %>%
           keep_adults_only() %>%
           filter(PersonalID %in% intersect(
-            entry_income$PersonalID[entry_income$IncomeFromAnySource %in% c(0, 1)],
-            exit_income$PersonalID[exit_income$IncomeFromAnySource %in% c(0, 1)])) %>%
+            entry_income_for_changes$PersonalID,
+            exit_income_for_changes$PersonalID)) %>%
           left_join(entry_income_for_changes, by = "PersonalID")%>%
           left_join(exit_income_for_changes, by = "PersonalID")
         
@@ -1375,6 +1375,7 @@
           titles <- paste(c("Number of Adults with", "Average Change in"), 
                           str_to_title(row), "Income")
           data <- entry_income_for_changes %>%
+            filter(PersonalID %in% Q19a2_detail$PersonalID) %>%
             get_income_type_changes(., row, "exit") %>%
             cbind(titles, .)
           
