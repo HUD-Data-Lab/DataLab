@@ -1425,13 +1425,40 @@
       
       # Q20a checked
       {
+        benefit_entry_annual_exit <- paste0(c("", "benefit_", ""), entry_annual_exit)
+        
+        recent_income <- recent_program_enrollment %>%
+          filter(is.na(ExitDate) &
+                   HouseholdID %in% annual_income$HouseholdID[annual_income$RelationshipToHoH == 1 &
+                                                                !is.na(annual_income$IncomeBenefitsID)] &
+                   RelationshipToHoH != 1) %>%
+          left_join(IncomeBenefits %>%
+                      group_by(EnrollmentID) %>%
+                      arrange(desc(InformationDate)) %>%
+                      slice(1L) %>%
+                      ungroup() %>%
+                      select(-c(PersonalID, ExportID)),
+                    by = "EnrollmentID")
+        
+        benefit_annual_income <- annual_income %>%
+          filter(RelationshipToHoH == 1 |
+                   HouseholdID %nin% annual_income$HouseholdID[annual_income$RelationshipToHoH == 1 &
+                                                                 !is.na(annual_income$IncomeBenefitsID)]) %>%
+          full_join(recent_income,
+                    by = intersect(colnames(recent_income),
+                                   colnames(annual_income)))
+        
         Q20a_detail <- recent_program_enrollment %>%
           keep_adults_only() %>%
           select(all_of(standard_detail_columns), new_veteran_status, chronic)
         
-        for(period in entry_annual_exit) {
+        for(period in benefit_entry_annual_exit) {
           data <- get(paste0(period, "_income")) %>%
-            select(EnrollmentID, all_of(benefit_list), BenefitsFromAnySource)
+            filter(period != "exit" |
+                     paste(HouseholdID, ExitDate) %in% paste(
+                       Q20a_detail$HouseholdID[Q20a_detail$RelationshipToHoH == 1],
+                       Q20a_detail$ExitDate[Q20a_detail$RelationshipToHoH == 1])) %>%
+          select(EnrollmentID, all_of(benefit_list), BenefitsFromAnySource)
           
           Q20a_detail <- Q20a_detail %>%
             left_join(data %>%
@@ -1446,10 +1473,14 @@
       #Note row header one or more source(s) is different from specs (1 + Source(s)). How exact do we want to be?
       {
         Q20b_detail <- "See Q20a_detail.csv"
-        for(period in entry_annual_exit) {
+        for(period in benefit_entry_annual_exit) {
           
           data <- get(paste0(period, "_income")) %>%
             keep_adults_only() %>%
+            filter(period != "exit" |
+                     paste(HouseholdID, ExitDate) %in% paste(
+                       Q20a_detail$HouseholdID[Q20a_detail$RelationshipToHoH == 1],
+                       Q20a_detail$ExitDate[Q20a_detail$RelationshipToHoH == 1])) %>%
             mutate(benefit_count = case_when(
               BenefitsFromAnySource == 0 &
                 (is.na(SNAP) | SNAP == 0) &
@@ -1468,7 +1499,7 @@
               BenefitsFromAnySource %in% c(8, 9) ~ "Unknown or refused",
               TRUE ~ "Not collected/annual assessment not due"))
           
-          if(period == "annual"){
+          if(period == "benefit_annual"){
             data <- data %>%
               left_join(annual_assessment_dates, by = "HouseholdID") %>%
               mutate(benefit_count = if_else(
@@ -1488,11 +1519,11 @@
         
         Q20b <- as.data.frame(benefit_count) %>%
           left_join(entry_benefit_counts, by = "benefit_count") %>%
-          left_join(annual_benefit_counts, by = "benefit_count") %>%
+          left_join(benefit_annual_benefit_counts, by = "benefit_count") %>%
           left_join(exit_benefit_counts, by = "benefit_count") %>%
           rename(BenefitGroup = benefit_count,
                  Benefit.at.Start = entry_people,
-                 Benefit.at.Latest.Annual.Assessment.for.Stayers = annual_people,
+                 Benefit.at.Latest.Annual.Assessment.for.Stayers = benefit_annual_people,
                  Benefit.at.Exit.for.Leavers = exit_people) %>%
           adorn_totals("row") %>%
           ifnull(., 0)

@@ -660,25 +660,33 @@ create_gender_groups <- function(filtered_recent_program_enrollment) {
 
 # create benefit group table
 create_benefit_groups <- function(included_enrollments) {
-  for(period in entry_annual_exit) {
+  for(period in benefit_entry_annual_exit) {
     
     data <- get(paste0(period, "_income")) %>%
       keep_adults_only() %>%
-      filter(EnrollmentID %in% included_enrollments$EnrollmentID) %>%
+      filter(EnrollmentID %in% included_enrollments$EnrollmentID &
+               (period != "exit" |
+                  paste(HouseholdID, ExitDate) %in% paste(
+                    included_enrollments$HouseholdID[included_enrollments$RelationshipToHoH == 1],
+                    included_enrollments$ExitDate[included_enrollments$RelationshipToHoH == 1]))) %>%
       select(all_of(benefit_list)) %>%
       pivot_existing_only(., "BenefitGroup", period) %>%
       left_join(BenefitTypes, by = "BenefitGroup") %>%
       mutate(BenefitGroup = OfficialBenefitName) %>%
       select(-OfficialBenefitName)
     
-    assign(paste0(period, "_benefit_sources"), data)
+    assign(
+      paste0(
+        entry_annual_exit[which(benefit_entry_annual_exit == period)],
+        "_benefit_sources"), 
+      data)
   }
   
   entry_benefit_sources %>%
     left_join(annual_benefit_sources, by = "BenefitGroup") %>%
     left_join(exit_benefit_sources, by = "BenefitGroup") %>%
     rename(Benefit.at.Start = entryClients,
-           Benefit.at.Latest.Annual.Assessment.for.Stayers = annualClients,
+           Benefit.at.Latest.Annual.Assessment.for.Stayers = benefit_annualClients,
            Benefit.at.Exit.for.Leavers = exitClients)
 }
 
