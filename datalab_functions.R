@@ -1206,9 +1206,8 @@ create_time_prior_to_housing <- function(filtered_enrollments) {
   filtered_enrollments %>%
     filter(ProjectType %in% c(0, 1, 2, 3, 8, 9, 13)) %>%
     mutate(housing_date = case_when(
-      ProjectType %nin% c(3, 9, 13) |
-        EntryDate > HoH_HMID ~ EntryDate,
-      TRUE ~ HoH_HMID),
+      ProjectType %nin% c(3, 9, 13) ~ EntryDate,
+      TRUE ~ MoveInDateAdj),
       homelessness_start_date = case_when(
         age < 18 &
           EntryDate == HoH_EntryDate ~ HoH_ADHS,
