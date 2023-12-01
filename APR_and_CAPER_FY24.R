@@ -101,7 +101,7 @@
     )
   }
   
-  items_to_keep <- c("items_to_keep", ls()) #Keep all functions and objects created up to this point. Why is this here? What is the purpose of this?
+  items_to_keep <- c("items_to_keep", ls())
   
   Exit <- Exit %>%
     rename(exit_DateCreated = DateCreated)
@@ -186,7 +186,7 @@
       # Q5a
       # Q5a checked
       {
-        recent_program_enrollment_dq <- recent_program_enrollment %>% #recent program enrollment created on line 91
+        recent_program_enrollment_dq <- recent_program_enrollment %>%
           filter(ProjectType != 4 |     # This removes enrollments that are street outreach project type or
                    (!is.na(DateOfEngagement) & # if date of engagement is not NA
                       DateOfEngagement <= report_end_date)) # date of engagement <= report end date.
@@ -210,7 +210,7 @@
       # Q6a
       #Q6a checked
       {
-        Q6a_data <- create_dq_Q1(recent_program_enrollment_dq) #View(create_dq_Q1) in datalab_functions.R line 1311. 
+        Q6a_data <- create_dq_Q1(recent_program_enrollment_dq) #View(create_dq_Q1) in datalab_functions.R 
         Q6a <- Q6a_data[[1]]
         Q6a_detail <- Q6a_data[[2]]
       }
@@ -2457,7 +2457,15 @@
           filter(PersonalID %in% recent_youth_enrollment$PersonalID)
         
         Q27i <- exit_income %>%
-          income_hh_type_disabling_condition_table(., youth = TRUE)
+          income_hh_type_disabling_condition_table(., youth = TRUE) %>% 
+          mutate(name = case_when(
+            name == "Unduplicated.Total.Adults" ~ "Unduplicated.Total.Youth", #Resolution to Testkit Issue 92. Rename to be youth 
+            TRUE ~ name
+          ))
+        
+        Q27i[, c(5, 9, 13, 17)] <- decimal_format(Q27i[, c(5, 9, 13, 17)], 4)
+        
+        View(Q27i)
       }
       
       # Q27j checked
