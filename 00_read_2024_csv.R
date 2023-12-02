@@ -9,8 +9,10 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
-source("datalab_functions.R")
-source("DataLab_Lists.R")
+#source("datalab_functions.R")
+source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/datalab_functions.R")
+#source("DataLab_Lists.R")
+source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/DataLab_Lists.R")
 
 file_source <- file.choose()
 

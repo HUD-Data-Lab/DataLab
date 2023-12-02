@@ -87,7 +87,8 @@ CE_element_projects <- Project %>%
   inner_join(CEParticipation %>%
                filter(CEParticipationStatusStartDate <= report_end_date &
                         (is.na(CEParticipationStatusEndDate) |
-                                 CEParticipationStatusEndDate >= report_start_date)) %>%
+                                 CEParticipationStatusEndDate >= report_start_date) &
+                        (AccessPoint == 1 | ReceivesReferrals == 1)) %>% #Testkit Issue 119 resolution
                select(ProjectID) %>%
                distinct(),
              by = "ProjectID") 

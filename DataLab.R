@@ -9,7 +9,8 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
-source("00_read_2024_csv.R")
+#source("00_read_2024_csv.R")
+source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/00_read_2024_csv.R")
 
 all_bed_nights <- Services %>%
   left_join(Enrollment %>%
