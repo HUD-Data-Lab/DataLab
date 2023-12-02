@@ -2219,9 +2219,18 @@
             TRUE ~ chronic_categories[4])) 
         
         Q26a_detail <- Q26b_detail %>%
-          filter(RelationshipToHoH == 1)
+          keep_adults_and_hoh_only(.)
         
         Q26a <- Q26a_detail %>%
+          group_by(HouseholdID) %>%
+          mutate(
+            category = case_when(
+              chronic_categories[1] %in% category ~ chronic_categories[1],
+              chronic_categories[3] %in% category ~ chronic_categories[3],
+              chronic_categories[4] %in% category ~ chronic_categories[4],
+              chronic_categories[2] %in% category ~ chronic_categories[2])) %>%
+          ungroup() %>%
+          filter(RelationshipToHoH == 1) %>%
           return_household_groups(., category, chronic_categories) %>%
           adorn_totals("row") %>%
           ifnull(., 0)
