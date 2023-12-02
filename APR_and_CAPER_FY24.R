@@ -1858,20 +1858,20 @@
               race_count > 1 ~ "Multi-racial (does not include Hispanic/Latina/e/o)",
               TRUE ~ "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)"),
             include_type = case_when(
-              MoveInDateAdj >= report_start_date & 
+              !is.na(MoveInDateAdj) &
                 MoveInDateAdj <= report_end_date ~ "moved_in",
-              leaver ~ "exit_only"))
+              TRUE ~ "not_yet_moved_in"))
         
       Q22g_calcs <- Q22g_detail %>% 
         group_by(race_tabulation) %>%
         summarise(
-          Persons.Moved.Into.Housing = n_distinct(PersonalID[days_prior_to_housing != "Not yet moved into housing"], 
+          Persons.Moved.Into.Housing = n_distinct(PersonalID[include_type == "moved_in"], 
                                                   na.rm = TRUE),
-          Persons.Not.Yet.Moved.Into.Housing = n_distinct(PersonalID[days_prior_to_housing == "Not yet moved into housing"], 
+          Persons.Not.Yet.Moved.Into.Housing = n_distinct(PersonalID[include_type == "not_yet_moved_in"], 
                                                       na.rm = TRUE),
-          Average.time.to.Move.In =  mean(number_of_days[days_prior_to_housing != "Not yet moved into housing"], 
+          Average.time.to.Move.In =  mean(number_of_days[include_type == "moved_in"], 
                                           na.rm = TRUE), 
-          Median.time.to.Move.In = median(number_of_days[days_prior_to_housing != "Not yet moved into housing"], 
+          Median.time.to.Move.In = median(number_of_days[include_type == "moved_in"], 
                                           na.rm = TRUE)) %>% 
         ungroup() 
       
