@@ -9,7 +9,7 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
-source("DataLab.R")
+source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/DataLab.R")
 
 report_start_date <- ymd("2021-10-1")
 report_end_date <- ymd("2022-9-30")
@@ -815,9 +815,17 @@ for (organization in c(47, 106, 109)) {
       dir.create("created_files_2")
     }
     
+    if (!dir.exists(paste0(folder_name, "/HMIS CSVs"))) {
+      dir.create(paste0(folder_name, "/HMIS CSVs"))
+    }
+      
     if (!dir.exists(paste0(folder_name, "/Reports"))) {
       dir.create(paste0(folder_name, "/Reports"))
     }
+    
+    write_csvs_for(Project$ProjectID[Project$OrganizationID == organization], 
+                   zip_title = Organization$OrganizationName[Organization$OrganizationID == organization],
+                   write_to <- paste0(folder_name, "/HMIS CSVs"))
     
     for (question in PATH_files) {
       if (exists(question)) {

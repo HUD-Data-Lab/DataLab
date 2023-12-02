@@ -19,7 +19,7 @@
     # This is a global parameter that should be changed if desired
     generate_new_kits <- TRUE
     
-    source("DataLab.R")
+    source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/DataLab.R")
   
   # used for building and testing APR on specific projects or groups of projects. To run full test kit use full_project_list
   {

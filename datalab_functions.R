@@ -1138,22 +1138,24 @@ write_csvs_for <- function(project_ids, zip_title, write_to) {
       
     }
     
-    if ("ExportDate" %in% colnames(data)) {
-      data <- data %>%
-        mutate(ExportDate = format(ExportDate, "%m-%d-%Y 12:00:00"))
-      
-    }
-    
-    if (file == "IncomeBenefits") {
-      data <- data %>%
-        mutate(across(
-          c("TotalMonthlyIncome", 
-            colnames(data)[str_detect(colnames(data), "Amount")]),
-          ~ if_else(!is.na(.), decimal_format(.), NA)))
-    }
-    
-    write.csv(data, file.path(paste0("created_files/", file, ".csv")), 
-              row.names=FALSE, na="")
+    write.csv(data %>%
+                mutate(
+                  across(colnames(file)[str_locate_all(pattern = "T",
+                                                       get(file,
+                                                           hmis_csvs_fy24))[[1]][,1]],
+                         ~ format(., format = "%Y-%m-%d %H:%M:%S")),
+                  across(colnames(file)[str_locate_all(pattern = "D",
+                                                       get(file,
+                                                           hmis_csvs_fy24))[[1]][,1]],
+                         ~ format(., format = "%Y-%m-%d")),
+                  across(colnames(file)[str_locate_all(pattern = "d",
+                                                       get(file,
+                                                           hmis_csvs_fy24))[[1]][,1]],
+                         ~ if_else(. > 0, sprintf("%.2f", .), NA))),
+              file.path(paste0("created_files/", file, ".csv")),
+              row.names=FALSE, na = "",
+              quote = which(as.character(lapply(get(file), class)) %nin%
+                              c("integer", "numeric")))
   }
   
   general_wd <- getwd()
