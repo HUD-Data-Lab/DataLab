@@ -1,6 +1,670 @@
-"Field","Response"
-1,"Subsidized housing application assistance"
-2,"Financial assistance for Moving On (e.g., security deposit, moving expenses)"
-3,"Non-financial assistance for Moving On (e.g., housing navigation, transition support)"
-4,"Housing referral/placement"
-5,"Other (please specify)"
+File,ColumnName,DataType,List,Nullable,Notes
+Export,ExportID,S32,NA,NA,Unique identifier
+Export,SourceType,I,NA,NA,"Identifies whether the source database is a
+continuum-operated HMIS (1), an agency-specific
+database (2), a data warehouse (3), or other (4).
+An HMIS instance operated jointly by more than
+one continuum should be identified as a data
+warehouse when the CoC export parameter is not
+used to limit the export to a single CoC."
+Export,SourceID,S32,NA,Y,"If SourceType = 1, this field may not be null and must
+identify the HUD CoC Code of the HMIS
+implementation from which data are being exported
+in the format of two letters, a dash, and 3 numbers.
+^[a-zA-Z]{2}-[0-9]{3}$
+If SourceType <> 1, this field may be null or used to
+specify other characteristics, as agreed upon by
+sender and receiver."
+Export,SourceName,S50,NA,Y,"If the source database is not an HMIS implementation
+(if SourceType <> 1), this field may not be null and
+must identify the organization responsible for the
+database."
+Export,SourceContactFirst,S50,NA,Y,The first name of the user generating the export.
+Export,SourceContactLast,S50,NA,Y,The last name of the user generating the export.
+Export,SourceContactPhone,S10,NA,Y,"The phone number of the user generating the export.
+Limited to 10 digits/no punctuation.
+[2-9][0-9]{2}[2-9][0-9]{2}[0-9]{4}"
+Export,SourceContactExtension,S5,NA,Y,"The phone extension of the user generating the
+export, if available. Limited to 5 digits/no
+punctuation.
+[0-9]{1,5}"
+Export,SourceContactEmail,S320,NA,Y,"The email address of the user generating the export, if
+available.
+Valid email addresses only"
+Export,ExportDate,T,NA,NA,The date and time that the export process was initiated.
+Export,ExportStartDate,D,NA,NA,The user-entered start date for the export period.
+Export,ExportEndDate,D,NA,NA,"The user-entered end date for the export period; the
+ExportEnd should be the same as the ExportStart for
+exports of HIC data."
+Export,SoftwareName,S50,NA,NA,The name of the software generating the export.
+Export,SoftwareVersion,S50,NA,Y,"The version number of the software, if applicable."
+Export,CSVVersion,S50,NA,Y,"The version number of the CSV Specification, if
+Applicable.This may, but is not required to be, include
+the [year] and [version]."
+Export,ExportPeriodType,I,1.1000000000000001,NA,NA
+Export,ExportDirective,I,1.2,NA,NA
+Export,HashStatus,I,1.5,NA,NA
+Export,ImplementationID,S200,NA,NA,"A vendor-generated ID that is unique to every source
+database, regardless of the number of CoCs participating
+in the implementation."
+Organization,OrganizationID,S32,NA,NA,Unique identifier
+Organization,OrganizationName,S200,NA,NA,NA
+Organization,VictimServiceProvider,I,1.1000000000000001,NA,NA
+Organization,OrganizationCommonName,S200,NA,Y,NA
+Organization,DateCreated,T,NA,NA,NA
+Organization,DateUpdated,T,NA,NA,NA
+Organization,UserID,S32,NA,NA,NA
+Organization,DateDeleted,T,NA,Y,NA
+Organization,ExportID,S32,NA,NA,Must match record in Export.csv
+User,UserID,S32,NA,NA,Unique Identifier
+User,UserFirstName,S50,NA,Y,"The first name of the user if
+available"
+User,UserLastName,S50,NA,Y,"The last name of the user if
+available"
+User,UserPhone,S10,NA,Y,"The phone number of the user if
+available. Limited to 10 digits/no
+punctuation.
+[2-9][0-9]{2}[2-9][0-9]{2}[0-9]{4}"
+User,UserExtension,S5,NA,Y,"The phone extension of the user, if
+available. Limited to 5 digits/no
+punctuation.
+[0-9]{1,5}"
+User,UserEmail,S320,NA,Y,"The email address of the user, if
+available.
+Valid email addresses only"
+User,DateCreated,T,NA,NA,NA
+User,DateUpdated,T,NA,NA,NA
+User,DateDeleted,T,NA,Y,NA
+User,ExportID,S32,NA,NA,Must match record in Export.csv
+Funder,FunderID,S32,NA,NA,Unique identifier
+Funder,ProjectID,S32,NA,NA,Must match a record in Project.csv
+Funder,Funder,I,36928,NA,NA
+Funder,OtherFunder,S50,NA,Y,Required if 2.06.1 = 46
+Funder,GrantID,S100,NA,NA,NA
+Funder,StartDate,D,NA,NA,NA
+Funder,EndDate,D,NA,Y,NA
+Funder,DateCreated,T,NA,NA,NA
+Funder,DateUpdated,T,NA,NA,NA
+Funder,UserID,S32,NA,NA,NA
+Funder,DateDeleted,T,NA,Y,NA
+Funder,ExportID,S32,NA,NA,Must match the ExportID in Export.csv
+Project,ProjectID,S32,NA,NA,Unique identifier
+Project,OrganizationID,S32,NA,NA,"Must match a record in
+Organization.csv"
+Project,ProjectName,S200,NA,NA,NA
+Project,ProjectCommonName,S200,NA,Y,NA
+Project,OperatingStartDate,D,NA,NA,NA
+Project,OperatingEndDate,D,NA,Y,NA
+Project,ContinuumProject,I,1.10,NA,NA
+Project,ProjectType,I,2.02.6,Y,"May be null if ContinuumProject <>
+1"
+Project,HousingType,I,2.02.D,Y,NA
+Project,RRHSubType,I,2.02.A,Y,NA
+Project,ResidentialAffiliation,I,1.10,Y,"Non-null if ProjectType = 6 or
+(ProjectType = 13 and RRHSubType
+= 1)"
+Project,TargetPopulation,I,2.02.7,NA,NA
+Project,HOPWAMedAssistedLivingFac,I,2.02.8,Y,NA
+Project,PITCount,I,NA,Y,"Used for the HIC; a count of active
+clients^{2} on the date of the PIT
+Count"
+Project,DateCreated,T,NA,NA,NA
+Project,DateUpdated,T,NA,NA,NA
+Project,UserID,S32,NA,NA,NA
+Project,DateDeleted,T,NA,Y,NA
+Project,ExportID,S32,NA,NA,Must match ExportID in Export.csv
+ProjectCoC,ProjectCoCID,S32,NA,NA,Unique identifier
+ProjectCoC,ProjectID,S32,NA,NA,Must match a ProjectID in Project.csv
+ProjectCoC,CoCCode,S6,NA,NA,"Two letters, a dash, and 3 numbers
+^[a-zA-Z]{2}-[0-9]{3}$"
+ProjectCoC,Geocode,S6,NA,NA,"Limited to six digits
+^[0-9]{6}$"
+ProjectCoC,Address1,S100,NA,Y,NA
+ProjectCoC,Address2,S100,NA,Y,NA
+ProjectCoC,City,S50,NA,Y,NA
+ProjectCoC,State,S2,NA,Y,"Limited to USPS-defined two-letter
+abbreviations^{4}
+^[a-zA-Z]{2}$"
+ProjectCoC,ZIP,S5,NA,Y,"Limited to five digits
+^[0-9]{5}$"
+ProjectCoC,GeographyType,I,38020,Y,NA
+ProjectCoC,DateCreated,T,NA,NA,NA
+ProjectCoC,DateUpdated,T,NA,NA,NA
+ProjectCoC,UserID,S32,NA,NA,NA
+ProjectCoC,DateDeleted,T,NA,Y,NA
+ProjectCoC,ExportID,S32,NA,NA,Must match the ExportID in Export.csv
+Inventory,InventoryID,S32,NA,NA,Unique identifier
+Inventory,ProjectID,S32,NA,NA,"Must match a ProjectID
+in ProjectCoC.csv"
+Inventory,CoCCode,S6,NA,NA,"Must match a CoCCode
+in ProjectCoC.csv for the
+same ProjectID"
+Inventory,HouseholdType,I,38024,NA,NA
+Inventory,Availability,I,38755,Y,"Null unless Project.csv
+ProjectType = 1 or 15"
+Inventory,UnitInventory,I,NA,NA,NA
+Inventory,BedInventory,I,NA,NA,NA
+Inventory,CHVetBedInventory,I,NA,Y,NA
+Inventory,YouthVetBedInventory,I,NA,Y,NA
+Inventory,VetBedInventory,I,NA,Y,NA
+Inventory,CHYouthBedInventory,I,NA,Y,NA
+Inventory,YouthBedInventory,I,NA,Y,NA
+Inventory,CHBedInventory,I,NA,Y,NA
+Inventory,OtherBedInventory,I,NA,Y,NA
+Inventory,ESBedType,I,38390,Y,"Null unless Project.csv
+ProjectType = 1 or 15"
+Inventory,InventoryStartDate,D,NA,NA,NA
+Inventory,InventoryEndDate,D,NA,Y,NA
+Inventory,DateCreated,T,NA,NA,NA
+Inventory,DateUpdated,T,NA,NA,NA
+Inventory,UserID,S32,NA,NA,NA
+Inventory,DateDeleted,T,NA,Y,NA
+Inventory,ExportID,S32,NA,NA,"Must match the
+ExportID in Export.csv"
+Affiliation,AffiliationID,S32,NA,NA,Unique identifier
+Affiliation,ProjectID,S32,NA,NA,"Must match a ProjectID in Project.csv where
+(ProjectType = 6) or (ProjectType = 13 and
+RRHSubType = 1)"
+Affiliation,ResProjectID,S32,NA,NA,"Must match a record in Project.csv where
+ProjectType = 1,2, 3, 8, 10, or 13. If ProjectType =
+13, RRHSubType must be 2."
+Affiliation,DateCreated,T,NA,NA,NA
+Affiliation,DateUpdated,T,NA,NA,NA
+Affiliation,UserID,S32,NA,NA,NA
+Affiliation,DateDeleted,T,NA,Y,NA
+Affiliation,ExportID,S,NA,NA,Must match the ExportID in Export.csv
+HMISParticipation,HMISParticipationID,S32,NA,NA,Unique identifier
+HMISParticipation,ProjectID,S32,NA,NA,"Must match a ProjectID in
+Project.csv"
+HMISParticipation,HMISParticipationType,I,36930,NA,NA
+HMISParticipation,HMISParticipationStatusStartDate,D,NA,NA,NA
+HMISParticipation,HMISParticipationStatusEndDate,D,NA,Y,NA
+HMISParticipation,DateCreated,T,NA,NA,NA
+HMISParticipation,DateUpdated,T,NA,NA,NA
+HMISParticipation,UserID,S32,NA,NA,NA
+HMISParticipation,DateDeleted,T,NA,Y,NA
+HMISParticipation,ExportID,S,NA,NA,"Must match the ExportID in
+Export.csv"
+CEParticipation,CEParticipationID,S32,NA,NA,Unique identifier
+CEParticipation,ProjectID,S32,NA,NA,"Must match a ProjectID in
+Project.csv"
+CEParticipation,AccessPoint,I,1.1000000000000001,NA,NA
+CEParticipation,PreventionAssessment,I,1.1000000000000001,NA,NA
+CEParticipation,CrisisAssessment,I,1.1000000000000001,NA,NA
+CEParticipation,HousingAssessment,I,1.1000000000000001,NA,NA
+CEParticipation,DirectServices,I,1.1000000000000001,NA,NA
+CEParticipation,ReceivesReferrals,I,1.1000000000000001,NA,NA
+CEParticipation,CEParticipationStatusStartDate,D,NA,NA,NA
+CEParticipation,CEParticipationStatusEndDate,D,NA,Y,NA
+CEParticipation,DateCreated,T,NA,NA,NA
+CEParticipation,DateUpdated,T,NA,NA,NA
+CEParticipation,UserID,S32,NA,NA,NA
+CEParticipation,DateDeleted,T,NA,Y,NA
+CEParticipation,ExportID,S,NA,NA,"Must match the ExportID in
+Export.csv"
+Client,PersonalID,S32,NA,NA,Unique identifier
+Client,FirstName,S50,NA,Y,"See notes in Hash Status section re: field
+sizes for hashed data."
+Client,MiddleName,S50,NA,Y,"See notes in Hash Status section re: field
+sizes for hashed data."
+Client,LastName,S50,NA,Y,"See notes in Hash Status section re: field
+sizes for hashed data."
+Client,NameSuffix,S50,NA,Y,NA
+Client,NameDataQuality,I,38412,NA,NA
+Client,SSN,S9,NA,Y,"See notes in Hash Status section re: field
+sizes for hashed data.
+The letter x is the only permissible non-numeric character and should be used to
+indicate the position of omitted digits
+^[0-9xX]{9}$^{6}"
+Client,SSNDataQuality,I,3.02.2,NA,NA
+Client,DOB,D,NA,Y,NA
+Client,DOBDataQuality,I,3.03.2,NA,NA
+Client,AmIndAKNative,I,1.7,NA,"1 = American Indian, Alaska Native, or
+Indigenous
+0 = (This race not selected.)"
+Client,Asian,I,1.10,NA,"1 = Asian or Asian American
+0 = (This race/ethnicity not selected.)"
+Client,BlackAfAmerican,I,1.10,NA,"1 = Black, African American, or African
+0 = (This race/ethnicity not selected.)"
+Client,HispanicLatinaeo,I,1.10,NA,"1 = Hispanic/Latina/e/o
+0 = (This race/ethnicity not selected.)"
+Client,MidEastNAfrican,I,1.10,NA,"1 = Middle Eastern or North African
+0 = (This race/ethnicity not selected.)"
+Client,NativeHIPacific,I,1.10,NA,"1 = Native Hawaiian or Pacific Islander
+0 = (This race/ethnicity not selected.)"
+Client,White,I,1.10,NA,"1 = White
+0 = (This race/ethnicity not selected.)"
+Client,RaceNone,I,1.6,Y,"Non-null only if all other race fields = 0 or
+99"
+Client,AdditionalRaceEthnicity,S100,NA,Y,NA
+Client,Woman,I,10,NA,"1 = Woman (Girl, if child)
+0 = (This option not selected.)"
+Client,Man,I,10,NA,"1 = Man (Boy, if child)
+0 = (This option not selected.)"
+Client,NonBinary,I,10,NA,"1 = Non-Binary
+0 = (This option not selected.)"
+Client,CulturallySpecific,I,1.10,NA,"1 = Culturally Specific Identity (e.g., Two-Spirit)
+0 = (This option not selected.)"
+Client,Transgender,I,1.10,NA,"1 = Transgender
+0 = (This option not selected.)"
+Client,Questioning,I,1.10,NA,"1 = Questioning
+0 = (This option not selected.)"
+Client,DifferentIdentity,I,1.10,NA,"1 = Different Identity
+0 = (This option not selected.)"
+Client,GenderNone,I,1.6,Y,"Non-null only if all other gender fields = 0
+or 99"
+Client,DifferentIdentityText,S100,NA,Y,Non-null if DifferentIdentity=1
+Client,VeteranStatus,I,1.8,NA,"Export 99 (Data not collected) for all
+clients, including minors, for whom there
+is no Veteran Status data."
+Client,YearEnteredService,I,NA,Y,"Values between 1920 and the current year
+^(19[2-8][0-9]|199[0-9]|20[01][0-9]|202[01])$^{7}"
+Client,YearSeparated,I,NA,Y,"Values between 1920 and the current year
+^(19[2-8][0-9]|199[0-9]|20[01][0-9]|202[01])$$"
+Client,WorldWarII,I,1.8,Y,NA
+Client,KoreanWar,I,1.8,Y,NA
+Client,VietnamWar,I,1.8,Y,NA
+Client,DesertStorm,I,1.8,Y,NA
+Client,AfghanistanOEF,I,1.8,Y,NA
+Client,IraqOIF,I,1.8,Y,NA
+Client,IraqOND,I,1.8,Y,NA
+Client,OtherTheater,I,1.8,Y,NA
+Client,MilitaryBranch,I,V1.11,Y,NA
+Client,DischargeStatus,I,V1.12,Y,NA
+Client,DateCreated,T,NA,NA,NA
+Client,DateUpdated,T,NA,NA,NA
+Client,UserID,S32,NA,NA,NA
+Client,DateDeleted,T,NA,Y,NA
+Client,ExportID,S32,NA,NA,Must match the ExportID in Export.csv
+Enrollment,EnrollmentID,S32,NA,NA,Unique identifier
+Enrollment,PersonalID,S32,NA,NA,NA
+Enrollment,ProjectID,S32,NA,NA,"Must match a ProjectID in
+Project.csv"
+Enrollment,EntryDate,D,NA,NA,NA
+Enrollment,HouseholdID,S32,NA,NA,NA
+Enrollment,RelationshipToHoH,I,3.15.1,NA,NA
+Enrollment,EnrollmentCoC,S6,NA,NA,"Must match a record in
+ProjectCoC.csv with the same
+ProjectID
+^[A-Za-z]{2}-(0-9){3}$"
+Enrollment,LivingSituation,I,3.12.1,Y,NA
+Enrollment,RentalSubsidyType,I,3.12.A,Y,Null unless 3.917.1 = 435
+Enrollment,LengthOfStay,I,3.917.2,Y,NA
+Enrollment,LOSUnderThreshold,I,1.7,Y,NA
+Enrollment,PreviousStreetESSH,I,1.7,Y,NA
+Enrollment,DateToStreetESSH,D,NA,Y,NA
+Enrollment,TimesHomelessPastThreeYears,I,3.917.4,Y,NA
+Enrollment,MonthsHomelessPastThreeYears,I,3.917.5,Y,NA
+Enrollment,DisablingCondition,I,1.8,NA,"Export 99 (Data not collected) for
+any project entry where there is no
+response."
+Enrollment,DateOfEngagement,D,NA,Y,NA
+Enrollment,MoveInDate,D,NA,Y,NA
+Enrollment,DateOfPATHStatus,D,NA,Y,NA
+Enrollment,ClientEnrolledInPATH,I,1.7,Y,NA
+Enrollment,ReasonNotEnrolled,I,P3.A,Y,Null unless P3.2 = 0
+Enrollment,PercentAMI,I,V4.1,Y,NA
+Enrollment,ReferralSource,I,R1.1,Y,NA
+Enrollment,CountOutreachReferralApproaches,I,NA,Y,NA
+Enrollment,DateOfBCPStatus,D,NA,Y,NA
+Enrollment,EligibleForRHY,I,1.7,Y,NA
+Enrollment,ReasonNoServices,I,R2.A,Y,Null unless R2.2 = 0
+Enrollment,RunawayYouth,I,1.8,Y,Null unless R2.2 = 1
+Enrollment,SexualOrientation,I,R3.1,Y,NA
+Enrollment,SexualOrientationOther,S100,NA,Y,Null unless R3.1 = 6
+Enrollment,FormerWardChildWelfare,I,1.8,Y,NA
+Enrollment,ChildWelfareYears,I,R11.A,Y,NA
+Enrollment,ChildWelfareMonths,I,NA,Y,NA
+Enrollment,FormerWardJuvenileJustice,I,1.8,Y,NA
+Enrollment,JuvenileJusticeYears,I,R11.A,Y,NA
+Enrollment,JuvenileJusticeMonths,I,NA,Y,NA
+Enrollment,UnemploymentFam,I,1.7,Y,NA
+Enrollment,MentalHealthDisorderFam,I,1.7,Y,NA
+Enrollment,PhysicalDisabilityFam,I,1.7,Y,NA
+Enrollment,AlcoholDrugUseDisorderFam,I,1.7,Y,NA
+Enrollment,InsufficientIncome,I,1.7,Y,NA
+Enrollment,IncarceratedParent,I,1.7,Y,NA
+Enrollment,VAMCStation,S5,V6.1,Y,"List includes non-integer values;
+data type is still a string."
+Enrollment,TargetScreenReqd,I,1.7,Y,NA
+Enrollment,TimeToHousingLoss,I,V7.A,Y,NA
+Enrollment,AnnualPercentAMI,I,V7.B,Y,NA
+Enrollment,LiteralHomelessHistory,I,V7.C,Y,NA
+Enrollment,ClientLeaseholder,I,1.7,Y,NA
+Enrollment,HOHLeaseholder,I,1.7,Y,NA
+Enrollment,SubsidyAtRisk,I,1.7,Y,NA
+Enrollment,EvictionHistory,I,V7.G,Y,NA
+Enrollment,CriminalRecord,I,1.7,Y,NA
+Enrollment,IncarceratedAdult,I,V7.I,Y,NA
+Enrollment,PrisonDischarge,I,1.7,Y,NA
+Enrollment,SexOffender,I,1.7,Y,NA
+Enrollment,DisabledHoH,I,1.7,Y,NA
+Enrollment,CurrentPregnant,I,1.7,Y,NA
+Enrollment,SingleParent,I,1.7,Y,NA
+Enrollment,DependentUnder6,I,V7.O,Y,NA
+Enrollment,HH5Plus,I,1.7,Y,NA
+Enrollment,CoCPrioritized,I,1.7,Y,NA
+Enrollment,HPScreeningScore,I,NA,Y,NA
+Enrollment,ThresholdScore,I,NA,Y,NA
+Enrollment,TranslationNeeded,I,1.8,Y,NA
+Enrollment,PreferredLanguage,I,NA,Y,NA
+Enrollment,PreferredLanguageDifferent,S100,NA,Y,Null unless C4.A = 21
+Enrollment,DateCreated,T,NA,NA,NA
+Enrollment,DateUpdated,T,NA,NA,NA
+Enrollment,UserID,S32,NA,NA,NA
+Enrollment,DateDeleted,T,NA,Y,NA
+Enrollment,ExportID,S32,NA,NA,Must match ExportID in Export.csv
+Exit,ExitID,S32,NA,NA,Unique identifier
+Exit,EnrollmentID,S32,NA,NA,NA
+Exit,PersonalID,S32,NA,NA,NA
+Exit,ExitDate,D,NA,NA,NA
+Exit,Destination,I,3.12.1,NA,NA
+Exit,DestinationSubsidyType,I ,3.12.A ,Y ,Null unless Destination = 435 
+Exit,OtherDestination,S50,NA,Y,Null unless Destination = 17
+Exit,HousingAssessment,I,W5.1,Y,NA
+Exit,SubsidyInformation,I,W5.AB,Y,Includes data for W5.A and W5.B.
+Exit,ProjectCompletionStatus,I,R17.1,Y,NA
+Exit,EarlyExitReason,I,R17.A,Y,Null unless R17.1 = 3
+Exit,ExchangeForSex,I,1.8,Y,NA
+Exit,ExchangeForSexPastThreeMonths,I,1.8,Y,Null unless R15.1 = 1
+Exit,CountOfExchangeForSex,I,R15.B,Y,Null unless R15.1 = 1
+Exit,AskedOrForcedToExchangeForSex,I,1.8,Y,Null unless R15.1 = 1
+Exit,AskedOrForcedToExchangeForSexPastThreeMonths,I,1.8,Y,Null unless R15.C = 1
+Exit,WorkplaceViolenceThreats,I,1.8,Y,NA
+Exit,WorkplacePromiseDifference,I,1.8,Y,NA
+Exit,CoercedToContinueWork,I,1.8,Y,Null unless R16.1 or R16.2 = 1
+Exit,LaborExploitPastThreeMonths,I,1.8,Y,Null unless R16.1 or R16.2 = 1
+Exit,CounselingReceived,I,1.7,Y,NA
+Exit,IndividualCounseling,I,1.7,Y,Null unless R18.1 = 1
+Exit,FamilyCounseling,I,1.7,Y,Null unless R18.1 = 1
+Exit,GroupCounseling,I,1.7,Y,Null unless R18.1 = 1
+Exit,SessionCountAtExit,I,NA,Y,"Null unless R18.1 = 1
+Integer >0"
+Exit,PostExitCounselingPlan,I,1.7,Y,NA
+Exit,SessionsInPlan,I,NA,Y,Integer >0
+Exit,DestinationSafeClient,I,1.8,Y,NA
+Exit,DestinationSafeWorker,I,R19.A,Y,NA
+Exit,PosAdultConnections,I,R19.A,Y,NA
+Exit,PosPeerConnections,I,R19.A,Y,NA
+Exit,PosCommunityConnections,I,R19.A,Y,NA
+Exit,AftercareDate,D,NA,Y,"Null unless date is between
+ExitDate and ExitDate + 180 days
+AND AftercareProvided is not null"
+Exit,AftercareProvided,I,R20.2,Y,"Null unless AftercareDate is
+between ExitDate and ExitDate +
+180 days"
+Exit,EmailSocialMedia,I,1.7,Y,Null unless R20.2 = 1
+Exit,Telephone,I,1.7,Y,Null unless R20.2 = 1
+Exit,InPersonIndividual,I,1.7,Y,Null unless R20.2 = 1
+Exit,InPersonGroup,I,1.7,Y,Null unless R20.2 = 1
+Exit,CMExitReason,I,V9.1,Y,NA
+Exit,DateCreated,T,NA,NA,NA
+Exit,DateUpdated,T,NA,NA,NA
+Exit,UserID,S32,NA,NA,NA
+Exit,DateDeleted,T,NA,Y,NA
+Exit,ExportID,S32,NA,NA,Must match ExportID in Export.csv
+IncomeBenefits,IncomeBenefitsID,S32,NA,NA,Unique identifier
+IncomeBenefits,EnrollmentID,S32,NA,NA,NA
+IncomeBenefits,PersonalID,S32,NA,NA,NA
+IncomeBenefits,InformationDate,D,NA,NA,NA
+IncomeBenefits,IncomeFromAnySource,I,1.8,Y,NA
+IncomeBenefits,TotalMonthlyIncome,M+,NA,Y,Should match aggregation of 4.02.2
+IncomeBenefits,Earned,I,1.7,Y,NA
+IncomeBenefits,EarnedAmount,M+,NA,Y,NA
+IncomeBenefits,Unemployment,I,1.7,Y,NA
+IncomeBenefits,UnemploymentAmount,M+,NA,Y,NA
+IncomeBenefits,SSI,I,1.7,Y,NA
+IncomeBenefits,SSIAmount,M+,NA,Y,NA
+IncomeBenefits,SSDI,I,1.7,Y,NA
+IncomeBenefits,SSDIAmount,M+,NA,Y,NA
+IncomeBenefits,VADisabilityService,I,1.7,Y,NA
+IncomeBenefits,VADisabilityServiceAmount,M+,NA,Y,NA
+IncomeBenefits,VADisabilityNonService,I,1.7,Y,NA
+IncomeBenefits,VADisabilityNonServiceAmount,M+,NA,Y,NA
+IncomeBenefits,PrivateDisability,I,1.7,Y,NA
+IncomeBenefits,PrivateDisabilityAmount,M+,NA,Y,NA
+IncomeBenefits,WorkersComp,I,1.7,Y,NA
+IncomeBenefits,WorkersCompAmount,M+,NA,Y,NA
+IncomeBenefits,TANF,I,1.7,Y,NA
+IncomeBenefits,TANFAmount,M+,NA,Y,NA
+IncomeBenefits,GA,I,1.7,Y,NA
+IncomeBenefits,GAAmount,M+,NA,Y,NA
+IncomeBenefits,SocSecRetirement,I,1.7,Y,NA
+IncomeBenefits,SocSecRetirementAmount,M+,NA,Y,NA
+IncomeBenefits,Pension,I,1.7,Y,NA
+IncomeBenefits,PensionAmount,M+,NA,Y,NA
+IncomeBenefits,ChildSupport,I,1.7,Y,NA
+IncomeBenefits,ChildSupportAmount,M+,NA,Y,NA
+IncomeBenefits,Alimony,I,1.7,Y,NA
+IncomeBenefits,AlimonyAmount,M+,NA,Y,NA
+IncomeBenefits,OtherIncomeSource,I,1.7,Y,NA
+IncomeBenefits,OtherIncomeAmount,M+,NA,Y,NA
+IncomeBenefits,OtherIncomeSourceIdentify,S50,NA,Y,Null unless 4.02.17 = 1
+IncomeBenefits,BenefitsFromAnySource,I,1.8,Y,NA
+IncomeBenefits,SNAP,I,1.7,y,NA
+IncomeBenefits,WIC,I,1.7,Y,NA
+IncomeBenefits,TANFChildCare,I,1.7,Y,NA
+IncomeBenefits,TANFTransportation,I,1.7,Y,NA
+IncomeBenefits,OtherTANF,I,1.7,Y,NA
+IncomeBenefits,OtherBenefitsSource,I,1.7,Y,NA
+IncomeBenefits,OtherBenefitsSourceIdentify,S50,NA,Y,Null unless 4.03.8 = 1
+IncomeBenefits,InsuranceFromAnySource,I,1.8,Y,NA
+IncomeBenefits,Medicaid,I,1.7,Y,NA
+IncomeBenefits,NoMedicaidReason,I,4.04.A,Y,Null unless 4.04.3 = 0
+IncomeBenefits,Medicare,I,1.7,Y,NA
+IncomeBenefits,NoMedicareReason,I,4.04.A,Y,Null unless 4.04.4 = 0
+IncomeBenefits,SCHIP,I,1.7,Y,NA
+IncomeBenefits,NoSCHIPReason,I,4.04.A,Y,Null unless 4.04.5 = 0
+IncomeBenefits,VHAServices,I,1.7,Y,NA
+IncomeBenefits,NoVHAReason,I,4.04.A,Y,Null unless 4.04.6 = 0
+IncomeBenefits,EmployerProvided,I,1.7,Y,NA
+IncomeBenefits,NoEmployerProvidedReason,I,4.04.A,Y,Null unless 4.04.7 = 0
+IncomeBenefits,COBRA,I,1.7,Y,NA
+IncomeBenefits,NoCOBRAReason,I,4.04.A,Y,Null unless 4.04.8 = 0
+IncomeBenefits,PrivatePay,I,1.7,Y,NA
+IncomeBenefits,NoPrivatePayReason,I,4.04.A,Y,Null unless 4.04.9 = 0
+IncomeBenefits,StateHealthIns,I,1.7,Y,NA
+IncomeBenefits,NoStateHealthInsReason,I,4.04.A,Y,Null unless 4.04.10 = 0
+IncomeBenefits,IndianHealthServices,I,1.7,Y,NA
+IncomeBenefits,NoIndianHealthServicesReason,I,4.04.A,Y,Null unless 4.04.11 = 0
+IncomeBenefits,OtherInsurance,I,1.7,Y,NA
+IncomeBenefits,OtherInsuranceIdentify,S50,NA,Y,Null unless 4.04.12 = 1
+IncomeBenefits,ADAP,I,1.8,Y,NA
+IncomeBenefits,NoADAPReason,I,W3,Y,Null unless W3.3 = 0
+IncomeBenefits,RyanWhiteMedDent,I,1.8,Y,NA
+IncomeBenefits,NoRyanWhiteReason,I,W3,Y,Null unless W3.4 = 0
+IncomeBenefits,ConnectionWithSOAR,I,1.8,Y,NA
+IncomeBenefits,DataCollectionStage,I,5.03.1,NA,NA
+IncomeBenefits,DateCreated,T,NA,NA,NA
+IncomeBenefits,DateUpdated,T,NA,NA,NA
+IncomeBenefits,UserID,S32,NA,NA,NA
+IncomeBenefits,DateDeleted,T,NA,Y,NA
+IncomeBenefits,ExportID,S32,NA,NA,"Must match ExportID in
+Export.csv"
+HealthAndDV,HealthAndDVID,S32,NA,NA,Unique identifier
+HealthAndDV,EnrollmentID,S32,NA,NA,NA
+HealthAndDV,PersonalID,S32,NA,NA,NA
+HealthAndDV,InformationDate,D,NA,NA,NA
+HealthAndDV,DomesticViolenceSurvivor,I,1.8,Y,NA
+HealthAndDV,WhenOccurred,I,4.11.A,Y,Null unless 4.11.2 = 1
+HealthAndDV,CurrentlyFleeing,I,1.8,Y,Null unless 4.11.2 = 1
+HealthAndDV,GeneralHealthStatus,I,R7.1,Y,NA
+HealthAndDV,DentalHealthStatus,I,R7.1,Y,NA
+HealthAndDV,MentalHealthStatus,I,R7.1,Y,NA
+HealthAndDV,PregnancyStatus,I,1.8,Y,NA
+HealthAndDV,DueDate,D,NA,Y,Null unless R10.1 = 1
+HealthAndDV,DataCollectionStage,I,5.03.1,NA,NA
+HealthAndDV,DateCreated,T,NA,NA,NA
+HealthAndDV,DateUpdated,T,NA,NA,NA
+HealthAndDV,UserID,S32,NA,NA,NA
+HealthAndDV,DateDeleted,T,NA,Y,NA
+HealthAndDV,ExportID,S32,NA,NA,Must match ExportID in Export.csv
+EmploymentEducation,EmploymentEducationID,S32,NA,NA,Unique identifier
+EmploymentEducation,EnrollmentID,S32,NA,NA,NA
+EmploymentEducation,PersonalID,S32,NA,NA,NA
+EmploymentEducation,InformationDate,D,NA,NA,NA
+EmploymentEducation,LastGradeCompleted,I,R4.1,Y,NA
+EmploymentEducation,SchoolStatus,I,R5.1,Y,NA
+EmploymentEducation,Employed,I,1.8,Y,NA
+EmploymentEducation,EmploymentType,I,R6.A,Y,Null unless R6.2 = 1
+EmploymentEducation,NotEmployedReason,I,R6.B,Y,Null unless R6.2 = 0
+EmploymentEducation,DataCollectionStage,I,37014,NA,NA
+EmploymentEducation,DateCreated,T,NA,NA,NA
+EmploymentEducation,DateUpdated,T,NA,NA,NA
+EmploymentEducation,UserID,S32,NA,NA,NA
+EmploymentEducation,DateDeleted,T,NA,Y,NA
+EmploymentEducation,ExportID,S32,NA,NA,Must match record in Export.csv
+Disabilities,DisabilitiesID,S32,NA,NA,Unique identifier
+Disabilities,EnrollmentID,S32,NA,NA,NA
+Disabilities,PersonalID,S32,NA,NA,NA
+Disabilities,InformationDate,D,NA,NA,NA
+Disabilities,DisabilityType,I,1.3,NA,NA
+Disabilities,DisabilityResponse,I,"(see
+note)",NA,"For DisabilityType
+10 (Substance Use Disorder) – •
+list 4.10.2
+• Any other – list 1.8"
+Disabilities,IndefiniteAndImpairs,I,1.8,Y,NA
+Disabilities,TCellCountAvailable,I,1.8,Y,"Null unless DisabilityType = 8
+AND DisabilityResponse=1"
+Disabilities,TcellCount,I,NA,Y,Null unless W4.2 = 1
+Disabilities,TcellSource,I,W4.B,Y,Null unless W4.A is not null
+Disabilities,ViralLoadAvailable,I,W4.3,Y,"Null unless DisabilityType = 8
+AND DisabilityResponse=1"
+Disabilities,ViralLoad,I,NA,Y,Null unless W4.3 = 1
+Disabilities,ViralLoadSource,I,W4.B,Y,Null unless W4.C is not null
+Disabilities,AntiRetroviral,I,1.8,Y,"Null unless DisabilityType = 8
+AND DisabilityResponse=1"
+Disabilities,DataCollectionStage,I,5.03.1,NA,NA
+Disabilities,DateCreated,T,NA,NA,NA
+Disabilities,DateUpdated,T,NA,NA,NA
+Disabilities,UserID,S32,NA,NA,NA
+Disabilities,DateDeleted,T,NA,Y,NA
+Disabilities,ExportID,S32,NA,NA,Must match ExportID in Export.csv
+Services,ServicesID,S32,NA,NA,Unique identifier
+Services,EnrollmentID,S32,NA,NA,NA
+Services,PersonalID,S32,NA,NA,NA
+Services,DateProvided,D,NA,NA,NA
+Services,RecordType,I,1.4,NA,NA
+Services,TypeProvided,I,"(see
+Notes)",NA,"For RecordType
+• 141 – list P1.2
+• 142 – list R14.2
+• 143 – list W1.2
+• 144 – list V2.2
+• 151 – list 2
+• 152 – list V3.3
+• 161 – list P2.2
+• 200 – list 4.14
+• 210 – list 2
+300 – list C2.2"
+Services,OtherTypeProvided,S50,NA,Y,"Null unless RecordType = 144 and
+TypeProvided = 6"
+Services,MovingOnOtherType,S50,NA,Y,"Null unless RecordType = 300 and
+TypeProvided = 5"
+Services,SubTypeProvided,I,"(see
+note)",Y,"Null unless RecordType = 144 and
+TypeProvided = 3, 4, or 5.
+For TypeProvided:
+• 3 – list V2.A
+• 4 – list V2.B
+• 5 – list V2.C"
+Services,FAAmount,M,NA,Y,Null unless RecordType = 151 or 152
+Services,FAStartDate,D,NA,Y,NA
+Services,FAEndDate,D,NA,Y,NA
+Services,ReferralOutcome,I,P2.A,Y,Null unless RecordType = 161
+Services,DateCreated,T,NA,NA,NA
+Services,DateUpdated,T,NA,NA,NA
+Services,UserID,S32,NA,NA,NA
+Services,DateDeleted,T,NA,Y,NA
+Services,ExportID,S32,NA,NA,Must match ExportID in Export.csv
+CurrentLivingSituation,CurrentLivingSitID,S32,NA,NA,Unique identifier
+CurrentLivingSituation,EnrollmentID,S32,NA,NA,NA
+CurrentLivingSituation,PersonalID,S32,NA,NA,NA
+CurrentLivingSituation,InformationDate,D,NA,NA,NA
+CurrentLivingSituation,CurrentLivingSituation,I,3.12,NA,NA
+CurrentLivingSituation,CLSSubsidyType,I ,3.12.A ,Y ,Null unless CurrentLivingSItuation = 435 
+CurrentLivingSituation,VerifiedBy,S100,NA,Y,Null unless ProjectType = 14
+CurrentLivingSituation,LeaveSituation14Days,I,1.8,Y,"Null unless CurrentLivingSituation in
+215, 206, 207, 225, 204, 205, 302,
+329, 314, 332, 336, 335, 410, 435,
+421, 411"
+CurrentLivingSituation,SubsequentResidence,I,1.8,Y,"Null unless LeaveSituation14Days =
+1"
+CurrentLivingSituation,ResourcesToObtain,I,1.8,Y,"Null unless LeaveSituation14Days =
+1"
+CurrentLivingSituation,LeaseOwn60Day,I,1.8,Y,"Null unless LeaveSituation14Days =
+1"
+CurrentLivingSituation,MovedTwoOrMore,I,1.8,Y,"Null unless LeaveSituation14Days =
+1"
+CurrentLivingSituation,LocationDetails,S250,NA,Y,NA
+CurrentLivingSituation,DateCreated,T,NA,NA,NA
+CurrentLivingSituation,DateUpdated,T,NA,NA,NA
+CurrentLivingSituation,UserID,S32,NA,NA,NA
+CurrentLivingSituation,DateDeleted,T,NA,Y,NA
+CurrentLivingSituation,ExportID,S32,NA,NA,Must match ExportID in Export.csv
+YouthEducationStatus,YouthEducationStatusID,S32,NA,NA,Unique identifier
+YouthEducationStatus,EnrollmentID,S32,NA,NA,NA
+YouthEducationStatus,PersonalID,S32,NA,NA,NA
+YouthEducationStatus,InformationDate,D,NA,NA,NA
+YouthEducationStatus,CurrentSchoolAttend,I,C3.2,Y,NA
+YouthEducationStatus,MostRecentEdStatus,I,C3.A,Y,Null unless C3.2 = 0
+YouthEducationStatus,CurrentEdStatus,I,C3.B,Y,Null unless C3.2 = 1 or C3.2 = 2
+YouthEducationStatus,DataCollectionStage,I,5.03.1,NA,NA
+YouthEducationStatus,DateCreated,T,NA,NA,NA
+YouthEducationStatus,DateUpdated,T,NA,NA,NA
+YouthEducationStatus,UserID,S32,NA,NA,NA
+YouthEducationStatus,DateDeleted,T,NA,Y,NA
+YouthEducationStatus,ExportID,S32,NA,NA,Must match ExportID in Export.csv
+Assessment,AssessmentID,S32  ,  ,  ,Unique identifier  
+Assessment,EnrollmentID,S32  ,  ,  Y  ,  
+Assessment,PersonalID,S32,NA,NA,NA
+Assessment,AssessmentDate,D,NA,NA,NA
+Assessment,AssessmentLocation,S250,NA,NA,NA
+Assessment,AssessmentType,I,4.19.3,NA,NA
+Assessment,AssessmentLevel,I,4.19.4,NA,NA
+Assessment,PrioritizationStatus,I,4.19.7,NA,NA
+Assessment,DateCreated,T,NA,NA,NA
+Assessment,DateUpdated,T,NA,NA,NA
+Assessment,UserID,S32,NA,NA,NA
+Assessment,DateDeleted,T,NA,Y,NA
+Assessment,ExportID,S32,NA,NA,Must match ExportID in Export.csv
+AssessmentQuestions,AssessmentQuestionID,S32,NA,NA,Unique identifier  
+AssessmentQuestions,AssessmentID,S32  ,  ,  ,NA
+AssessmentQuestions,EnrollmentID,S32  ,  ,NA,  
+AssessmentQuestions,PersonalID,S32,NA,NA,NA
+AssessmentQuestions,AssessmentQuestionGroup,S250,NA,NA,NA
+AssessmentQuestions,AssessmentQuestionOrder,I,NA,NA,NA
+AssessmentQuestions,AssessmentQuestion,S250,NA,NA,NA
+AssessmentQuestions,AssessmentAnswer,S500,NA,NA,NA
+AssessmentQuestions,DateCreated,T,NA,NA,NA
+AssessmentQuestions,DateUpdated,T,NA,NA,NA
+AssessmentQuestions,UserID,S32,NA,NA,NA
+AssessmentQuestions,DateDeleted,T,NA,Y,NA
+AssessmentQuestions,ExportID,S32,NA,NA,Must match ExportID in Export.csv
+AssessmentResults,AssessmentResultID,S32,NA,NA,Unique identifier  
+AssessmentResults,AssessmentID,S32  ,  ,  ,NA
+AssessmentResults,EnrollmentID,S32  ,  ,NA,  
+AssessmentResults,PersonalID,S32,NA,NA,NA
+AssessmentResults,AssessmentResultType,S250,NA,NA,Cannot be NULL if AssessmentResults.csv is populated
+AssessmentResults,AssessmentResult,S250,NA,Y,Locally determined
+AssessmentResults,DateCreated,T,NA,NA,NA
+AssessmentResults,DateUpdated,T,NA,NA,NA
+AssessmentResults,UserID,S32,NA,NA,NA
+AssessmentResults,DateDeleted,T,NA,Y,NA
+AssessmentResults,ExportID,S32,NA,NA,Must match ExportID in Export.csv
+Event,EventID,S32  ,  ,  ,Unique Identifier
+Event,EnrollmentID,S32  ,  ,NA,  
+Event,PersonalID,S32,NA,NA,NA
+Event,EventDate,D,NA,NA,NA
+Event,Event,I,4.20.2,NA,NA
+Event,ProbSolDivRRResult,I,1.7,Y,NA
+Event,ReferralCaseManageAfter,I,1.7,Y,NA
+Event,LocationCrisisOrPHHousing,S250,NA,Y,NA
+Event,ReferralResult,I,4.20.D,Y,NA
+Event,ResultDate,D,NA,Y,NULL unless ReferralResult not null
+Event,DateCreated,T,NA,NA,NA
+Event,DateUpdated,T,NA,NA,NA
+Event,UserID,S32,NA,NA,NA
+Event,DateDeleted,T,NA,Y,NA
+Event,ExportID,S32,NA,NA,Must match ExportID in Export.csv

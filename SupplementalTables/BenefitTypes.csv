@@ -1,6 +1,7 @@
-"Field","Response"
-1,"Subsidized housing application assistance"
-2,"Financial assistance for Moving On (e.g., security deposit, moving expenses)"
-3,"Non-financial assistance for Moving On (e.g., housing navigation, transition support)"
-4,"Housing referral/placement"
-5,"Other (please specify)"
+BenefitGroup,OfficialBenefitName
+SNAP,Supplemental Nutrition Assistance Program (SNAP) (Previously known as Food Stamps)
+WIC,"Special Supplemental Nutrition Program for Women, Infants, and Children (WIC)"
+TANFChildCare,TANF Child Care Services
+TANFTransportation,TANF Transportation Services
+OtherTANF,Other TANF-Funded Services
+OtherBenefitsSource,Other Source

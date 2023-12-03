@@ -1,6 +1,40 @@
-"Field","Response"
-1,"Subsidized housing application assistance"
-2,"Financial assistance for Moving On (e.g., security deposit, moving expenses)"
-3,"Non-financial assistance for Moving On (e.g., housing navigation, transition support)"
-4,"Housing referral/placement"
-5,"Other (please specify)"
+Location,Location_FY22,LocationDescription,APR_PriorLocationGroup_FY22,APR_ExitLocationGroup_FY22,PriorLivingSituation,CurrentLivingSituation,Destination,APR_PriorOrder_FY22,APR_ExitOrder_FY22,PriorResidenceType_Chronicity_FY22,APR_LocationOrder
+101,1,Emergency shelter,homeless,temporary,TRUE,TRUE,TRUE,3,18,homeless,4
+302,2,Transitional housing for homeless persons,homeless,temporary,TRUE,TRUE,TRUE,4,20,other,16
+NA,3,Permanent housing for formerly homeless persons,other,permanent,TRUE,TRUE,TRUE,19,10,other,NA
+204,4,Psychiatric hospital or other psychiatric facility,institution,institution,TRUE,TRUE,TRUE,10,30,institution,12
+205,5,Substance abuse treatment facility or detox center,institution,institution,TRUE,TRUE,TRUE,11,31,institution,13
+206,6,Hospital or other residential non-psychiatric medical facility,institution,institution,TRUE,TRUE,TRUE,12,32,institution,9
+207,7,"Jail, prison or juvenile detention facility",institution,institution,TRUE,TRUE,TRUE,13,33,institution,10
+8,8,Client doesn’t know,other,other,TRUE,TRUE,TRUE,32,NA,other,37
+9,9,Client prefers not to answer,other,other,TRUE,TRUE,TRUE,33,NA,other,NA
+410,10,"Rental by client, no ongoing housing subsidy",other,permanent,TRUE,TRUE,TRUE,25,6,other,28
+411,11,"Owned by client, no ongoing housing subsidy",other,permanent,TRUE,TRUE,TRUE,20,4,other,31
+312,12,"Staying or living with family, temporary tenure",NA,temporary,NA,NA,TRUE,NA,21,NA,20
+313,13,"Staying or living with friends, temporary tenure",NA,temporary,NA,NA,TRUE,NA,22,NA,21
+314,14,Hotel or motel paid for without emergency shelter voucher,other,temporary,TRUE,TRUE,TRUE,29,25,other,18
+215,15,Foster care home or foster care group home,institution,institution,TRUE,TRUE,TRUE,14,29,institution,8
+116,16,Place not meant for habitation,homeless,temporary,TRUE,TRUE,TRUE,5,23,homeless,3
+17,17,Other,NA,other,NA,TRUE,TRUE,NA,39,NA,35
+118,18,Safe Haven,homeless,temporary,TRUE,TRUE,TRUE,6,24,homeless,5
+NA,19,"Rental by client, with VASH housing subsidy",other,permanent,TRUE,TRUE,TRUE,26,7,other,NA
+NA,20,"Rental by client, with other ongoing housing subsidy",other,permanent,TRUE,TRUE,TRUE,28,9,other,NA
+421,21,"Owned by client, with ongoing housing subsidy",other,permanent,TRUE,TRUE,TRUE,21,5,other,30
+422,22,"Staying or living with family, permanent tenure",NA,permanent,NA,NA,TRUE,NA,11,NA,25
+423,23,"Staying or living with friends, permanent tenure",NA,permanent,NA,NA,TRUE,NA,12,NA,26
+24,24,Deceased,NA,other,NA,NA,TRUE,NA,38,NA,36
+225,25,Long-term care facility or nursing home,institution,institution,TRUE,TRUE,TRUE,15,34,institution,11
+426,26,Moved from one HOPWA funded project to HOPWA PH,NA,permanent,NA,NA,TRUE,NA,3,NA,27
+327,27,Moved from one HOPWA funded project to HOPWA TH,NA,temporary,NA,NA,TRUE,NA,19,NA,NA
+NA,28,"Rental by client, with GPD TIP housing subsidy",other,permanent,TRUE,TRUE,TRUE,27,8,other,NA
+329,29,Residential project or halfway house with no homeless criteria,institution,other,TRUE,TRUE,TRUE,16,37,other,17
+30,30,No exit interview completed,NA,other,NA,NA,TRUE,34,NA,NA,34
+NA,31,"Rental by client, with RRH or equivalent subsidy",other,permanent,TRUE,TRUE,TRUE,22,13,other,NA
+332,32,Host Home,homeless,temporary,TRUE,TRUE,TRUE,7,26,other,19
+NA,33,"Rental by client, with HCV voucher",other,permanent,TRUE,TRUE,TRUE,23,14,other,NA
+NA,34,Rental by client in a public housing unit,other,permanent,TRUE,TRUE,TRUE,24,15,other,NA
+335,35,"Staying or living in a family member’s room, apartment or house",other,NA,TRUE,TRUE,NA,31,NA,other,21
+336,36,"Staying or living in a friend’s room, apartment or house",other,NA,TRUE,TRUE,NA,30,NA,other,20
+37,37,Worker unable to determine,NA,NA,NA,TRUE,NA,NA,NA,NA,NA
+99,99,Data not collected,other,other,TRUE,TRUE,TRUE,34,NA,other,38
+435,NA,"Rental by client, with ongoing housing subsidy",NA,NA,TRUE,TRUE,TRUE,NA,NA,NA,29

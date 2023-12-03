@@ -1,6 +1,12 @@
-"Field","Response"
-1,"Subsidized housing application assistance"
-2,"Financial assistance for Moving On (e.g., security deposit, moving expenses)"
-3,"Non-financial assistance for Moving On (e.g., housing navigation, transition support)"
-4,"Housing referral/placement"
-5,"Other (please specify)"
+Field,Response
+428,GPD TIP housing subsidy
+419,VASH housing subsidy
+431,RRH or equivalent subsidy
+433,HCV voucher (tenant or project based) (not dedicated)
+434,Public housing unit
+420,"Rental by client, with other ongoing housing subsidy"
+436,Housing Stability Voucher
+437,Family Unification Program Voucher (FUP)
+438,Foster Youth to Independence Initiative (FYI)
+439,Permanent Supportive Housing
+440,Other permanent housing dedicated for formerly homeless persons
