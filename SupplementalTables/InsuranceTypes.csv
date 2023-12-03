@@ -1,6 +1,11 @@
-"Field","Response"
-1,"Subsidized housing application assistance"
-2,"Financial assistance for Moving On (e.g., security deposit, moving expenses)"
-3,"Non-financial assistance for Moving On (e.g., housing navigation, transition support)"
-4,"Housing referral/placement"
-5,"Other (please specify)"
+InsuranceGroup,OfficialInsuranceName
+Medicaid,MEDICAID
+Medicare,MEDICARE
+SCHIP,State Children’s Health Insurance Program
+VHAServices,Veteran's Health Administration (VHA)
+EmployerProvided,Employer – Provided Health Insurance
+COBRA,Health Insurance obtained through COBRA
+PrivatePay,Private Pay Health Insurance
+StateHealthIns,State Health Insurance for Adults
+IndianHealthServices,Indian Health Services Program
+OtherInsurance,Other

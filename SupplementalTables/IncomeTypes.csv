@@ -1,6 +1,16 @@
-"Field","Response"
-1,"Subsidized housing application assistance"
-2,"Financial assistance for Moving On (e.g., security deposit, moving expenses)"
-3,"Non-financial assistance for Moving On (e.g., housing navigation, transition support)"
-4,"Housing referral/placement"
-5,"Other (please specify)"
+IncomeGroup,OfficialIncomeName
+Earned,Earned Income
+Unemployment,Unemployment Insurance
+SSI,Supplemental Security Income (SSI)
+SSDI,Social Security Disability Insurance (SSDI)
+VADisabilityService,VA Service – Connected Disability Compensation
+VADisabilityNonService,VA Non-Service Connected Disability Pension
+PrivateDisability,Private Disability Insurance
+WorkersComp,Worker’s Compensation
+TANF,Temporary Assistance for Needy Families (TANF)
+GA,General Assistance (GA)
+SocSecRetirement,Retirement Income from Social Security
+Pension,Pension or retirement income from a former job
+ChildSupport,Child Support
+Alimony,Alimony and other spousal support
+OtherIncomeSource,Other Source

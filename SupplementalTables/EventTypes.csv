@@ -1,6 +1,19 @@
-"Field","Response"
-1,"Subsidized housing application assistance"
-2,"Financial assistance for Moving On (e.g., security deposit, moving expenses)"
-3,"Non-financial assistance for Moving On (e.g., housing navigation, transition support)"
-4,"Housing referral/placement"
-5,"Other (please specify)"
+Event,Label
+1,Referral to Prevention Assistance project
+2,Problem Solving/Diversion/Rapid Resolution intervention or service
+3,Referral to scheduled Coordinated Entry Crisis Needs Assessment
+4,Referral to scheduled Coordinated Entry Housing Needs Assessment
+5,Post-placement/follow-up case management 
+6,Street Outreach project or services 
+7,Housing Navigation project or services 
+8,Non-continuum services: Ineligible for continuum services 
+9,Non continuum services: No availability in continuum services 
+10,Emergency Shelter bed opening 
+11,Transitional Housing bed/unit opening 
+12,Joint TH-RRH project/unit/resource opening 
+13,RRH project resource opening 
+14,PSH project resource opening 
+15,Other PH project 
+16,Referral to emergency assistance/flex fund/furniture assistance 
+17,Referral to Emergency Housing Voucher (EHV) 
+18,Referral to a Housing Stability Voucher 
