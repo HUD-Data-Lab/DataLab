@@ -22,9 +22,8 @@ library(zip)
 # library(shinydashboard)
 # library(bsicons)
 
-`%nin%` = Negate(`%in%`)
-
-# source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/DataLab_Lists.R")
+source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/datalab_functions.R")
+source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/DataLab_Lists.R")
 
 
 # source("https://raw.githubusercontent.com/abtassociates/eva/main/helper_functions.R")
@@ -79,20 +78,4 @@ ICF_TitlePanel <- function (title, windowTitle = title, color = "#031D40") {
           h1(title, style = css))
 }
 
-IncomeTypes <- tibble(
-  IncomeGroup = c("Earned", "Unemployment", "SSI", "SSDI", "VADisabilityService", 
-                  "VADisabilityNonService", "PrivateDisability", "WorkersComp",
-                  "TANF", "GA", "SocSecRetirement", "Pension", "ChildSupport",
-                  "Alimony", "OtherIncomeSource"),
-  OfficialIncomeName = c("Earned Income", "Unemployment Insurance",
-                         "Supplemental Security Income (SSI)",
-                         "Social Security Disability Insurance (SSDI)",
-                         "VA Service – Connected Disability Compensation",
-                         "VA Non-Service Connected Disability Pension",
-                         "Private Disability Insurance", "Worker’s Compensation",
-                         "Temporary Assistance for Needy Families (TANF)",
-                         "General Assistance (GA)", 
-                         "Retirement Income from Social Security", 
-                         "Pension or retirement income from a former job",
-                         "Child Support", "Alimony and other spousal support",
-                         "Other Source"))
+

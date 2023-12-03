@@ -171,11 +171,13 @@ valid_cocs <- c(
 library(tidyverse)
 library(readxl)
 
-ResidenceUses <- read_excel("SupplementalTables.xlsx",
-                            sheet = "ResidenceUses",
-                            col_types = c("numeric", "numeric", "text", "text", 
-                                          "text", "logical", "logical", "logical",
-                                          "numeric", "numeric", "text", "numeric")) %>%
+# ResidenceUses <- read_excel("SupplementalTables.xlsx",
+#                             sheet = "ResidenceUses",
+#                             col_types = c("numeric", "numeric", "text", "text", 
+#                                           "text", "logical", "logical", "logical",
+#                                           "numeric", "numeric", "text", "numeric")) %>%
+ResidenceUses <- read_csv("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/SupplementalTables/ResidenceUses.csv",
+                        col_types = "nnccclllnncn") %>%
   mutate(PriorResidenceType_Chronicity = case_when(
     floor(Location/100) == 1 ~ "homeless",
     floor(Location/100) == 2 ~ "institution",
@@ -196,10 +198,13 @@ ResidenceUses <- read_excel("SupplementalTables.xlsx",
 # used in:
 #   APR/CAPER - 
 
-DestinationClassification <- read_excel("SupplementalTables.xlsx",
-                                        sheet = "DestinationClassificationRead",
-                                        col_types = c("numeric", "numeric", 
-                                                      "text"))
+# DestinationClassification <- read_excel("SupplementalTables.xlsx",
+#                                         sheet = "DestinationClassificationRead",
+#                                         col_types = c("numeric", "numeric", 
+#                                                       "text"))
+
+  DestinationClassification <- read_csv("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/SupplementalTables/DestinationClassificationRead.csv",
+                        col_types = "nnc")
 
 # ------------------------------------------------------------------------------
 # -------------------------- Subsidy List ----------------------------------
@@ -207,11 +212,12 @@ DestinationClassification <- read_excel("SupplementalTables.xlsx",
 # used in:
 #   APR - Q23d
 
-subsidy_list <- read_excel("SupplementalTables.xlsx",
-                           sheet = "DestinationSubsidy",
-                           col_types = c("numeric", "text"))
+# subsidy_list <- read_excel("SupplementalTables.xlsx",
+#                            sheet = "DestinationSubsidy",
+#                            col_types = c("numeric", "text"))
 
-
+  subsidy_list <- read_csv("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/SupplementalTables/DestinationSubsidy.csv",
+                        col_types = "nc")
 
 # ------------------------------------------------------------------------------
 # -------------------------- Income Type List ----------------------------------
@@ -219,9 +225,12 @@ subsidy_list <- read_excel("SupplementalTables.xlsx",
 # used in:
 #   APR/CAPER - 
 
-IncomeTypes <- read_excel("SupplementalTables.xlsx",
-                          sheet = "IncomeTypes",
-                          col_types = c("text", "text"))
+# IncomeTypes <- read_excel("SupplementalTables.xlsx",
+#                           sheet = "IncomeTypes",
+#                           col_types = c("text", "text"))
+
+IncomeTypes <- read_csv("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/SupplementalTables/IncomeTypes.csv",
+                         col_types = "cc")
 
 
 # ------------------------------------------------------------------------------
@@ -230,9 +239,12 @@ IncomeTypes <- read_excel("SupplementalTables.xlsx",
 # used in:
 #   APR/CAPER - 
 
-BenefitTypes <- read_excel("SupplementalTables.xlsx",
-                           sheet = "BenefitTypes",
-                           col_types = c("text", "text"))
+# BenefitTypes <- read_excel("SupplementalTables.xlsx",
+#                            sheet = "BenefitTypes",
+#                            col_types = c("text", "text"))
+
+BenefitTypes <- read_csv("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/SupplementalTables/BenefitTypes.csv",
+                         col_types = "cc")
 
 
 # ------------------------------------------------------------------------------
@@ -241,10 +253,12 @@ BenefitTypes <- read_excel("SupplementalTables.xlsx",
 # used in:
 #   APR/CAPER - 
 
-InsuranceTypes <- read_excel("SupplementalTables.xlsx",
-                             sheet = "InsuranceTypes",
-                             col_types = c("text", "text"))
+# InsuranceTypes <- read_excel("SupplementalTables.xlsx",
+#                              sheet = "InsuranceTypes",
+#                              col_types = c("text", "text"))
 
+InsuranceTypes <- read_csv("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/SupplementalTables/InsuranceTypes.csv",
+                        col_types = "cc")
 
 # ------------------------------------------------------------------------------
 # --------------------------- Event Type List ----------------------------------
@@ -252,10 +266,12 @@ InsuranceTypes <- read_excel("SupplementalTables.xlsx",
 # used in:
 #   CE APR
 
-EventTypes <- read_excel("SupplementalTables.xlsx",
-                             sheet = "EventTypes",
-                             col_types = c("numeric", "text"))
+# EventTypes <- read_excel("SupplementalTables.xlsx",
+#                              sheet = "EventTypes",
+#                              col_types = c("numeric", "text"))
 
+EventTypes <- read_csv("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/SupplementalTables/EventTypes.csv",
+                           col_types = "nc")
 
 # ------------------------------------------------------------------------------
 # ------------------------------ Subsidy Type List -----------------------------  
@@ -430,9 +446,12 @@ assessment_outcomes = c("Able to maintain the housing they had at project start-
 # used in:
 #   APR/CAPER - Q24b   
 
-moving_on_assistance <- read_excel("SupplementalTables.xlsx",
-                                   sheet = "MoveOnAssistance",
-                                   col_types = c("numeric", "text"))
+# moving_on_assistance <- read_excel("SupplementalTables.xlsx",
+#                                    sheet = "MoveOnAssistance",
+#                                    col_types = c("numeric", "text"))
+
+moving_on_assistance <- read_csv("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/SupplementalTables/MoveOnAssistance.csv",
+                       col_types = "nc")
 
 # ------------------------------------------------------------------------------
 # ----------------- Classification List: Veteran and Chronic -------------------
@@ -692,8 +711,10 @@ referral_results <- c("Successful referral: client accepted",
 # used in:
 #   APR/CAPER - 
 
-CSV_columns <- read_excel("SupplementalTables.xlsx",
-                            sheet = "CSV_Columns") %>%
+# CSV_columns <- read_excel("SupplementalTables.xlsx",
+#                             sheet = "CSV_Columns") %>%
+
+CSV_columns <- read_csv("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/SupplementalTables/CSV_Columns.csv") %>%
   mutate(RDataType = case_when(
     str_detect(DataType, "S") ~ "c",
     DataType == "I" ~ "i",
@@ -729,5 +750,7 @@ possible_languages <- read_excel("HMIS-C4-Translation-Assistance-Needed-Suppleme
 # used in:
 #   APR/CAPER - 
 
-youth_education_labels <- read_excel("SupplementalTables.xlsx",
-                          sheet = "YouthEducationStatus")
+# youth_education_labels <- read_excel("SupplementalTables.xlsx",
+#                           sheet = "YouthEducationStatus")
+
+youth_education_labels <- read_csv("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/SupplementalTables/YouthEducationStatus.csv")
