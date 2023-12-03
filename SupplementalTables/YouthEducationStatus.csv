@@ -1,6 +1,25 @@
-"Field","Response"
-1,"Subsidized housing application assistance"
-2,"Financial assistance for Moving On (e.g., security deposit, moving expenses)"
-3,"Non-financial assistance for Moving On (e.g., housing navigation, transition support)"
-4,"Housing referral/placement"
-5,"Other (please specify)"
+Value,Response,Question
+0,Not currently enrolled in any school or educational course,C3.2
+1,Currently enrolled but NOT attending regularly (when school or the course is in session),C3.2
+2,Currently enrolled and attending regularly (when school or the course is in session),C3.2
+9,Client Doesn’t Know / Prefers Not to Answer,C3.2
+99,Data not collected,C3.2
+NA,For those not enrolled – most recent education status,NA
+0,K12: Graduated from high school,C3.A
+1,K12: Obtained GED,C3.A
+2,K12: Dropped out,C3.A
+3,K12: Suspended,C3.A
+4,K12: Expelled,C3.A
+5,Higher education: Pursuing a credential but not currently attending,C3.A
+6,Higher education: Dropped out,C3.A
+7,Higher education: Obtained a credential/degree,C3.A
+9,Client Doesn’t Know / Prefers Not to Answer,C3.A
+99,Data not collected,C3.A
+NA,For those currently enrolled – current status,NA
+0,Pursuing a high school diploma or GED,C3.B
+1,Pursuing Associate’s Degree,C3.B
+2,Pursuing Bachelor’s Degree,C3.B
+3,Pursuing Graduate Degree,C3.B
+4,Pursuing other post-secondary credential,C3.B
+9,Client Doesn’t Know / Prefers Not to Answer,C3.B
+99,Data not collected,C3.B

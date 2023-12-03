@@ -1,6 +1,30 @@
-"Field","Response"
-1,"Subsidized housing application assistance"
-2,"Financial assistance for Moving On (e.g., security deposit, moving expenses)"
-3,"Non-financial assistance for Moving On (e.g., housing navigation, transition support)"
-4,"Housing referral/placement"
-5,"Other (please specify)"
+Location,4,0,1,2,3,9,10,13,8,6
+101,P,N,N,N,N,N,N,N,N,N
+116,N,N,N,N,N,N,N,N,N,N
+118,P,N,N,N,N,N,N,N,N,N
+206,X,X,X,X,X,X,X,X,X,X
+215,P,X,X,X,X,X,X,X,X,X
+207,N,N,N,N,N,N,N,N,N,N
+204,P,N,N,N,N,N,N,N,N,N
+205,P,N,N,N,N,N,N,N,N,N
+225,P,X,X,X,X,X,X,X,X,X
+329,X,N,N,N,N,N,N,N,N,N
+314,P,N,N,N,N,N,N,N,N,N
+312,P,N,N,N,N,N,N,N,N,N
+313,P,N,N,N,N,N,N,N,N,N
+302,P,N,N,N,N,N,N,N,N,N
+327,P,N,N,N,N,N,N,N,N,N
+332,P,N,N,N,N,N,N,N,N,N
+426,P,P,P,P,P,P,P,P,P,P
+411,P,P,P,P,P,P,P,P,P,P
+421,P,P,P,P,P,P,P,P,P,P
+410,P,P,P,P,P,P,P,P,P,P
+435,P,P,P,P,P,P,P,P,P,P
+422,P,P,P,P,P,P,P,P,P,P
+423,P,P,P,P,P,P,P,P,P,P
+24,X,X,X,X,X,X,X,X,X,X
+8,N,N,N,N,N,N,N,N,N,N
+9,N,N,N,N,N,N,N,N,N,N
+99,N,N,N,N,N,N,N,N,N,N
+30,N,N,N,N,N,N,N,N,N,N
+17,N,N,N,N,N,N,N,N,N,N
