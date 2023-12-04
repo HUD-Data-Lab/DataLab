@@ -52,6 +52,15 @@ get_col_types <- function(file) {
   return(col_types)
 }
 
+convert_list_1.8 <- function(column_name) {
+  # replace_na(column_name, 99)
+  names_for_1.8[match(column_name %>%
+                        replace_na(99), values_for_1.8)]
+}
+names_for_1.8 <- c("Yes", "No", "Client doesn't know",
+                   "Client prefers not to answer", "Data not collected")
+values_for_1.8 <- c(1, 0, 8, 9, 99)
+
 ICF_theme <- bslib::bs_theme(
   bg = "#ffffff", fg = "#000000", primary = "#0785F2",
   secondary = "#031D40", success = "#30F298", info = "#5BCBF5",
