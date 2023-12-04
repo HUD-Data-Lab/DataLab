@@ -36,7 +36,7 @@ function(input, output, session) {
   # observeEvent(input$imported, {
     valid_file(0)
     csv_files <- list()
-    source("local_initially_valid_import.R", local = TRUE)
+    source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/local_initially_valid_import.R")
     # extract file names from their uploaded zip
     if(tolower(tools::file_ext(input$imported$datapath)) != "zip") {
       show_invalid_popup(127)
