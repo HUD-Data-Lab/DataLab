@@ -29,6 +29,11 @@ function(input, output, session) {
     return(data)
   }
   
+  observeEvent(input$timeOut, {
+    reset("imported")
+    session$reload()
+  })
+  
   csv_files <- reactive({
     if (is.null(input$imported)) {
       return ()
@@ -36,7 +41,8 @@ function(input, output, session) {
   # observeEvent(input$imported, {
     valid_file(0)
     csv_files <- list()
-    source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/local_initially_valid_import.R")
+    source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/local_initially_valid_import.R", 
+           local = TRUE)
     # extract file names from their uploaded zip
     if(tolower(tools::file_ext(input$imported$datapath)) != "zip") {
       show_invalid_popup(127)

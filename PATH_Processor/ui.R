@@ -48,6 +48,30 @@
 
 ui <- 
   fluidPage(
+    tags$head(
+      tags$script(HTML("function idleTimer() {
+          var timeoutTime = 600000;
+          var t = setTimeout(logout, timeoutTime);
+          window.onmousemove = resetTimer; // catches mouse movements
+          window.onmousedown = resetTimer; // catches mouse movements
+          window.onclick = resetTimer;     // catches mouse clicks
+          window.onscroll = resetTimer;    // catches scrolling
+          window.onkeypress = resetTimer;  //catches keyboard actions
+    
+          function logout() {
+            alert('Your session timed out. Your data has been cleared, please re-upload.');
+            Shiny.setInputValue('timeOut', 1)
+          }
+    
+          function resetTimer() {
+            clearTimeout(t);
+            t = setTimeout(logout, timeoutTime); 
+          }
+        }
+        idleTimer();"
+      ))
+    ),
+    useShinyjs(),
     # thematic_shiny(),
     theme = ICF_theme,
     
