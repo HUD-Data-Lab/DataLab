@@ -1675,7 +1675,8 @@ return_race_groups <- function(APR_dataframe, grouped_by = grouped_by,
 
 add_chronicity_data <- function(df_of_active_enrollments,
                                 Enrollment = Enrollment,
-                                Project = Project) {
+                                Project = Project,
+                                Client = Client) {
   
   additional_disability_check <- disability_table %>%
     filter(DataCollectionStage == 1 &
