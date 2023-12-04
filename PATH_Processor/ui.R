@@ -108,7 +108,7 @@ ui <-
         uiOutput("report_end_date"))),
     # fluidRow(
     #   card(
-    #     DT::dataTableOutput("pdde_summary_table")
+    #     DT::dataTableOutput("debug_table")
     #   )
     # ),
     fluidRow(downloadButton('downloadall', 'Download PATH Report')),
