@@ -112,7 +112,10 @@ function(input, output, session) {
          Funder = Funder,
          Organization = Organization,
          Project = Project,
-         Services = Services)
+         Services = Services,
+         IncomeBenefits = IncomeBenefits,
+         Disabilities = Disabilities,
+         HealthAndDV = HealthAndDV)
     # Organization
     # names(csv_files) <- unique(cols_and_data_types$File)
     # csv_files
@@ -136,19 +139,6 @@ function(input, output, session) {
                  "What organization would you like to generate the report for?",
                  choices = choices,
                  selected = choices[1])
-  })
-  
-  output$pdde_summary_table <- DT::renderDataTable({
-    # req(valid_file() == 1)
-      if (is.null(input$imported)) {
-        return ()
-      }
-    datatable(
-      csv_files()$Organization,
-      rownames = FALSE,
-      filter = 'none',
-      options = list(dom = 't')
-    )
   })
   
   output$report_start_date <- renderUI({
@@ -175,25 +165,38 @@ function(input, output, session) {
       tmpdir <- tempdir()
       setwd(tempdir())
       print(tempdir())
+  # run_questions <- reactive({
+  #   if (is.null(input$imported)) {
+  #     return ()
+  #   }
 
-      Client <- csv_files()$Client
-      CurrentLivingSituation <- csv_files()$CurrentLivingSituation
-      Enrollment <- csv_files()$Enrollment
-      Event <- csv_files()$Event
-      Exit <- csv_files()$Exit
-      Funder <- csv_files()$Funder
-      Organization <- csv_files()$Organization
-      Project <- csv_files()$Project
-      Services <- csv_files()$Services
+      Client <<- csv_files()$Client
+      CurrentLivingSituation <<- csv_files()$CurrentLivingSituation
+      Enrollment <<- csv_files()$Enrollment
+      Event <<- csv_files()$Event
+      Exit <<- csv_files()$Exit
+      Funder <<- csv_files()$Funder
+      Organization <<- csv_files()$Organization
+      Project <<- csv_files()$Project
+      Services <<- csv_files()$Services
+      IncomeBenefits <<- csv_files()$IncomeBenefits
+      Disabilities <<- csv_files()$Disabilities
+      HealthAndDV <<- csv_files()$HealthAndDV
+      report_end_date <<- input$report_end_date
+      report_start_date <<- input$report_start_date
 
       #---------------------------------------------------
       relevant_projects <- Funder %>%
         filter(Funder == 21 &
-                 ProjectID %in% Project$ProjectID[Project$ProjectType %in% c(4, 6) &
-                                                    Project$OrganizationID == input$org_selector] &
-                 StartDate <= input$report_end_date &
+                 StartDate <= report_end_date &
                  (is.na(EndDate) |
-                    EndDate >= input$report_start_date)) %>%
+                    EndDate >= report_start_date)) %>%
+        inner_join(Project %>% 
+                     filter(ProjectType %in% c(4, 6)),
+                   by = "ProjectID") %>%
+        inner_join(Organization %>% 
+                     filter(OrganizationName == input$org_selector),
+                   by = "OrganizationID") %>%
         .$ProjectID %>%
         unique()
 
@@ -227,10 +230,33 @@ function(input, output, session) {
         group_by(EnrollmentID, active_date) %>%
         mutate(
           number_in_day = seq(n()),
-          in_report_period = active_date >= input$report_start_date &
-            active_date <= input$report_end_date) %>%
+          in_report_period = active_date >= report_start_date &
+            active_date <= report_end_date) %>%
         ungroup()
 
+      # check <- PATH_activity_dates %>%
+      #   full_join(Enrollment, by = "EnrollmentID") %>%
+      #   
+      #   # Enrollment %>%
+      #   # select(all_of(colnames(Enrollment)[1:21])) %>%
+      #   select(all_of(c(colnames(PATH_activity_dates),
+      #                   colnames(Enrollment)[1:21]))) %>%
+      #   left_join(Exit %>%
+      #               select(EnrollmentID, ExitDate, Destination),
+      #             by = "EnrollmentID") %>%
+      #   left_join(Project %>%
+      #               select(ProjectID, ProjectType),
+      #             by = "ProjectID")# %>%
+      # filter(
+      #   ProjectID %in% relevant_projects &
+      #     ((ExitDate >= report_start_date &
+      #         ExitDate <= report_end_date) |
+      #        (EntryDate <= report_end_date &
+      #           (is.na(ExitDate) |
+      #              ExitDate > report_end_date) &
+      #           EnrollmentID %in% PATH_activity_dates$EnrollmentID[PATH_activity_dates$in_report_period])))
+      
+      
       data_prep <- Enrollment %>%
         select(all_of(colnames(Enrollment)[1:21])) %>%
         left_join(Exit %>%
@@ -241,11 +267,11 @@ function(input, output, session) {
                   by = "ProjectID") %>%
         filter(
           ProjectID %in% relevant_projects &
-            ((ExitDate >= input$report_start_date &
-                ExitDate <= input$report_end_date) |
-               (EntryDate <= input$report_end_date &
+            ((ExitDate >= report_start_date &
+                ExitDate <= report_end_date) |
+               (EntryDate <= report_end_date &
                   (is.na(ExitDate) |
-                     ExitDate > input$report_end_date) &
+                     ExitDate > report_end_date) &
                   EnrollmentID %in% PATH_activity_dates$EnrollmentID[PATH_activity_dates$in_report_period])))
 
       general_detail <- data_prep %>%
@@ -253,28 +279,28 @@ function(input, output, session) {
                     select(PersonalID, DOB),
                   by = "PersonalID") %>%
         mutate(
-          ExitDateAdj = if_else(is.na(ExitDate), input$report_end_date,
+          ExitDateAdj = if_else(is.na(ExitDate), report_end_date,
                                 ExitDate),
-          new_and_active = EntryDate >= input$report_start_date &
-            EntryDate <= input$report_end_date &
-            PersonalID %nin% data_prep$PersonalID[data_prep$EntryDate < input$report_start_date],
+          new_and_active = EntryDate >= report_start_date &
+            EntryDate <= report_end_date &
+            PersonalID %nin% data_prep$PersonalID[data_prep$EntryDate < report_start_date],
           active_and_enrolled = !is.na(ClientEnrolledInPATH) &
             !is.na(DateOfPATHStatus) &
             ClientEnrolledInPATH == 1 &
-            DateOfPATHStatus <= input$report_end_date &
+            DateOfPATHStatus <= report_end_date &
             DateOfPATHStatus >= EntryDate &
             DateOfPATHStatus <= ExitDateAdj,
-          status_during_period = DateOfPATHStatus >= input$report_start_date &
-            DateOfPATHStatus <= input$report_end_date,
+          status_during_period = DateOfPATHStatus >= report_start_date &
+            DateOfPATHStatus <= report_end_date,
           enrolled_during_period = status_during_period &
             ClientEnrolledInPATH == 1,
           leaver = !is.na(ExitDate) &
-            ExitDate >= input$report_start_date &
-            ExitDate <= input$report_end_date,
+            ExitDate >= report_start_date &
+            ExitDate <= report_end_date,
           stayer = is.na(ExitDate),
           date_for_age = (if_else(
-            EntryDate <= input$report_start_date,
-            input$report_start_date, # Return Report Start date if true
+            EntryDate <= report_start_date,
+            report_start_date, # Return Report Start date if true
             EntryDate)),
           age = trunc((DOB %--% date_for_age) / years(1))) %>%
         select(-date_for_age) %>%
@@ -297,8 +323,8 @@ function(input, output, session) {
 
         Q16_detail <- Services %>%
           filter(EnrollmentID %in% general_detail$EnrollmentID[general_detail$active_and_enrolled] &
-                   DateProvided >= input$report_start_date &
-                   DateProvided <= input$report_end_date &
+                   DateProvided >= report_start_date &
+                   DateProvided <= report_end_date &
                    ((RecordType == 141 & #  141 is PATH service |
                        TypeProvided == 4) |
                       (RecordType == 161 & #  161 is PATH referral
@@ -392,8 +418,8 @@ function(input, output, session) {
                       select(EnrollmentID, PersonalID, DateProvided, RecordType,
                              TypeProvided) %>%
                       filter(EnrollmentID %in% general_detail$EnrollmentID[general_detail$active_and_enrolled] &
-                               DateProvided >= input$report_start_date &
-                               DateProvided <= input$report_end_date &
+                               DateProvided >= report_start_date &
+                               DateProvided <= report_end_date &
                                RecordType == 141),
                     by = "TypeProvided")
 
@@ -430,8 +456,8 @@ function(input, output, session) {
                       select(EnrollmentID, PersonalID, DateProvided, RecordType,
                              TypeProvided, ReferralOutcome) %>%
                       filter(EnrollmentID %in% general_detail$EnrollmentID[general_detail$active_and_enrolled] &
-                               DateProvided >= input$report_start_date &
-                               DateProvided <= input$report_end_date &
+                               DateProvided >= report_start_date &
+                               DateProvided <= report_end_date &
                                RecordType == 161),
                     by = "TypeProvided")
 
@@ -748,7 +774,7 @@ function(input, output, session) {
           select(EnrollmentID, PersonalID, EntryDate, ExitDateAdj) %>%
           left_join(Disabilities %>%
                       select(-PersonalID) %>%
-                      filter(InformationDate <= input$report_end_date &
+                      filter(InformationDate <= report_end_date &
                                DisabilityType == 10),
                     join_by(EnrollmentID,
                             EntryDate <= InformationDate,
@@ -782,7 +808,7 @@ function(input, output, session) {
           select(EnrollmentID, PersonalID, EntryDate, ExitDateAdj) %>%
           left_join(IncomeBenefits %>%
                       select(EnrollmentID, InformationDate, ConnectionWithSOAR) %>%
-                      filter(InformationDate <= input$report_end_date),
+                      filter(InformationDate <= report_end_date),
                     join_by(EnrollmentID,
                             EntryDate <= InformationDate,
                             ExitDateAdj >= InformationDate)) %>%
@@ -806,6 +832,29 @@ function(input, output, session) {
             .before = col_b)
 
         # Q26h
+        disability_table <<- Disabilities %>% 
+          filter(DisabilityResponse %in% c(0, 1) |
+                   (DisabilityType == 10 &
+                      DisabilityResponse %in% c(2, 3))) %>%
+          mutate(disability_name = case_when(DisabilityType == 5 ~ "Physical Disability",
+                                             DisabilityType == 6 ~ "Developmental Disability",
+                                             DisabilityType == 7 ~ "Chronic Health Condition",
+                                             DisabilityType == 8 ~ "HIV/AIDS",
+                                             DisabilityType == 9 ~ "Mental Health Disorder",
+                                             DisabilityResponse == 1 ~ "Alcohol Use Disorder",
+                                             DisabilityResponse == 2 ~ "Drug Use Disorder",
+                                             DisabilityResponse == 3 ~ "Both Alcohol and Drug Use Disorders"),
+                 disabilities = case_when(
+                   DisabilityResponse %in% 1:3 ~
+                     if_else(disability_name == "Both Alcohol and Drug Use Disorders", 2, 1)),
+                 indefinite_and_impairs = ((DisabilityResponse == 1 &
+                                              DisabilityType %in% c(6, 8)) |
+                                             (DisabilityResponse %in% c(2, 3) &
+                                                DisabilityType %in% c(5, 7, 9, 10) &
+                                                IndefiniteAndImpairs == 1))) %>%
+          select(EnrollmentID, DataCollectionStage, InformationDate, disability_name, 
+                 DisabilityResponse, indefinite_and_impairs, disabilities)
+        
         Q26h_j_detail <- general_detail %>%
           select(HouseholdID, EnrollmentID, PersonalID, EntryDate, ExitDate,
                  DisablingCondition, LivingSituation, LengthOfStay,
@@ -925,7 +974,7 @@ function(input, output, session) {
           select(EnrollmentID, PersonalID, EntryDate, ExitDateAdj) %>%
           left_join(HealthAndDV %>%
                       select(EnrollmentID, InformationDate, DomesticViolenceSurvivor) %>%
-                      filter(InformationDate <= input$report_end_date),
+                      filter(InformationDate <= report_end_date),
                     join_by(EnrollmentID,
                             EntryDate <= InformationDate,
                             ExitDateAdj >= InformationDate)) %>%
@@ -968,6 +1017,8 @@ function(input, output, session) {
 
 
       PATH_files <- c("Q8_16", "Q17", "Q18", "Q19_24", "Q25", "Q26")
+      # test_files <<- list(Q8_16, Q17, Q18, Q19_24, Q25, Q26)
+      # Q26
 
       for (question in PATH_files) {
         to_write <- get(question) %>%
@@ -981,8 +1032,23 @@ function(input, output, session) {
 
       zip(zipfile = fname, files = PATH_files)
       if(file.exists(paste0(fname, ".zip"))) {file.rename(paste0(fname, ".zip"), fname)}
-    },
+    }
+    ,
     contentType = "application/zip"
   )
+  
+  output$pdde_summary_table <- DT::renderDataTable({
+    # req(valid_file() == 1)
+    if (is.null(input$imported)) {
+      return ()
+    }
+    datatable(
+      # csv_files()$Organization,
+      run_questions(),
+      rownames = FALSE,
+      filter = 'none',
+      options = list(dom = 't')
+    )
+  })
   
   }

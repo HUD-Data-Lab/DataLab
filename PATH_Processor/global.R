@@ -35,8 +35,7 @@ cols_and_data_types <- read_csv("https://raw.githubusercontent.com/abtassociates
                                 col_types = cols()) %>%
   filter(!(File %in% c("Affiliation",
                        "AssessmentResults",
-                       "AssessmentQuestions",
-                       "Disabilities")))
+                       "AssessmentQuestions")))
 data_type_mapping <- c(
   character = "c", 
   numeric = "n", 
