@@ -861,7 +861,8 @@ function(input, output, session) {
              TimesHomelessPastThreeYears, MonthsHomelessPastThreeYears) %>%
       add_chronicity_data(., Enrollment = csv_files()$Enrollment,
                           Project = csv_files()$Project,
-                          Client = csv_files()$Client)
+                          Client = csv_files()$Client,
+                          report_start_date = input$report_start_date)
     
     living_situation_counts <- Q26h_j_detail %>%
       mutate(LivingSituation = if_else(
