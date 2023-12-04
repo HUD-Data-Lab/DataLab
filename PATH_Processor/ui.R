@@ -48,7 +48,7 @@
 
 ui <- 
   fluidPage(
-    thematic_shiny(),
+    # thematic_shiny(),
     theme = ICF_theme,
     
     ICF_TitlePanel("PATH Report Generator"),
@@ -98,7 +98,7 @@ ui <-
                   multiple = FALSE,
                   accept = ".zip")#,
         # uiOutput("fileInfo")
-        )),
+      )),
     fluidRow(
       card(
         uiOutput("org_selector")
@@ -106,21 +106,42 @@ ui <-
       card(
         uiOutput("report_start_date"),
         uiOutput("report_end_date"))),
+    # fluidRow(
+    #   card(
+    #     DT::dataTableOutput("pdde_summary_table")
+    #   )
+    # ),
+    fluidRow(downloadButton('downloadall', 'Download PATH Report')),
     fluidRow(
-      card(
-        DT::dataTableOutput("pdde_summary_table")
-      )
-    ),
-fluidRow(downloadButton('downloadall', 'Download PATH Report')),
-
-
-
-fluidRow(
-  card(card_header(
-    "Citations"),
-    HTML("<p>To ge")))
-
-)
+      card(card_header(
+        "Citations"),
+        HTML("<p>This project would not exist were it not for the existence of
+         other quality, free and open source products, particularly the following:
+         
+         <p>The wonderful <a href = 'https://github.com/abtassociates/eva' target= '_blank' rel='noopener noreferrer'>Eva</a> app developed by Abt 
+         
+         <p>The <a href = 'https://cran.r-project.org/package=tidyverse' 
+         target= '_blank' rel='noopener noreferrer'>tidyverse</a> package
+         
+         <p>The <a href = 'https://cran.r-project.org/package=stringr' 
+         target= '_blank' rel='noopener noreferrer'>stringr</a> package
+         
+         <p>The <a href = 'https://cran.r-project.org/package=janitor' 
+         target= '_blank' rel='noopener noreferrer'>janitor</a> package
+         
+         <p>The <a href = 'https://cran.r-project.org/package=shiny' 
+         target= '_blank' rel='noopener noreferrer'>shiny</a> package
+         
+         <p>The <a href = 'https://cran.r-project.org/package=bslib' 
+         target= '_blank' rel='noopener noreferrer'>bslib</a> package
+         
+         <p>The <a href = 'https://cran.r-project.org/package=DT' 
+         target= '_blank' rel='noopener noreferrer'>DT</a> package
+         
+         <p>The <a href = 'https://cran.r-project.org/package=zip' 
+         target= '_blank' rel='noopener noreferrer'>zip</a> package")))
+    
+  )
 # 
 # theme <- bslib::bs_theme(
 #   bg = "#0b3d91",
