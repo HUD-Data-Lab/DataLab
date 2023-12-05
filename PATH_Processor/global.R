@@ -23,6 +23,8 @@ library(zip)
 # library(shinydashboard)
 # library(bsicons)
 
+options(shiny.maxRequestSize = 30*1024^2)
+
 source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/datalab_functions.R")
 source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/DataLab_Lists.R")
 
@@ -61,6 +63,8 @@ convert_list_1.8 <- function(column_name) {
 names_for_1.8 <- c("Yes", "No", "Client doesn't know",
                    "Client prefers not to answer", "Data not collected")
 values_for_1.8 <- c(1, 0, 8, 9, 99)
+
+PATH_questions <- c("Q8_16", "Q17", "Q18", "Q19_24", "Q25", "Q26")
 
 ICF_theme <- bslib::bs_theme(
   bg = "#ffffff", fg = "#000000", primary = "#0785F2",

@@ -103,9 +103,8 @@ function(input, output, session) {
         # csv_files <- c(csv_files, list(get(file)))
       }
     }
-    default_report_start_date <<- Export %>% pull(ExportStartDate)
-    
-    default_report_end_date <<- Export %>% pull(ExportEndDate)
+    default_report_start_date <- Export %>% pull(ExportStartDate)
+    default_report_end_date <- Export %>% pull(ExportEndDate)
     
     # rv$Enrollment <- Enrollment
     # valid_file(1)
@@ -123,12 +122,12 @@ function(input, output, session) {
          Services = Services,
          IncomeBenefits = IncomeBenefits,
          Disabilities = Disabilities,
-         HealthAndDV = HealthAndDV)
+         HealthAndDV = HealthAndDV,
+         default_report_start_date = default_report_start_date,
+         default_report_end_date = default_report_end_date)
     # Organization
     # names(csv_files) <- unique(cols_and_data_types$File)
     # csv_files
-    
-    
   })
   
   output$org_selector <- renderUI({
@@ -155,6 +154,7 @@ function(input, output, session) {
     if (is.null(input$imported)) {
       return ()
     }
+    default_report_start_date <- csv_files()$default_report_start_date
     dateInput("report_start_date",
                  "Report Start Date",
                  value = default_report_start_date)
@@ -164,6 +164,7 @@ function(input, output, session) {
     if (is.null(input$imported)) {
       return ()
     }
+    default_report_end_date <- csv_files()$default_report_end_date
     dateInput("report_end_date",
               "Report End Date",
               value = default_report_end_date)
@@ -196,7 +197,7 @@ function(input, output, session) {
     
     PATH_activity_date_columns <- c("EnrollmentID", "active_date", "type")
     
-    csv_files()$CurrentLivingSituation %>%
+    PATH_activity_dates <- csv_files()$CurrentLivingSituation %>%
       select(EnrollmentID, InformationDate) %>%
       mutate(type = "CLS") %>%
       `colnames<-`(PATH_activity_date_columns) %>%
@@ -220,13 +221,22 @@ function(input, output, session) {
       filter(active_date >= EntryDate &
                (active_date <= ExitDate |
                   is.na(ExitDate))) %>%
-      select(-c(EntryDate, ExitDate))  %>%
-      group_by(EnrollmentID, active_date) %>%
-      mutate(
-        number_in_day = seq(n()),
-        in_report_period = active_date >= input$report_start_date &
-          active_date <= input$report_end_date) %>%
-      ungroup()
+      select(-c(EntryDate, ExitDate))
+    
+    if (nrow(PATH_activity_dates) > 0) {
+      PATH_activity_dates <- PATH_activity_dates %>%
+        group_by(EnrollmentID, active_date) %>%      
+        mutate(
+          number_in_day = seq(n()),
+          in_report_period = active_date >= input$report_start_date &
+            active_date <= input$report_end_date) %>%
+        ungroup()
+    } else {
+      PATH_activity_dates$number_in_day <- NA
+      PATH_activity_dates$in_report_period <- NA
+    }
+    
+    PATH_activity_dates
   })
   
   general_detail <- reactive({
@@ -645,8 +655,9 @@ function(input, output, session) {
                          na.rm = TRUE))) %>%
       set_hud_format(., ignore_row_names = TRUE) %>%
       ifnull(., 0)
-    
+
     Q25[is.na(Q25)] <- ""
+    Q25
   })
   
   Q26 <- reactive({
@@ -1036,8 +1047,7 @@ function(input, output, session) {
       print(tempdir())
 
 
-      PATH_files <- paste0(c("Q8_16", "Q17", "Q18", "Q19_24", "Q25", "Q26"),
-                           ".csv")
+      PATH_files <- paste0(PATH_questions, ".csv")
       
       write.csv(Q8_16(), "Q8_16.csv", row.names=FALSE)
       write.csv(Q17(), "Q17.csv", row.names=FALSE)
@@ -1053,16 +1063,39 @@ function(input, output, session) {
     contentType = "application/zip"
   )
   
-  output$debug_table <- DT::renderDataTable({
-    # req(valid_file() == 1)
+  output$preview_selector <- renderUI({
     if (is.null(input$imported)) {
       return ()
     }
+    
+    # choices <- unique(orgs_with_PATH$OrganizationName)
+    # choices <- ls()
+    radioButtons("preview_selector",
+                 "What table would you like to preview?",
+                 choices = PATH_questions,
+                 selected = PATH_questions[1])
+  })
+  
+  
+  output$debug_table <- DT::renderDataTable({
+    if (is.null(input$imported)) {
+      return ()
+    }
+    req(input$preview_selector)
+    if (input$preview_selector == "Q8_16") {df <- Q8_16()}
+    else if (input$preview_selector == "Q17") {df <- Q17()}
+    else if (input$preview_selector == "Q18") {df <- Q18()}
+    else if (input$preview_selector == "Q19_24") {df <- Q19_24()}
+    else if (input$preview_selector == "Q25") {df <- Q25()}
+    else if (input$preview_selector == "Q26") {df <- Q26()}
+    
     datatable(
       # csv_files()$Organization,
       # run_questions(),
-      Q8_16(),
-      rownames = FALSE
+      df,
+      rownames = FALSE,
+      options = list(dom = 't',
+                     "pageLength" = -1)
     )
   })
   

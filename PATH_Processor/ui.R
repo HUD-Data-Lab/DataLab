@@ -130,12 +130,13 @@ ui <-
       card(
         uiOutput("report_start_date"),
         uiOutput("report_end_date"))),
-    # fluidRow(
-    #   card(
-    #     DT::dataTableOutput("debug_table")
-    #   )
-    # ),
     fluidRow(downloadButton('downloadall', 'Download PATH Report')),
+    fluidRow(
+      uiOutput("preview_selector"), 
+      card(
+        DT::dataTableOutput("debug_table")
+      )
+    ),
     fluidRow(
       card(card_header(
         "Citations"),
