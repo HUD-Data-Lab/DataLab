@@ -1379,7 +1379,7 @@ get_household_info <- function(filtered_enrollments,
 create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Client.Does.Not.Know.or.Prefers.Not.to.Answer to Client.Does.Not.Know.or.Prefers.Not.to.Answer
   DQ1_data <- filtered_enrollments %>%
     inner_join(Client %>%
-                 select(-c(ExportID, DOB)), by = "PersonalID")
+                 select(-ExportID, DOB), by = "PersonalID") #QUESTION: Don't we need to keep DOB for DQ1_dob?
   
   DQ1_name <- DQ1_data %>%
     mutate(dq_flag = case_when(
