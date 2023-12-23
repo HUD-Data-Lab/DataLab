@@ -32,8 +32,8 @@ for (file in names(hmis_csvs_fy24)){
   file.remove(paste0(file, ".csv"))
 }
 
-source("DataLab_hc_variables.R")
-
+#source("DataLab_hc_variables.R")
+source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/DataLab_hc_variables.R")
 # remove deleted records exportID colummns before proceeding with processing
 for (file in names(hmis_csvs_fy24)){
   
