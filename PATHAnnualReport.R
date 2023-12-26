@@ -10,6 +10,7 @@
 # <https://www.gnu.org/licenses/>. 
 
 source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/DataLab.R")
+source("DataLab.R")
 
 report_start_date <- ymd("2022-7-1")
 report_end_date <- ymd("2023-6-30")
@@ -17,10 +18,12 @@ generate_new_kits <- TRUE
 
 # for (organization in c(47, 106, 109)) {
 for (organization in c(473, 1153)) {
+  
   relevant_projects <- Funder %>%
     filter(Funder == 21 &
-             ProjectID %in% Project$ProjectID[Project$ProjectType %in% c(4, 6) &
-                                                Project$OrganizationID == organization] &
+             ProjectID %in% Project$ProjectID[Project$ProjectType %in% c(4, 6)] &
+                                                #Project$OrganizationID == organization] & #This line was filtering all the projects out
+                                                ProjectID == organization &
              StartDate <= report_end_date &
              (is.na(EndDate) |
                 EndDate >= report_start_date)) %>%
@@ -122,7 +125,7 @@ for (organization in c(473, 1153)) {
                          active_date <= DateOfPATHStatus))
     
     Q12b_detail <- PATH_activity_dates %>%
-      filter(EnrollmentID %in% general_detail$EnrollmentID[general_detail$enrolled_during_period] &
+      filter(EnrollmentID %in% general_detail$EnrollmentID[general_detail$enrolled_during_period] & #Test kit issue 124: this is filtering out clients not enrolled during reporting period. So if project start date is before report start date they won't be included.
                in_report_period)
     
     Q16_detail <- Services %>%
@@ -641,7 +644,7 @@ for (organization in c(473, 1153)) {
              DisablingCondition, LivingSituation, LengthOfStay, 
              LOSUnderThreshold, PreviousStreetESSH, DateToStreetESSH, 
              TimesHomelessPastThreeYears, MonthsHomelessPastThreeYears) %>%
-      add_chronicity_data()
+      add_chronicity_data() #getting an ERROR in this function: "promise already under evaluation: recursive default argument reference or earlier problems?"
     
     living_situation_counts <- Q26h_j_detail %>%
       mutate(LivingSituation = if_else(
