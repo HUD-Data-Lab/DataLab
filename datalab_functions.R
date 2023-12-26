@@ -1683,7 +1683,7 @@ add_chronicity_data <- function(df_of_active_enrollments,
     filter(DataCollectionStage == 1 &
              DisabilityResponse != 0 &
              indefinite_and_impairs &
-             EnrollmentID %in% df_of_active_enrollments$EnrollmentID) %>%
+             EnrollmentID %in% df_of_active_enrollments$EnrollmentID) %>% # ERROR: This is causing the following error for me, "a promise already under evaluation: recursive default argument reference or earlier problems?"
     group_by(EnrollmentID) %>%
     summarise() %>%
     ungroup() %>%
