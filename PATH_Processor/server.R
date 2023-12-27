@@ -134,13 +134,13 @@ function(input, output, session) {
     if (is.null(input$imported)) {
       return ()
     }
-    orgs_with_PATH <- csv_files()$Organization #%>%
-      # inner_join(csv_files()$Project %>%
-      #              filter(ProjectType %in% c(4, 6)),
-      #            by = "OrganizationID") %>%
-      # inner_join(csv_files()$Funder %>%
-      #              filter(Funder == 21),
-      #            by = "ProjectID")
+    orgs_with_PATH <- csv_files()$Organization %>%
+      inner_join(csv_files()$Project %>%
+                   filter(ProjectType %in% c(4, 6)),
+                 by = "OrganizationID") %>%
+      inner_join(csv_files()$Funder %>%
+                   filter(Funder == 21),
+                 by = "ProjectID")
     
     choices <- unique(orgs_with_PATH$OrganizationName)
     # choices <- ls()
@@ -598,6 +598,7 @@ function(input, output, session) {
       return ()
     }
     Q25_detail <- general_detail() %>%
+      filter(active_and_enrolled) %>%
       select(EnrollmentID, PersonalID, EntryDate, ExitDate, Destination,
              stayer, leaver)
     
@@ -665,6 +666,7 @@ function(input, output, session) {
       return ()
     }
     Q26a_e_detail <- general_detail() %>%
+      filter(active_and_enrolled) %>%
       select(EnrollmentID, PersonalID, EntryDate, ExitDate, age, Destination,
              stayer, leaver) %>%
       left_join(csv_files()$Client %>%
@@ -821,6 +823,7 @@ function(input, output, session) {
     
     # Q26g
     Q26g_detail <- general_detail() %>%
+      filter(active_and_enrolled) %>%
       select(EnrollmentID, PersonalID, EntryDate, ExitDateAdj) %>%
       left_join(csv_files()$IncomeBenefits %>%
                   select(EnrollmentID, InformationDate, ConnectionWithSOAR) %>%
@@ -872,6 +875,7 @@ function(input, output, session) {
              DisabilityResponse, indefinite_and_impairs, disabilities)
     
     Q26h_j_detail <- general_detail() %>%
+      filter(active_and_enrolled) %>%
       select(HouseholdID, EnrollmentID, PersonalID, EntryDate, ExitDate,
              DisablingCondition, LivingSituation, LengthOfStay,
              LOSUnderThreshold, PreviousStreetESSH, DateToStreetESSH,
@@ -989,7 +993,8 @@ function(input, output, session) {
     # Q26k
     Q26k_detail <- general_detail() %>%
       filter(!is.na(age) &
-               age >= 18) %>%
+               age >= 18 &
+               active_and_enrolled) %>%
       select(EnrollmentID, PersonalID, EntryDate, ExitDateAdj) %>%
       left_join(csv_files()$HealthAndDV %>%
                   select(EnrollmentID, InformationDate, DomesticViolenceSurvivor) %>%
@@ -1072,8 +1077,33 @@ function(input, output, session) {
     # choices <- ls()
     radioButtons("preview_selector",
                  "What table would you like to preview?",
-                 choices = PATH_questions,
+                 choices = c(PATH_questions, "Included Projects"),
                  selected = PATH_questions[1])
+  })
+  
+  included_projects <- reactive({
+    if (is.null(input$imported)) {
+      return ()
+    }
+    csv_files()$Organization %>% 
+      filter(OrganizationName == input$org_selector) %>%
+      inner_join(csv_files()$Project %>%
+                   mutate(`SO or SSO Project` = ProjectType %in% c(4, 6),
+                          `Included Project` = ProjectID %in% general_detail()$ProjectID),
+                 by = "OrganizationID") %>%
+      inner_join(csv_files()$Funder %>%
+                   group_by(ProjectID) %>%
+                   summarise(`Has PATH Fund Source` = as.logical(max(Funder == 21))) %>%
+                   ungroup(),
+                 by = "ProjectID") %>%
+      left_join(general_detail() %>%
+                  group_by(ProjectID) %>%
+                  summarise(`People With Activity` = n_distinct(PersonalID,
+                                                         na.rm = TRUE)) %>%
+                  ungroup(),
+                by = "ProjectID") %>%
+      select(ProjectName, `SO or SSO Project`, `Has PATH Fund Source`,
+             `People With Activity`, `Included Project`)
   })
   
   
@@ -1088,6 +1118,7 @@ function(input, output, session) {
     else if (input$preview_selector == "Q19_24") {df <- Q19_24()}
     else if (input$preview_selector == "Q25") {df <- Q25()}
     else if (input$preview_selector == "Q26") {df <- Q26()}
+    else if (input$preview_selector == "Included Projects") {df <- included_projects()}
     
     datatable(
       # csv_files()$Organization,
