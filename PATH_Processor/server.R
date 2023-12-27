@@ -195,22 +195,25 @@ function(input, output, session) {
       return ()
     }
     
-    PATH_activity_date_columns <- c("EnrollmentID", "active_date", "type")
+    PATH_activity_date_columns <- c("EnrollmentID", "active_date", 
+                                    "internal_row_id", "type")
     
     PATH_activity_dates <- csv_files()$CurrentLivingSituation %>%
-      select(EnrollmentID, InformationDate) %>%
+      select(EnrollmentID, InformationDate, CurrentLivingSitID) %>%
       mutate(type = "CLS") %>%
       `colnames<-`(PATH_activity_date_columns) %>%
       union(csv_files()$Enrollment %>%
               mutate(DateOfPATHStatus = if_else(ClientEnrolledInPATH == 1,
-                                                DateOfPATHStatus, NA)) %>%
-              select(EnrollmentID, DateOfEngagement, DateOfPATHStatus) %>%
+                                                DateOfPATHStatus, NA),
+                     internal_row_id = EnrollmentID) %>%
+              select(EnrollmentID, DateOfEngagement, DateOfPATHStatus,
+                     internal_row_id) %>%
               pivot_longer(contains("Date"), names_to = "type",
                            values_to = "active_date", values_drop_na = TRUE)) %>%
       union(csv_files()$Services %>%
               filter(RecordType == 141) %>%
               mutate(type = "Service") %>%
-              select(EnrollmentID, DateProvided, type) %>%
+              select(EnrollmentID, DateProvided, ServicesID, type) %>%
               `colnames<-`(PATH_activity_date_columns)) %>%
       inner_join(csv_files()$Enrollment %>%
                    select(EnrollmentID, EntryDate),

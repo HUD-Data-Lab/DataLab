@@ -11,8 +11,8 @@
 
 source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/DataLab.R")
 
-report_start_date <- ymd("2022-7-1")
-report_end_date <- ymd("2023-6-30")
+report_start_date <- ymd("2021-10-1")
+report_end_date <- ymd("2022-9-30")
 generate_new_kits <- TRUE
 
 # for (organization in c(47, 106, 109)) {
@@ -27,22 +27,25 @@ for (organization in c(473, 1153)) {
     .$ProjectID %>%
     unique()
   
-  PATH_activity_date_columns <- c("EnrollmentID", "active_date", "type")
+  PATH_activity_date_columns <- c("EnrollmentID", "active_date", 
+                                  "internal_row_id", "type")
   
   PATH_activity_dates <- CurrentLivingSituation %>%
-    select(EnrollmentID, InformationDate) %>%
+    select(EnrollmentID, InformationDate, CurrentLivingSitID) %>%
     mutate(type = "CLS") %>%
     `colnames<-`(PATH_activity_date_columns) %>%
     union(Enrollment %>%
             mutate(DateOfPATHStatus = if_else(ClientEnrolledInPATH == 1,
-                                              DateOfPATHStatus, NA)) %>%
-            select(EnrollmentID, DateOfEngagement, DateOfPATHStatus) %>% 
+                                              DateOfPATHStatus, NA),
+                   internal_row_id = EnrollmentID) %>%
+            select(EnrollmentID, DateOfEngagement, DateOfPATHStatus,
+                   internal_row_id) %>% 
             pivot_longer(contains("Date"), names_to = "type", 
                          values_to = "active_date", values_drop_na = TRUE)) %>%
     union(Services %>%
             filter(RecordType == 141) %>%
             mutate(type = "Service") %>%
-            select(EnrollmentID, DateProvided, type) %>%
+            select(EnrollmentID, DateProvided, ServicesID, type) %>%
             `colnames<-`(PATH_activity_date_columns)) %>%
     inner_join(Enrollment %>%
                  select(EnrollmentID, EntryDate),
