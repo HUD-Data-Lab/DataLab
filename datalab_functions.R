@@ -1674,10 +1674,10 @@ return_race_groups <- function(APR_dataframe, grouped_by = grouped_by,
 #   and Client.Does.Not.Know.or.Prefers.Not.to.Answer
 
 add_chronicity_data <- function(df_of_active_enrollments,
-                                Enrollment = Enrollment,
-                                Project = Project,
-                                Client = Client,
-                                report_start_date = report_start_date) {
+                                f_Enrollment = Enrollment,
+                                f_Project = Project,
+                                f_Client = Client,
+                                f_report_start_date = report_start_date) {
   
   additional_disability_check <- disability_table %>%
     filter(DataCollectionStage == 1 &
@@ -1689,7 +1689,7 @@ add_chronicity_data <- function(df_of_active_enrollments,
     ungroup() %>%
     mutate(has_disability = 1)
   
-  chronic_individual <- Enrollment %>%
+  chronic_individual <- f_Enrollment %>%
     filter(EnrollmentID %in% df_of_active_enrollments$EnrollmentID) %>%
     select(EnrollmentID, DisablingCondition, ProjectID, EntryDate,
            LivingSituation, LOSUnderThreshold, PreviousStreetESSH,
@@ -1697,7 +1697,7 @@ add_chronicity_data <- function(df_of_active_enrollments,
            MonthsHomelessPastThreeYears) %>%
     left_join(additional_disability_check, 
               by = "EnrollmentID") %>%
-    left_join(Project %>%
+    left_join(f_Project %>%
                 select(ProjectID, ProjectType),
               by = "ProjectID") %>%
     mutate(
@@ -1742,15 +1742,15 @@ add_chronicity_data <- function(df_of_active_enrollments,
         TRUE ~ "ERROR")) %>%
     select(EnrollmentID, chronic)
   
-  chronic_household <- Enrollment %>%
+  chronic_household <- f_Enrollment %>%
     filter(HouseholdID %in% df_of_active_enrollments$HouseholdID) %>%
     select(PersonalID, EnrollmentID, HouseholdID, EntryDate, RelationshipToHoH) %>%
-    left_join(Client %>%
+    left_join(f_Client %>%
                 select(PersonalID, DOB), 
               by = "PersonalID") %>%
     mutate(date_for_age = (if_else(
-      EntryDate <= report_start_date,
-      report_start_date,
+      EntryDate <= f_report_start_date,
+      f_report_start_date,
       EntryDate)),
       age = trunc((DOB %--% date_for_age) / years(1)),
       chronic_age_group = case_when(age >= 18 ~ "adult",
