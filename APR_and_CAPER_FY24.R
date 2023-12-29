@@ -1459,8 +1459,8 @@
           data <- get(paste0(period, "_income")) %>%
             filter(period != "exit" |
                      paste(HouseholdID, ExitDate) %in% paste(
-                       Q20a_detail$HouseholdID[Q20a_detail$RelationshipToHoH == 1],
-                       Q20a_detail$ExitDate[Q20a_detail$RelationshipToHoH == 1])) %>%
+                       all_program_enrollments$HouseholdID[all_program_enrollments$RelationshipToHoH == 1],
+                       all_program_enrollments$ExitDate[all_program_enrollments$RelationshipToHoH == 1])) %>%
           select(EnrollmentID, all_of(benefit_list), BenefitsFromAnySource)
           
           Q20a_detail <- Q20a_detail %>%
@@ -1482,8 +1482,8 @@
             keep_adults_only() %>%
             filter(period != "exit" |
                      paste(HouseholdID, ExitDate) %in% paste(
-                       Q20a_detail$HouseholdID[Q20a_detail$RelationshipToHoH == 1],
-                       Q20a_detail$ExitDate[Q20a_detail$RelationshipToHoH == 1])) %>%
+                       all_program_enrollments$HouseholdID[all_program_enrollments$RelationshipToHoH == 1],
+                       all_program_enrollments$ExitDate[all_program_enrollments$RelationshipToHoH == 1])) %>%
             mutate(benefit_count = case_when(
               BenefitsFromAnySource == 0 &
                 (is.na(SNAP) | SNAP == 0) &

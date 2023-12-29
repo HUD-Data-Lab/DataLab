@@ -863,12 +863,12 @@ create_prior_residence_groups <- function(included_enrollments) {
                        DisablingCondition == 0) |
                     (condition_presence == condition_presence_list[3] &
                        DisablingCondition %in% c(0, 1)))) %>%
-        mutate(Other.Source = if_else(
-          Unemployment == 1 |
-            VADisabilityNonService == 1 |
-            GA == 1 |
-            Alimony == 1 |
-            OtherIncomeSource == 1, 1, 0)) %>%
+        # mutate(Other.Source = if_else(
+          # Unemployment == 1 |
+          #   VADisabilityNonService == 1 |
+          #   GA == 1 |
+          #   Alimony == 1 |
+            # OtherIncomeSource == 1, 1, 0)) %>%
         select(c(PersonalID, household_type, IncomeFromAnySource, 
                  all_of(IncomeTypes$IncomeGroup))) 
       
