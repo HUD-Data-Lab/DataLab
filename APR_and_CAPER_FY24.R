@@ -689,9 +689,9 @@
                                  ExitDate > pit_date) |
                               (ProjectType %in% c(4, 6, 11) &
                                  ExitDate >= pit_date))))) %>%
-            left_join(household_info %>%
-                        select(HouseholdID, household_type),
-                      by = "HouseholdID") %>%
+            left_join(recent_program_enrollment %>%
+                        select(PersonalID, household_type),
+                      by = "PersonalID") %>%
             mutate(Month = pit_month) 
           
           pit_enrollments <- pit_enrollment_detail %>%
