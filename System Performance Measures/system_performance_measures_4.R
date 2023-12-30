@@ -114,7 +114,7 @@ stayer_income_annuals <- stayer_income %>%
   #select( EnrollmentID, IncomeBenefitsID, EntryDate, InformationDate, years_entry_to_aa, related_anniversary_date, in_range) %>%
   filter(in_range == TRUE) %>%
   # remove duplicate in-range AAs for the same anniversary date
-  ## there weren't any cases in Iowa BoS test data, but still think should account
+  ## there weren't any cases in BoS test data, but still think should account
   ## for this possibility
   arrange(desc(InformationDate), desc(IncomeBenefitsID)) %>%
   # Used below select step for QA
@@ -263,6 +263,8 @@ make_spm_4_table <- function(income_data,
   later_income_column <- paste0("E_", income_column)
   
   calculations <- income_data %>%
+    filter(!is.na(S_calculated_total_income) &
+             !is.na(E_calculated_total_income)) %>%
     select(PersonalID, {{start_income_column}}, {{later_income_column}}) %>%
     summarise(total_people = n_distinct(PersonalID, na.rm = TRUE),
               people_increased = n_distinct(PersonalID[get(start_income_column)

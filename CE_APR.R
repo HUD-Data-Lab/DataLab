@@ -11,7 +11,7 @@
 
 generate_new_kits <- TRUE
 
-source("DataLab.R")
+source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/DataLab.R")
 
 items_to_keep <- c("items_to_keep", ls())
 hold_ProjectCoC <- ProjectCoC
