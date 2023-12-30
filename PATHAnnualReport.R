@@ -11,12 +11,12 @@
 
 source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/DataLab.R")
 
-report_start_date <- ymd("2021-10-1")
-report_end_date <- ymd("2022-9-30")
+# report_start_date <- ymd("2021-10-1")
+# report_end_date <- ymd("2022-9-30")
 generate_new_kits <- TRUE
 
-# for (organization in c(47, 106, 109)) {
-for (organization in c(473, 1153)) {
+for (organization in c(47, 106, 109)) {
+# for (organization in c(473, 1153)) {
   relevant_projects <- Funder %>%
     filter(Funder == 21 &
              ProjectID %in% Project$ProjectID[Project$ProjectType %in% c(4, 6) &
@@ -395,6 +395,7 @@ for (organization in c(473, 1153)) {
   # Q25
   {
     Q25_detail <- general_detail %>%
+      filter(active_and_enrolled) %>%
       select(EnrollmentID, PersonalID, EntryDate, ExitDate, Destination,
              stayer, leaver)
     
@@ -456,6 +457,7 @@ for (organization in c(473, 1153)) {
   # Q26
   {
     Q26a_e_detail <- general_detail %>%
+      filter(active_and_enrolled) %>%
       select(EnrollmentID, PersonalID, EntryDate, ExitDate, age, Destination,
              stayer, leaver) %>%
       left_join(Client %>%
@@ -612,6 +614,7 @@ for (organization in c(473, 1153)) {
     
     # Q26g
     Q26g_detail <- general_detail %>%
+      filter(active_and_enrolled) %>%
       select(EnrollmentID, PersonalID, EntryDate, ExitDateAdj) %>%
       left_join(IncomeBenefits %>%
                   select(EnrollmentID, InformationDate, ConnectionWithSOAR) %>%
@@ -640,6 +643,7 @@ for (organization in c(473, 1153)) {
     
     # Q26h
     Q26h_j_detail <- general_detail %>%
+      filter(active_and_enrolled) %>%
       select(HouseholdID, EnrollmentID, PersonalID, EntryDate, ExitDate, 
              DisablingCondition, LivingSituation, LengthOfStay, 
              LOSUnderThreshold, PreviousStreetESSH, DateToStreetESSH, 
@@ -754,7 +758,8 @@ for (organization in c(473, 1153)) {
     # Q26k
     Q26k_detail <- general_detail %>%
       filter(!is.na(age) &
-               age >= 18) %>%
+               age >= 18 &
+               active_and_enrolled) %>%
       select(EnrollmentID, PersonalID, EntryDate, ExitDateAdj) %>%
       left_join(HealthAndDV %>%
                   select(EnrollmentID, InformationDate, DomesticViolenceSurvivor) %>%

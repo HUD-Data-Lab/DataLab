@@ -42,51 +42,6 @@
   
   # used for running all reports for all projects. Use project_list for running specific projects.
   {
-    # full_project_list <- c(Project$ProjectID[Project$ProjectID %in% Funder$ProjectID[Funder$Funder %in% 1:11]]) # Funding source HUD-CoC or HUD-ESG
-    # full_project_list <- full_project_list[full_project_list %nin% c(1647, 340)] #Copied from old test kit, but those are invalid funding sources for those project types. This shouldn't exist.
-    #project_list <- full_project_list #if you want to run full test kit undo the comment for this line
-    # full_project_list <- Funder %>%
-    #   filter(ProjectID %in% Enrollment$ProjectID &
-    #            .$Funder %in% 1:11 &
-    #            StartDate <= report_end_date &
-    #            (is.na(EndDate) |
-    #               EndDate >= report_start_date)) %>%
-    #   .$ProjectID
-    # 
-    # full_project_list <- c(Project$ProjectID[Project$ProjectID %in% Funder$ProjectID[Funder$Funder %in% 1:11] & #]) # Funding source HUD-CoC or HUD-ESG
-    #                                            Project$ProjectID %in% Enrollment$ProjectID])
-    # 
-    check <- Project %>%
-      filter(
-        # ProjectID %in% full_project_list
-        OperatingStartDate <= report_end_date &
-          (is.na(OperatingEndDate) |
-             OperatingEndDate >= report_start_date)
-        ) %>%
-      inner_join(Funder %>%
-                  filter(ProjectID %in% Enrollment$ProjectID &
-                           .$Funder %in% 1:11 &
-                           StartDate <= report_end_date &
-                           (is.na(EndDate) |
-                              EndDate >= report_start_date)), by = "ProjectID") %>%
-      inner_join(Enrollment %>%
-                   filter(EntryDate >= report_start_date) %>%
-                   group_by(ProjectID) %>%
-                   summarise(enrollments = n()) %>%
-                   filter(enrollments > 10),
-                 by = "ProjectID") %>%
-      # left_join(funder_list %>%
-      #             select(Value, Text),
-      #           by = c("Funder" = "Value")) %>%
-      select(ProjectID, ProjectName, OrganizationID, ProjectType, RRHSubType,
-             Funder, enrollments
-             # , Text
-             )
-    # funder_list <- as.data.frame(read.table(file = "clipboard", 
-    #                           header = T, 
-    #                           sep = "\t"))
-    # write.table(check, "clipboard", sep="\t", row.names=FALSE)
-    
     full_project_list <- c(
       234,	#"DataLab - ES-EE ESG I",
       93,	#"DataLab - ES-NbN ESG",
