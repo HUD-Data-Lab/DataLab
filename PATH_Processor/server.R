@@ -383,7 +383,8 @@ function(input, output, session) {
       )
     ), ncol = 2, byrow = TRUE)) %>%
       setNames(c("Persons served during this reporting period", "Count")) %>%
-      set_hud_format(., ignore_row_names = TRUE) %>%
+      set_hud_format(., ignore_row_names = TRUE,
+                     for_datatable = TRUE) %>%
       ifnull(., 0)
     
     Q8_16[is.na(Q8_16)] <- ""
@@ -427,7 +428,8 @@ function(input, output, session) {
       summarise(Number.of.people.receiving.service = n_distinct(PersonalID,
                                                                 na.rm = TRUE)) %>%
       arrange(Type.of.Service) %>%
-      set_hud_format(., ignore_row_names = TRUE) %>%
+      set_hud_format(., ignore_row_names = TRUE,
+                     for_datatable = TRUE) %>%
       ifnull(., 0)
     
     Q17[is.na(Q17)] <- ""
@@ -474,7 +476,8 @@ function(input, output, session) {
                 Number.who.attained.the.service.from.the.referral = n_distinct(PersonalID[ReferralOutcome == 1],
                                                                                na.rm = TRUE)) %>%
       arrange(Type.of.Referral) %>%
-      set_hud_format(., ignore_row_names = TRUE) %>%
+      set_hud_format(., ignore_row_names = TRUE,
+                     for_datatable = TRUE) %>%
       ifnull(., 0)
     
     Q18[is.na(Q18)] <- ""
@@ -589,7 +592,8 @@ function(input, output, session) {
       `colnames<-`(c("Outcomes",	"At PATH Project Start",
                      "At PATH Project Exit (for clients who were exited from PATH in the reporting period - leavers)",
                      "At Report End Date (for clients who were still active in PATH as of Report End Date - stayers")) %>%
-      set_hud_format(., ignore_row_names = TRUE) %>%
+      set_hud_format(., ignore_row_names = TRUE,
+                     for_datatable = TRUE) %>%
       ifnull(., 0)
     
     Q19_24[is.na(Q19_24)] <- ""
@@ -657,7 +661,8 @@ function(input, output, session) {
       rbind(c("Total",
               n_distinct(Q25_detail$PersonalID,
                          na.rm = TRUE))) %>%
-      set_hud_format(., ignore_row_names = TRUE) %>%
+      set_hud_format(., ignore_row_names = TRUE,
+                     for_datatable = TRUE) %>%
       ifnull(., 0)
 
     Q25[is.na(Q25)] <- ""
@@ -883,10 +888,10 @@ function(input, output, session) {
              DisablingCondition, LivingSituation, LengthOfStay,
              LOSUnderThreshold, PreviousStreetESSH, DateToStreetESSH,
              TimesHomelessPastThreeYears, MonthsHomelessPastThreeYears) %>%
-      add_chronicity_data(., Enrollment = csv_files()$Enrollment,
-                          Project = csv_files()$Project,
-                          Client = csv_files()$Client,
-                          report_start_date = input$report_start_date)
+      add_chronicity_data(., f_Enrollment = csv_files()$Enrollment,
+                          f_Project = csv_files()$Project,
+                          f_Client = csv_files()$Client,
+                          f_report_start_date = input$report_start_date)
     
     living_situation_counts <- Q26h_j_detail %>%
       mutate(LivingSituation = if_else(
@@ -1039,7 +1044,8 @@ function(input, output, session) {
         individuals = ifnull(individuals, 0))  %>%
       `colnames<-`(c(" ", "  ",
                      "Of those with an active, enrolled PATH status during this reporting period, how many individuals are in each of the following categories?")) %>%
-      set_hud_format(., ignore_row_names = TRUE) %>%
+      set_hud_format(., ignore_row_names = TRUE,
+                     for_datatable = TRUE) %>%
       ifnull(., 0)
     
     Q26[is.na(Q26)] <- ""

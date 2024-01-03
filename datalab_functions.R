@@ -1069,7 +1069,8 @@ create_inactive_table <- function(dq_enrollments,
 
 # used to write files with correct formatting
 set_hud_format <- function(data_for_csv,
-                           ignore_row_names = FALSE) {
+                           ignore_row_names = FALSE,
+                           for_datatable = FALSE) {
   
   first_col_name <- names(data_for_csv)[1]
   if(!ignore_row_names) {
@@ -1084,8 +1085,12 @@ set_hud_format <- function(data_for_csv,
   new_header <- names(data_for_csv)[2:length(data_for_csv)]
   new_header[new_header == "Client.Does.Not.Know.or.Prefers.Not.to.Answer"] <- "Client Doesn't Know/Refused" # Flagging this for follow-up: FY2024 removed refused ----
   
-  data_for_csv %>%
+  if(for_datatable) {
+    data_for_csv %>%
+      `colnames<-`(gsub(".", " ", colnames(data_for_csv), fixed = TRUE))
+  } else {
     `colnames<-`(c("", gsub(".", " ", new_header, fixed = TRUE)))
+  }
 }
 
 

@@ -22,7 +22,7 @@ if (kit_type == "new_kit") {
   lookback_stop_date <- ymd("2012-10-1")
 }
 
-source("00_read_2024_csv.R")
+source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/00_read_2024_csv.R")
 
 report_start_date <- ymd("2021-10-1")
 report_end_date <- ymd("2022-9-30")

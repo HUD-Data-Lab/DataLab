@@ -12,7 +12,6 @@
 # <https://www.gnu.org/licenses/>. 
 
 library(shinyjs)
-library(tidyverse)
 library(stringr)
 library(janitor)
 library(shiny)
@@ -20,6 +19,8 @@ library(bslib)
 # library(thematic)
 library(DT)
 library(zip)
+library(archive)
+library(tidyverse)
 # library(shinydashboard)
 # library(bsicons)
 
