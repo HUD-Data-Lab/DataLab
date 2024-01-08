@@ -1712,7 +1712,9 @@
         Q22e_detail <- recent_program_enrollment %>%
           select(c("ProjectType", all_of(housing_program_detail_columns), "age",
                    "HoH_EntryDate", "DateToStreetESSH", "HoH_ADHS")) %>%
-          create_time_prior_to_housing()
+          create_time_prior_to_housing() %>%
+        mutate(days_prior_to_housing = case_when(is.na(housing_date) ~ "Not yet moved into housing",
+                                                TRUE ~ days_prior_to_housing))
         
         homeless_to_housed_groups <- length_of_time_groups("days_prior_to_housing", "days_prior_to_housing")
         
@@ -2431,8 +2433,6 @@
           ))
         
         Q27i[, c(5, 9, 13, 17)] <- decimal_format(Q27i[, c(5, 9, 13, 17)], 4)
-        
-        View(Q27i)
       }
       
       # Q27j checked
@@ -2515,7 +2515,9 @@
         Q27l_detail <- recent_youth_enrollment %>%
           select(c("ProjectType", all_of(housing_program_detail_columns), "age",
                    "HoH_EntryDate", "DateToStreetESSH", "HoH_ADHS")) %>%
-          create_time_prior_to_housing()
+          create_time_prior_to_housing() %>%
+          mutate(days_prior_to_housing = case_when(is.na(housing_date) ~ "Not yet moved into housing",
+                                                   TRUE ~ days_prior_to_housing))
         
         Q27l_groups <- Q27l_detail %>%
           return_household_groups(., days_prior_to_housing,

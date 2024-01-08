@@ -1222,8 +1222,6 @@ create_time_prior_to_housing <- function(filtered_enrollments) {
           DateToStreetESSH <= EntryDate ~ DateToStreetESSH)) %>%
     add_length_of_time_groups(., homelessness_start_date, housing_date, 
                               "days_prior_to_housing", in_project = FALSE) %>%
-    mutate(number_of_days_group = case_when(is.na(housing_date) ~ "Not yet moved into housing",
-                                            TRUE ~ number_of_days_group)) %>%
     rename(days_prior_to_housing = number_of_days_group)
 }
 
