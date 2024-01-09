@@ -307,7 +307,7 @@ race_columns <- c(AmIndAKNative = "American Indian, Alaska Native, or Indigenous
                   NativeHIPacific = "Native Hawaiian or Pacific Islander", 
                   White = "White")
 
-race_columns <- setNames(names(race_columns), race_columns) #This adds the full variable names to the race_columns (you can call unname to show full variable name)
+race_columns <- setNames(names(race_columns), race_columns)
 
 
 # ------------------------------------------------------------------------------
@@ -323,7 +323,7 @@ possible_race_combos <- outer(race_list, race_list, paste, sep = '/') #Creates t
 possible_race_name_combos <- outer(race_name_list, race_name_list, paste, sep = ' & ') #creates race combos with full names
 
 for (combo in 1:6) { #what is this loop doing?
-  race_list <- c(race_list, possible_race_combos[combo, (combo + 1):7]) #What is this doing? 
+  race_list <- c(race_list, possible_race_combos[combo, (combo + 1):7])
   race_name_list <- c(race_name_list, possible_race_name_combos[combo, (combo + 1):7])
 }
 
@@ -339,7 +339,7 @@ for (col in unname(race_columns)) {
                             1, 0))
 }
 
-#Why do we keep naming and then un-naming the variables?
+
 
 
 # used in APR 22f, 22g, 22e:

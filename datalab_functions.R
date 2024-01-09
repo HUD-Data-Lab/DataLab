@@ -422,17 +422,17 @@ pivot_existing_only <- function(data, group_name, client_label) {
 # used in Q5
 add_length_of_time_groups <- function(data, start_date, end_date, report_type,
                                       in_project = TRUE) { 
-  start_date <- enquo(start_date) #What is enquo and why are we using it for the date variables?
+  start_date <- enquo(start_date) 
   end_date <- enquo(end_date) 
   
   if(in_project) { 
     nbn_data <- data %>%
       filter(ProjectID %in% Project$ProjectID[Project$ProjectType == 1]) %>% 
-      left_join(all_bed_nights, # The all_bed_nights object for SPM is different from all_bed_nights in DataLab.R.
+      left_join(all_bed_nights, 
                 by = "EnrollmentID",
                 multiple = "all") %>%
       group_by(EnrollmentID) %>%
-      summarise(nbn_number_of_days = n_distinct(na.omit(ymd(DateProvided)), #Count distinct number of days that are not NA. What is the difference between na.omit and na.rm?
+      summarise(nbn_number_of_days = n_distinct(na.omit(ymd(DateProvided)),
                                                 na.rm = TRUE)) %>%
       ungroup() %>%
       select(EnrollmentID, nbn_number_of_days)
@@ -443,7 +443,7 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type,
                if_else(
                  ProjectID %in% Project$ProjectID[Project$ProjectType == 1], #Identify project IDs that are a nbn shelter
                  nbn_number_of_days, #If true return number of days
-                 as.integer(trunc((!!start_date %--% !!end_date) / days(1))))) #what does !! do? What is this doing? 
+                 as.integer(trunc((!!start_date %--% !!end_date) / days(1))))) 
   } else {
     time_groups <- data %>%
       mutate(number_of_days = as.integer(trunc((!!start_date %--% !!end_date) / days(1)))) #If not a nbn shelter use this calculation for number_of_days
@@ -470,19 +470,19 @@ add_length_of_time_groups <- function(data, start_date, end_date, report_type,
   if(report_type == "APR") {
     time_groups <- time_groups %>%
       mutate(number_of_days_group = case_when(
-        between(number_of_days, 0, 30) ~ "30 days or less", # Q22 for APR changes days categories. This modifies the categories for the APR 
+        between(number_of_days, 0, 30) ~ "30 days or less",
         TRUE ~ number_of_days_group))
   } else if(report_type == "days_prior_to_housing") {
     time_groups <- time_groups %>%
       mutate(number_of_days_group = case_when(
-        #between(number_of_days, 61, 180) ~ "61 to 180 days",    # Specs updated age categories to be 61 to 90 and 91 to 180
+        #between(number_of_days, 61, 180) ~ "61 to 180 days", 
         number_of_days >= 731 ~ "731 days or more",
         TRUE ~ number_of_days_group)) 
   } # Set up different age categories for Q22d(?)
     # else {
     #time_groups <- time_groups %>%
     #  mutate(number_of_days_group = case_when(
-    #    #between(number_of_days, 61, 180) ~ "61 to 180 days",    # Specs updated age categories to be 61 to 90 and 91 to 180
+    #    #between(number_of_days, 61, 180) ~ "61 to 180 days",0
     #    number_of_days >= 731 ~ "731 days or more",
     #    TRUE ~ number_of_days_group))}
   data %>%
@@ -1003,7 +1003,7 @@ create_summary_table <- function(filtered_enrollments, column_name) {
     summarise(Total.number.of.persons.served = n_distinct(PersonalID, na.rm = TRUE),
               Number.of.adults.age.18.or.over = uniqueN(na.omit(PersonalID[age_group == "Adults"])),
               Number.of.children.under.age.18 = uniqueN(na.omit(PersonalID[age_group == "Children"])),
-              Number.of.persons.with.unknown.age = uniqueN(na.omit(PersonalID[age_group %in% c("Client.Does.Not.Know.or.Prefers.Not.to.Answer", "Data.Not.Collected")])), #Removed refused and entered prefers not to answer
+              Number.of.persons.with.unknown.age = uniqueN(na.omit(PersonalID[age_group %in% c("Client.Does.Not.Know.or.Prefers.Not.to.Answer", "Data.Not.Collected")])),
               Number.of.leavers = uniqueN(na.omit(PersonalID[!is.na(ExitDate)])),
               Number.of.adult.leavers = uniqueN(na.omit(PersonalID[age_group == "Adults" &
                                                              !is.na(ExitDate)])),
@@ -1083,7 +1083,7 @@ set_hud_format <- function(data_for_csv,
   }
 
   new_header <- names(data_for_csv)[2:length(data_for_csv)]
-  new_header[new_header == "Client.Does.Not.Know.or.Prefers.Not.to.Answer"] <- "Client Doesn't Know/Refused" # Flagging this for follow-up: FY2024 removed refused ----
+  new_header[new_header == "Client.Does.Not.Know.or.Prefers.Not.to.Answer"] <- "Client Doesn't Know/Refused"
   
   if(for_datatable) {
     data_for_csv %>%
@@ -1226,24 +1226,24 @@ create_time_prior_to_housing <- function(filtered_enrollments) {
 }
 
 # get additional client info
-add_client_info <- function(filtered_enrollments) { #Create function to add client info
+add_client_info <- function(filtered_enrollments) { 
   
-  if(exists("all_program_enrollments")) {      #all_program_enrollments object created on line 61 of APS_and_CAPER_FY24.
+  if(exists("all_program_enrollments")) {     
     enrollments_to_use <- all_program_enrollments
   } else {
-    enrollments_to_use <- filtered_enrollments #filtered enrollments is the DF we use for the function (i.e., add_client_info(DF_example))
+    enrollments_to_use <- filtered_enrollments
   }
   
   enrollments_to_use %>%
-    filter(HouseholdID %in% filtered_enrollments$HouseholdID) %>% #select household IDs from either all program enrollments or DF selected
+    filter(HouseholdID %in% filtered_enrollments$HouseholdID) %>% 
     mutate(date_for_age = (if_else( 
       EntryDate <= report_start_date,
       report_start_date, # Return Report Start date if true
       EntryDate))) %>% # Return Entry Date if False
     # select(PersonalID, date_for_age, HouseholdID, RelationshipToHoH) %>%
     # distinct() %>%
-    inner_join(Client, by = "PersonalID") %>%  #Why inner_join? Doesn't inner join only keep the observations enrollments_to_use that match in Client?
-    mutate(age = trunc((DOB %--% date_for_age) / years(1)), #Where is DOB created? What is %--% date_for_age? Did you just format the 1 to be a 1 year?
+    inner_join(Client, by = "PersonalID") %>% 
+    mutate(age = trunc((DOB %--% date_for_age) / years(1)),
            detailed_age_group = case_when(age < 5 ~ "Under 5",
                                           age <= 12 ~ "5-12",
                                           age <= 17 ~ "13-17",
@@ -1258,12 +1258,12 @@ add_client_info <- function(filtered_enrollments) { #Create function to add clie
                                           TRUE ~ "Data.Not.Collected"), 
            age_group = case_when(age >= 18 ~ "Adults",
                                  age < 18 ~ "Children",
-                                 TRUE ~ detailed_age_group), #What does TRUE do?
+                                 TRUE ~ detailed_age_group), 
            new_veteran_status = if_else(
-             age_group == "Children", as.integer(0), VeteranStatus)) %>% #If "Children" return 0 otherwise Veteran Status
+             age_group == "Children", as.integer(0), VeteranStatus)) %>% 
     # get a second opinion on when to apply the household type calcs
     group_by(HouseholdID) %>% 
-    mutate(oldest_age = max(age, na.rm = TRUE), # I think this is returning the -inf error.
+    mutate(oldest_age = max(age, na.rm = TRUE),
            youth_household = if_else(oldest_age <= 24 & 
                                        oldest_age >= 0, 1, 0),
            youth = if_else(youth_household & age >= 12, 1, 0),
@@ -1295,13 +1295,13 @@ program_information_table <- function(project_list, filtered_enrollments) {
                 select(OrganizationID, OrganizationName,
                        VictimServiceProvider), 
               by = "OrganizationID") %>%
-    left_join(CEParticipation %>% #Added CEParticiaption to match FY2024 APR/CAPER specs
+    left_join(CEParticipation %>% 
                 select(ProjectID,AccessPoint),
               by="ProjectID") %>% 
     left_join(Affiliation %>%
                 select(ProjectID, ResProjectID) %>%
                 group_by(ProjectID) %>%
-                summarise(affiliated_with = toString(ResProjectID)) %>%  #What is this doing? why group_by and summarise during the join?
+                summarise(affiliated_with = toString(ResProjectID)) %>% 
                 ungroup(),
               by = "ProjectID") %>%
     left_join(ProjectCoC %>%
@@ -1321,13 +1321,13 @@ program_information_table <- function(project_list, filtered_enrollments) {
            report_start_date = report_start_date,
            report_end_date = report_end_date) %>%
     select(OrganizationName, OrganizationID, ProjectName, ProjectID,
-           ProjectType,RRHSubType,AccessPoint,ResidentialAffiliation, affiliated_with, #Included RRHSubType,AccessPoint here
+           ProjectType,RRHSubType,AccessPoint,ResidentialAffiliation, affiliated_with, 
            coc_codes, geocodes, VictimServiceProvider,
            software_name, report_start_date, report_end_date,
            active_clients, active_households) %>%
     `colnames<-`(c("Organization Name", "Organization ID",
                    "Project Name", "Project ID",
-                   "HMIS Project Type", "RRH Subtype", "Coordinated Entry Access Point", # I added two columns to match changes to the APR_CAPER Specs
+                   "HMIS Project Type", "RRH Subtype", "Coordinated Entry Access Point", 
                    "Affiliated with a residential project",
                    "Project IDs of affiliations", "CoC Number", 
                    "Geocode", "Victim Service Provider",
@@ -1379,14 +1379,14 @@ get_household_info <- function(filtered_enrollments,
 
 
 # create first DQ table in glossary
-create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Client.Does.Not.Know.or.Prefers.Not.to.Answer to Client.Does.Not.Know.or.Prefers.Not.to.Answer
+create_dq_Q1 <- function(filtered_enrollments) {  
   DQ1_data <- filtered_enrollments %>%
     inner_join(Client %>%
-                 select(-ExportID, DOB), by = "PersonalID") #QUESTION: Don't we need to keep DOB for DQ1_dob?
+                 select(-ExportID, DOB), by = "PersonalID") 
   
   DQ1_name <- DQ1_data %>%
     mutate(dq_flag = case_when(
-      NameDataQuality %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer", # Changed from Client.Does.Not.Know.or.Prefers.Not.to.Answer
+      NameDataQuality %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
       NameDataQuality == 99 |
         is.na(FirstName) |
         is.na(LastName) ~ "Information.Missing",
@@ -1397,7 +1397,7 @@ create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Cl
   DQ1_ssn <- DQ1_data %>%
     mutate(sequential = lapply(SSN, sequential_ssn),
            dq_flag = case_when(
-             SSNDataQuality %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer", # changed from Client.Does.Not.Know.or.Prefers.Not.to.Answer
+             SSNDataQuality %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer", 
              SSNDataQuality == 99 |
                #  below is what the data standards currently say
                # is.na(SSNDataQuality) ~ "Information.Missing",
@@ -1485,7 +1485,7 @@ create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Cl
   elements <- list("Name", "SSN", "DOB", "Race", "Gender")
   
   for (element in elements) {
-    table <- get(paste0("DQ1_", tolower(element))) #this loop creates the table for the data-elements
+    table <- get(paste0("DQ1_", tolower(element)))
     
     detail_title <- paste0(element, "_DQ")
     DQ1_detail <- DQ1_detail %>%
@@ -1532,7 +1532,7 @@ create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Cl
     add_row(DataElement = "Overall Score", 
             `Client.Does.Not.Know.or.Prefers.Not.to.Answer` = 0, Information.Missing = 0, Data.Issues = 0, 
             Total = nrow(unique(error_clients))) %>%
-    mutate("% of Issue Rate" = decimal_format(Total / Q5a$Count.of.Clients.for.DQ[1], 4)) #changed from ErrorRate to"% of Issue Rate"
+    mutate("% of Issue Rate" = decimal_format(Total / Q5a$Count.of.Clients.for.DQ[1], 4)) 
   
   DQ1[DQ1$DataElement == "Overall Score", c("Client.Does.Not.Know.or.Prefers.Not.to.Answer",
                                             "Information.Missing")] <- NA
@@ -1686,7 +1686,7 @@ add_chronicity_data <- function(df_of_active_enrollments,
     filter(DataCollectionStage == 1 &
              DisabilityResponse != 0 &
              indefinite_and_impairs &
-             EnrollmentID %in% df_of_active_enrollments$EnrollmentID) %>% # ERROR: This is causing the following error for me, "a promise already under evaluation: recursive default argument reference or earlier problems?"
+             EnrollmentID %in% df_of_active_enrollments$EnrollmentID) %>% 
     group_by(EnrollmentID) %>%
     summarise() %>%
     ungroup() %>%
