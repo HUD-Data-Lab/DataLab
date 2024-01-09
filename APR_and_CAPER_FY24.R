@@ -28,10 +28,10 @@
       # 93#,	#"DataLab - ES-NbN ESG",
       # 1409#,	"DataLab - HP ESG",
       # 780#,	#"DataLab - PSH CoC I",
-     # 1428,	#"DataLab - RRH CoC I", #Commented out because Project ID did not exist
-     # 1495#,	#"DataLab - RRH CoC II", #Commented out because project ID did not exist
-      1554, #DataLab - RRH CoC I", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
-      1555 #, #"DataLab - RRH CoC II", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
+     # 1428,	#"DataLab - RRH CoC I",
+     # 1495#,	#"DataLab - RRH CoC II",
+      1554, #DataLab - RRH CoC I",
+      1555 #, #"DataLab - RRH CoC II",
       # 1060#,	#"DataLab - RRH ESG I",
       # 1419,	#"DataLab - SO ESG",
       # 1615#,	#"DataLab - SSO CoC",
@@ -82,22 +82,22 @@
                     select(ProjectID, ProjectType, ProjectName),
                   by = "ProjectID") %>%
         left_join(Exit %>%
-                    select(-PersonalID), # Are we removing personalID to avoid the duplication problem? (i.e., PersonalID.X and PersonalID.Y)
+                    select(-PersonalID),
                   by = "EnrollmentID")
       
       recent_program_enrollment <- all_program_enrollments %>%
         group_by(PersonalID) %>%
         arrange(desc(EntryDate)) %>% #arrange by most recent entry date  
-        slice(1L) %>% #what does 1L do?
+        slice(1L) %>%
         ungroup() 
       
       # get additional client information (age for reporting)
-      client_plus <- add_client_info(recent_program_enrollment)  #View(add_client_info) Getting a warning about mac(age, na.rm=TRUE) is returning -inf
+      client_plus <- add_client_info(recent_program_enrollment)
       
-      annual_assessment_dates <- Enrollment %>% #What is this trying to get?
+      annual_assessment_dates <- Enrollment %>%
         group_by(HouseholdID) %>%
         mutate(start_for_annual = max(EntryDate[RelationshipToHoH == 1]), #Max entry date for each head of household
-               years_in_project = trunc((start_for_annual %--% report_end_date) / years(1))) %>% # What does %--% do?
+               years_in_project = trunc((start_for_annual %--% report_end_date) / years(1))) %>%
         filter(years_in_project > 0) %>%
         mutate(annual_due = start_for_annual %m+% years(years_in_project)) %>%
         select(HouseholdID, annual_due) %>%
@@ -133,7 +133,7 @@
       {
         Q4a_detail <- "See Q5a_detail.csv"
         
-        Q4a <- program_information_table(project_list, #View(program_information_table) #Should RRH Subtype and CES Access be 0=No? or leave as NA?
+        Q4a <- program_information_table(project_list, 
                                          recent_program_enrollment)
         }
       
@@ -142,20 +142,20 @@
       # Q5a checked
       {
         recent_program_enrollment_dq <- recent_program_enrollment %>%
-          filter(ProjectType != 4 |     # This removes enrollments that are street outreach project type or
-                   (!is.na(DateOfEngagement) & # if date of engagement is not NA
-                      DateOfEngagement <= report_end_date)) # date of engagement <= report end date.
+          filter(ProjectType != 4 |   
+                   (!is.na(DateOfEngagement) &
+                      DateOfEngagement <= report_end_date))
         
         Q5a_detail <- recent_program_enrollment %>%
-          add_length_of_time_groups(., EntryDate, #View(add_length_of_time_groups)
-                                    ifnull(ExitDate, ymd(report_end_date) + days(1)),  #For end date use ExitDate, unless null then use report_end_date
+          add_length_of_time_groups(., EntryDate, 
+                                    ifnull(ExitDate, ymd(report_end_date) + days(1)), 
                                     "APR") %>%
           select(c(all_of(standard_detail_columns), #standard_detail_columns are created in DataLab_Lists.R
                    all_of(demographic_detail_columns),
                           number_of_days)) %>%
           mutate(IncludedInDQ = EnrollmentID %in% recent_program_enrollment_dq$EnrollmentID)
         
-        Q5a <- create_summary_table(recent_program_enrollment_dq, "Count.of.Clients.for.DQ") %>% #View(create_summary_table)
+        Q5a <- create_summary_table(recent_program_enrollment_dq, "Count.of.Clients.for.DQ") %>%
           left_join(create_summary_table(recent_program_enrollment, "Count.of.Clients"), 
                     by = "Group")
       }
@@ -174,7 +174,7 @@
       # Q6b checked
       {
         
-        Q6b_earlier_enrollment <- recent_program_enrollment_dq %>% #use the DQ dataframe 
+        Q6b_earlier_enrollment <- recent_program_enrollment_dq %>%
           left_join(Enrollment %>%
                       left_join(Exit %>%
                                   select(EnrollmentID, ExitDate),
@@ -410,9 +410,9 @@
                                         "PH.all", "SSO.Day.Shelter.HP", "CE")
         
         Q6d_detail <- recent_program_enrollment_dq %>% 
-          filter(EntryDate >= mdy("10/1/2016") & #Just making a note that this date is hard coded ----
+          filter(EntryDate >= mdy("10/1/2016") &
                    ProjectType %in% c(0, 1, 2, 3, 4, 6, 8, 9, 10, 11, 12, 13, 14)) %>%
-          keep_adults_and_hoh_only() %>% #View(keep_adults_and_hoh_only)
+          keep_adults_and_hoh_only() %>% 
           select(c("ProjectType", all_of(standard_detail_columns), 
                    all_of(lot_homeless_detail_columns))) %>%
           mutate(Entering.into.project.type = case_when(
@@ -494,7 +494,7 @@
             Percent.of.records.unable.to.calculate, 4))
         
         
-        Q6d[Q6d$Entering.into.project.type == "ES-EE.ES-NbN.SH.Street.Outreach",  #What is this section doing? It doesn't seem to be writing back into Q6d.
+        Q6d[Q6d$Entering.into.project.type == "ES-EE.ES-NbN.SH.Street.Outreach",
             c("Missing.time.in.institution.3.917.2",
               "Missing.time.in.housing.3.917.2")] <- NA
       }
@@ -666,7 +666,7 @@
       
       # Q8a checked
       {
-        Q8a_data <- households_served_table(recent_program_enrollment) #View(households_served_table)
+        Q8a_data <- households_served_table(recent_program_enrollment)
         Q8a <- Q8a_data[[1]]
         Q8a_detail <- Q8a_data[[2]]
       }
@@ -838,8 +838,7 @@
       }
       
       
-      # Q10d checked / Grant Updated ----
-      #Updated the column headers to match age categories
+      # Q10d checked
 
       {
         Q10d_detail <- recent_program_enrollment %>%
@@ -1168,10 +1167,6 @@
                  Income.at.Latest.Annual.Assessment.for.Stayers = annualIncome,
                  Income.at.Exit.for.Leavers = exitIncome) %>%
           adorn_totals("row", name = "Total adults")
-
-        #Recode attempt: Error because Q16$total_income_group is an ordered factor
-        #Q16.2 <- as.data.frame(Q16)
-        #Q16.2[Q16.2 == "No Annual Required"] <- "Number of adult stayers not yet required to have an annual assessment"
         
        
       }
@@ -1428,7 +1423,6 @@
       }
       
       # Q20b checked
-      #Note row header one or more source(s) is different from specs (1 + Source(s)). How exact do we want to be?
       {
         Q20b_detail <- "See Q20a_detail.csv"
         for(period in benefit_entry_annual_exit) {
@@ -2428,7 +2422,7 @@
         Q27i <- exit_income %>%
           income_hh_type_disabling_condition_table(., youth = TRUE) %>% 
           mutate(name = case_when(
-            name == "Unduplicated.Total.Adults" ~ "Unduplicated.Total.Youth", #Resolution to Testkit Issue 92. Rename to be youth 
+            name == "Unduplicated.Total.Adults" ~ "Unduplicated.Total.Youth",
             TRUE ~ name
           ))
         
