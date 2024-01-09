@@ -1382,7 +1382,7 @@ get_household_info <- function(filtered_enrollments,
 create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Client.Does.Not.Know.or.Prefers.Not.to.Answer to Client.Does.Not.Know.or.Prefers.Not.to.Answer
   DQ1_data <- filtered_enrollments %>%
     inner_join(Client %>%
-                 select(-c(ExportID, DOB)), by = "PersonalID")
+                 select(-ExportID, DOB), by = "PersonalID") #QUESTION: Don't we need to keep DOB for DQ1_dob?
   
   DQ1_name <- DQ1_data %>%
     mutate(dq_flag = case_when(
@@ -1686,7 +1686,7 @@ add_chronicity_data <- function(df_of_active_enrollments,
     filter(DataCollectionStage == 1 &
              DisabilityResponse != 0 &
              indefinite_and_impairs &
-             EnrollmentID %in% df_of_active_enrollments$EnrollmentID) %>%
+             EnrollmentID %in% df_of_active_enrollments$EnrollmentID) %>% # ERROR: This is causing the following error for me, "a promise already under evaluation: recursive default argument reference or earlier problems?"
     group_by(EnrollmentID) %>%
     summarise() %>%
     ungroup() %>%

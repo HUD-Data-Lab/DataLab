@@ -140,6 +140,7 @@
       # Q5
       # Q5a
       # Q5a checked
+      # Question: standard_detail_columns has household_type. Where are we making that variable. I am getting an error with it.
       {
         recent_program_enrollment_dq <- recent_program_enrollment %>%
           filter(ProjectType != 4 |   
@@ -164,6 +165,7 @@
       # Q6
       # Q6a
       #Q6a checked
+      # QUESTION: See edits in create_dq_Q1()
       {
         Q6a_data <- create_dq_Q1(recent_program_enrollment_dq) #View(create_dq_Q1) in datalab_functions.R 
         Q6a <- Q6a_data[[1]]
