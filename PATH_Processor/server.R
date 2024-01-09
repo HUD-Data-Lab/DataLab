@@ -281,8 +281,8 @@ function(input, output, session) {
           DateOfPATHStatus <= ExitDateAdj,
         status_during_period = DateOfPATHStatus >= input$report_start_date &
           DateOfPATHStatus <= input$report_end_date,
-        enrolled_during_period = status_during_period &
-          ClientEnrolledInPATH == 1,
+        enrolled_during_period = active_and_enrolled &
+          status_during_period,
         leaver = !is.na(ExitDate) &
           ExitDate >= input$report_start_date &
           ExitDate <= input$report_end_date,
@@ -960,7 +960,7 @@ function(input, output, session) {
       `colnames<-`(c("col_b")) %>%
       full_join(
         Q26h_j_detail %>%
-          filter(LivingSituation %in% 100:199) %>%
+          filter(LivingSituation %in% c(101, 116)) %>%
           mutate(
             col_b = case_when(
               is.na(LengthOfStay) |
