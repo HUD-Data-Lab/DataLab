@@ -85,10 +85,11 @@ relevant_events <- Event %>%
 CE_element_projects <- Project %>%
   filter(ContinuumProject == 1) %>%
   inner_join(CEParticipation %>%
-               filter(CEParticipationStatusStartDate <= report_end_date &
-                        (is.na(CEParticipationStatusEndDate) |
-                                 CEParticipationStatusEndDate >= report_start_date) &
-                        (AccessPoint == 1 | ReceivesReferrals == 1)) %>% #Testkit Issue 119 resolution
+               filter(
+                 CEParticipationStatusStartDate <= report_end_date &
+                   AccessPoint == 1 &
+                   (is.na(CEParticipationStatusEndDate) |
+                      CEParticipationStatusEndDate >= report_start_date)) %>% 
                select(ProjectID) %>%
                distinct(),
              by = "ProjectID") 
