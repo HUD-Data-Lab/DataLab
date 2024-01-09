@@ -1145,15 +1145,15 @@ write_csvs_for <- function(project_ids, zip_title, write_to) {
     
     write.csv(data %>%
                 mutate(
-                  across(colnames(file)[str_locate_all(pattern = "T",
+                  across(colnames(data)[str_locate_all(pattern = "T",
                                                        get(file,
                                                            hmis_csvs_fy24))[[1]][,1]],
                          ~ format(., format = "%Y-%m-%d %H:%M:%S")),
-                  across(colnames(file)[str_locate_all(pattern = "D",
+                  across(colnames(data)[str_locate_all(pattern = "D",
                                                        get(file,
                                                            hmis_csvs_fy24))[[1]][,1]],
                          ~ format(., format = "%Y-%m-%d")),
-                  across(colnames(file)[str_locate_all(pattern = "d",
+                  across(colnames(data)[str_locate_all(pattern = "d",
                                                        get(file,
                                                            hmis_csvs_fy24))[[1]][,1]],
                          ~ if_else(. > 0, sprintf("%.2f", .), NA))),
