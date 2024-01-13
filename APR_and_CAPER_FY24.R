@@ -77,7 +77,7 @@
       # run this chunk to define global variables for use in individual metric testing (i.e. does not include all questions)
       {
       all_program_enrollments <- Enrollment %>% 
-        filter(ProjectID %in% project_list) %>% #filter by projectID in Project list.
+        filter(ProjectID %in% project_list) %>%
         left_join(Project %>%
                     select(ProjectID, ProjectType, ProjectName),
                   by = "ProjectID") %>%
@@ -87,7 +87,7 @@
       
       recent_program_enrollment <- all_program_enrollments %>%
         group_by(PersonalID) %>%
-        arrange(desc(EntryDate)) %>% #arrange by most recent entry date  
+        arrange(desc(EntryDate)) %>% 
         slice(1L) %>%
         ungroup() 
       
@@ -125,9 +125,6 @@
       }
       
       
-      # CEParticipation <- CEParticipation %>% 
-      #   mutate(ProjectID = as.character(ProjectID)) #Changed data type because I was getting a join error in View(Program_information_table)
-      
       # Q4a
       # Q4a checked
       {
@@ -140,7 +137,6 @@
       # Q5
       # Q5a
       # Q5a checked
-      # Question: standard_detail_columns has household_type. Where are we making that variable. I am getting an error with it.
       {
         recent_program_enrollment_dq <- recent_program_enrollment %>%
           filter(ProjectType != 4 |   
@@ -151,7 +147,7 @@
           add_length_of_time_groups(., EntryDate, 
                                     ifnull(ExitDate, ymd(report_end_date) + days(1)), 
                                     "APR") %>%
-          select(c(all_of(standard_detail_columns), #standard_detail_columns are created in DataLab_Lists.R
+          select(c(all_of(standard_detail_columns),
                    all_of(demographic_detail_columns),
                           number_of_days)) %>%
           mutate(IncludedInDQ = EnrollmentID %in% recent_program_enrollment_dq$EnrollmentID)
@@ -165,9 +161,8 @@
       # Q6
       # Q6a
       #Q6a checked
-      # QUESTION: See edits in create_dq_Q1()
       {
-        Q6a_data <- create_dq_Q1(recent_program_enrollment_dq) #View(create_dq_Q1) in datalab_functions.R 
+        Q6a_data <- create_dq_Q1(recent_program_enrollment_dq)
         Q6a <- Q6a_data[[1]]
         Q6a_detail <- Q6a_data[[2]]
       }
@@ -401,7 +396,7 @@
                           Group == "Income.and.Sources.4.02.at.Start" ~ Total / (Q5a$Count.of.Clients.for.DQ[2] + 
                                                                                    Q5a$Count.of.Clients.for.DQ[15]),
                           Group == "Income.and.Sources.4.02.at.Annual.Assessment" ~ Total / Q5a$Count.of.Clients.for.DQ[16],
-                          Group == "Income.and.Sources.4.02.at.Exit" ~ Total / Q5a$Count.of.Clients.for.DQ[7]), 4)), #Refer to DQ check on Q5a
+                          Group == "Income.and.Sources.4.02.at.Exit" ~ Total / Q5a$Count.of.Clients.for.DQ[7]), 4)),
                     by = "Group")%>%
           ifnull(., 0)
       }

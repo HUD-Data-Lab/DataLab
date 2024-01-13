@@ -29,10 +29,10 @@ items_to_keep <- c(items_to_keep,
         Destination %in% c(400:499) ~ "Permanent"))
   
   spm_7a1_dq <- df_7a1_clientDetail %>%
-    filter(PersonalID %nin% df_7a1_clientDetail$PersonalID[df_7a1_clientDetail$leaver.stayer == "Stayer"]) %>% # removes all clients who are a stayer.
+    filter(PersonalID %nin% df_7a1_clientDetail$PersonalID[df_7a1_clientDetail$leaver.stayer == "Stayer"]) %>% 
     group_by(PersonalID) %>%
     arrange(desc(ExitDate)) %>%
-    slice(1L) %>%  #Keeps the most recent exit information. If the exit dates are the same it will keep first in DF
+    slice(1L) %>% 
     ungroup()
   
   spm_7a1_exits <- spm_7a1_dq %>% 
@@ -45,7 +45,7 @@ items_to_keep <- c(items_to_keep,
   Count_7a.1_temp.inst.exts <- spm_7a1_exits %>% 
     filter(
       Destination %in% c(100:399) &
-        Destination %nin% c(116, 207)) %>% # Don't include 207 and 116
+        Destination %nin% c(116, 207)) %>% 
     {n_distinct(.$PersonalID)}
   
   Count_7a.1_PH.exts <- spm_7a1_exits %>% 
@@ -137,7 +137,7 @@ items_to_keep <- c(items_to_keep,
   df_7b.2_leaverLatestStay_u <- df_7b.2.stayers.leavers %>% 
     filter(PersonalID %nin% df_7b.2.stayers.leavers$PersonalID[df_7b.2.stayers.leavers$ExitDate > report_end_date | is.na(df_7b.2.stayers.leavers$ExitDate)]) %>% # removes all clients who are a stayer.
     group_by(PersonalID) %>% 
-    arrange(desc(EnrollmentID), .by_group = TRUE) %>% # sorts by most recently created enrollment date. This could be the spot for a tie-breaker.
+    arrange(desc(EnrollmentID), .by_group = TRUE) %>% # sorts by most recently created enrollment date.
     slice(which.max(ExitDate)) %>% #keeps the most recent exit enrollment
     ungroup()
   

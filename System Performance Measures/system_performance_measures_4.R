@@ -42,7 +42,7 @@ source_amount_cols <- paste0(c(source_yn_cols[1:14], "OtherIncome"), "Amount")
 # Define universe ----
 
 spm_4_projects <- Funder %>%
-  filter(Funder %in% c(2, 3, 4, 5, 6, 43, 44, 54, 55) & # Updated to reflect change in programming SPM Programming Specs v1.1 line 1 of programming instructions
+  filter(Funder %in% c(2, 3, 4, 5, 6, 43, 44, 54, 55) & 
            StartDate <= report_end_date &
            (is.na(EndDate) |
               EndDate >= report_start_date) &
