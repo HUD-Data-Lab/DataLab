@@ -464,14 +464,15 @@ if (generate_new_kits) {
           write.csv(get(paste0(question, "_detail")),
                     file.path(paste0("created_files_2/", question, ".csv")),
                     row.names = FALSE)
+          
+          to_write <- to_write %>% 
+            ifnull(., 0) 
         }
         
-        to_write <- to_write %>% 
-          ifnull(., 0) 
+        # to_write[is.na(to_write)] <- ""
         
-        to_write[is.na(to_write)] <- ""
-        
-        write_csv(to_write, file.path(paste0("created_files/", question, ".csv")))
+        write_csv(to_write, file.path(paste0("created_files/", question, ".csv")),
+                  na = "")
       } else {
         missing_files <- c(missing_files, paste("CE APR -", projects_included, "-", question))
       }

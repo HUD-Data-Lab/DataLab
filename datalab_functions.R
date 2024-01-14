@@ -20,10 +20,12 @@ if(!require(tidyverse)) {
   install.packages("tidyverse"); 
   library(tidyverse)
 }
-# if(!require(archive)) {
-#   install.packages("archive");
-#   library(archive)
-# }
+if(exists("run_locally")) {
+  if(!require(archive)) {
+    install.packages("archive");
+    library(archive)
+  }
+}
 
 set.seed(2022)
 
@@ -1089,6 +1091,7 @@ set_hud_format <- function(data_for_csv,
     data_for_csv %>%
       `colnames<-`(gsub(".", " ", colnames(data_for_csv), fixed = TRUE))
   } else {
+    data_for_csv %>%
     `colnames<-`(c("", gsub(".", " ", new_header, fixed = TRUE)))
   }
 }
