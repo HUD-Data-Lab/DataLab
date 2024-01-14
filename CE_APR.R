@@ -10,6 +10,7 @@
 # <https://www.gnu.org/licenses/>. 
 
 generate_new_kits <- TRUE
+run_locally <- TRUE
 
 source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/DataLab.R")
 

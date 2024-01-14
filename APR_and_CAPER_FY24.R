@@ -18,6 +18,7 @@
   {
     # This is a global parameter that should be changed if desired
     generate_new_kits <- TRUE
+    run_locally <- TRUE
     
     source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/DataLab.R")
   
@@ -30,12 +31,13 @@
       # 780#,	#"DataLab - PSH CoC I",
      # 1428,	#"DataLab - RRH CoC I", #Commented out because Project ID did not exist
      # 1495#,	#"DataLab - RRH CoC II", #Commented out because project ID did not exist
-      1554, #DataLab - RRH CoC I", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
-      1555 #, #"DataLab - RRH CoC II", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
+      # 1554, #DataLab - RRH CoC I", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
+      # 1555 #, #"DataLab - RRH CoC II", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
       # 1060#,	#"DataLab - RRH ESG I",
       # 1419,	#"DataLab - SO ESG",
       # 1615#,	#"DataLab - SSO CoC",
       # 388#,	#"DataLab - TH CoC"
+      1343, 1492
     )
     }
   

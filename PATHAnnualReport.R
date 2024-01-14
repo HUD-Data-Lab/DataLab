@@ -14,6 +14,7 @@ source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/DataLab.R")
 # report_start_date <- ymd("2021-10-1")
 # report_end_date <- ymd("2022-9-30")
 generate_new_kits <- TRUE
+run_locally <- TRUE
 
 for (organization in c(47, 106, 109)) {
 # for (organization in c(473, 1153)) {
