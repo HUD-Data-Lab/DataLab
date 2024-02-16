@@ -97,8 +97,8 @@ items_to_keep <- c(items_to_keep,
              Destination %in% c(200:399) ~ "Temporary or Institutional", #Include both Temporary and Institutional destinations
              Destination %in% c(400:499) ~ "Permanent")) %>%
     group_by(PersonalID) %>% 
-    arrange(desc(EnrollmentID), .by_group = TRUE) %>% # sorts by most recently created enrollment date. This could be the spot for a tie-breaker.
-    slice(which.max(ExitDate)) %>% 
+    arrange(desc(ExitDate), EnrollmentID) %>% # sorts by most recently created enrollment date. This could be the spot for a tie-breaker.
+    slice(1L) %>% 
     ungroup()
   
   spm_7b1_dq <- df_7b.1_client.detail %>% 
@@ -137,8 +137,8 @@ items_to_keep <- c(items_to_keep,
   df_7b.2_leaverLatestStay_u <- df_7b.2.stayers.leavers %>% 
     filter(PersonalID %nin% df_7b.2.stayers.leavers$PersonalID[df_7b.2.stayers.leavers$ExitDate > report_end_date | is.na(df_7b.2.stayers.leavers$ExitDate)]) %>% # removes all clients who are a stayer.
     group_by(PersonalID) %>% 
-    arrange(desc(EnrollmentID), .by_group = TRUE) %>% # sorts by most recently created enrollment date. This could be the spot for a tie-breaker.
-    slice(which.max(ExitDate)) %>% #keeps the most recent exit enrollment
+    arrange(desc(ExitDate), EnrollmentID) %>% 
+    slice(1L) %>%
     ungroup()
   
   df_7b.2_stayer_u <- df_7b.2_StayerLatestStay_u %>% 
