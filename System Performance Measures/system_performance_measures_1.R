@@ -249,7 +249,16 @@ spm_1a <-
 
 # SPM 1b1
 {
+  include_after_negation_1b1 <- spm_1_enrollments %>%
+    negate_lot_blocks(.,
+                      projects_to_keep = c(0, 1, 3, 8, 9, 10, 13),
+                      projects_to_remove = c(2, 3, 9, 10, 13)) %>%
+    make_spm1_dq_table(.) %>%
+    select(PersonalID) %>%
+    distinct()
+  
   spm_1b1_dq <- spm_1_enrollments %>%
+    filter(PersonalID %in% include_after_negation_1b1$PersonalID) %>%
     negate_lot_blocks(.,
                       projects_to_keep = c(0, 1, 3, 8, 9, 10, 13),
                       projects_to_remove = c(2, 3, 9, 10, 13),
@@ -264,7 +273,16 @@ spm_1a <-
 
 # SPM 1b2
 {
+  include_after_negation_1b2 <- spm_1_enrollments %>%
+    negate_lot_blocks(.,
+                      projects_to_keep = c(0, 1, 2, 3, 8, 9, 10, 13),
+                      projects_to_remove = c(3, 9, 10, 13)) %>%
+    make_spm1_dq_table(.) %>%
+    select(PersonalID) %>%
+    distinct()
+  
   spm_1b2_dq <- spm_1_enrollments %>%
+    filter(PersonalID %in% include_after_negation_1b2$PersonalID) %>%
     negate_lot_blocks(.,
                       projects_to_keep = c(0, 1, 2, 3, 8, 9, 10, 13),
                       projects_to_remove = c(3, 9, 10, 13),
