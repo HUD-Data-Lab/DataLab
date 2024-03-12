@@ -80,7 +80,7 @@ spm_2_dq <- spm_2_exits %>%
            ExitDate <= R_EntryDate &
            R_EntryDate <= ExitDate %m+% days(730) &
            (R_ProjectType %nin% ph_program_types |
-              ExitDate <= R_EntryDate %m+% days(14))) %>%
+              ExitDate <= R_EntryDate %m-% days(14))) %>%
   group_by(EnrollmentID) %>%
   arrange(R_EntryDate) %>%
   slice(1L) %>%
