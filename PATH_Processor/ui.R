@@ -136,35 +136,36 @@ ui <-
       card(
         DT::dataTableOutput("debug_table")
       )
-    ),
-    fluidRow(
-      card(card_header(
-        "Citations"),
-        HTML("<p>This project would not exist were it not for the existence of
-         other quality, free and open source products, particularly the following:
-         
-         <p>The wonderful <a href = 'https://github.com/abtassociates/eva' target= '_blank' rel='noopener noreferrer'>Eva</a> app developed by Abt 
-         
-         <p>The <a href = 'https://cran.r-project.org/package=tidyverse' 
-         target= '_blank' rel='noopener noreferrer'>tidyverse</a> package
-         
-         <p>The <a href = 'https://cran.r-project.org/package=stringr' 
-         target= '_blank' rel='noopener noreferrer'>stringr</a> package
-         
-         <p>The <a href = 'https://cran.r-project.org/package=janitor' 
-         target= '_blank' rel='noopener noreferrer'>janitor</a> package
-         
-         <p>The <a href = 'https://cran.r-project.org/package=shiny' 
-         target= '_blank' rel='noopener noreferrer'>shiny</a> package
-         
-         <p>The <a href = 'https://cran.r-project.org/package=bslib' 
-         target= '_blank' rel='noopener noreferrer'>bslib</a> package
-         
-         <p>The <a href = 'https://cran.r-project.org/package=DT' 
-         target= '_blank' rel='noopener noreferrer'>DT</a> package
-         
-         <p>The <a href = 'https://cran.r-project.org/package=zip' 
-         target= '_blank' rel='noopener noreferrer'>zip</a> package")))
+    )
+    # ,
+    # fluidRow(
+    #   card(card_header(
+    #     "Citations"),
+    #     HTML("<p>This project would not exist were it not for the existence of
+    #      other quality, free and open source products, particularly the following:
+    #      
+    #      <p>The wonderful <a href = 'https://github.com/abtassociates/eva' target= '_blank' rel='noopener noreferrer'>Eva</a> app developed by Abt 
+    #      
+    #      <p>The <a href = 'https://cran.r-project.org/package=tidyverse' 
+    #      target= '_blank' rel='noopener noreferrer'>tidyverse</a> package
+    #      
+    #      <p>The <a href = 'https://cran.r-project.org/package=stringr' 
+    #      target= '_blank' rel='noopener noreferrer'>stringr</a> package
+    #      
+    #      <p>The <a href = 'https://cran.r-project.org/package=janitor' 
+    #      target= '_blank' rel='noopener noreferrer'>janitor</a> package
+    #      
+    #      <p>The <a href = 'https://cran.r-project.org/package=shiny' 
+    #      target= '_blank' rel='noopener noreferrer'>shiny</a> package
+    #      
+    #      <p>The <a href = 'https://cran.r-project.org/package=bslib' 
+    #      target= '_blank' rel='noopener noreferrer'>bslib</a> package
+    #      
+    #      <p>The <a href = 'https://cran.r-project.org/package=DT' 
+    #      target= '_blank' rel='noopener noreferrer'>DT</a> package
+    #      
+    #      <p>The <a href = 'https://cran.r-project.org/package=zip' 
+    #      target= '_blank' rel='noopener noreferrer'>zip</a> package")))
     
   )
 # 

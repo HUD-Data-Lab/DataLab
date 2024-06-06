@@ -144,10 +144,10 @@ function(input, output, session) {
     
     choices <- unique(orgs_with_PATH$OrganizationName)
     # choices <- ls()
-    radioButtons("org_selector",
-                 "What organization would you like to generate the report for?",
-                 choices = choices,
-                 selected = choices[1])
+    checkboxGroupInput("org_selector",
+                       "What organization would you like to generate the report for?",
+                       choices = choices,
+                       selected = choices[1])
   })
   
   output$report_start_date <- renderUI({
@@ -184,7 +184,7 @@ function(input, output, session) {
                    filter(ProjectType %in% c(4, 6)),
                  by = "ProjectID") %>%
       inner_join(csv_files()$Organization %>% 
-                   filter(OrganizationName == input$org_selector),
+                   filter(OrganizationName %in% input$org_selector),
                  by = "OrganizationID") %>%
       .$ProjectID %>%
       unique()
@@ -1095,7 +1095,7 @@ function(input, output, session) {
       return ()
     }
     csv_files()$Organization %>% 
-      filter(OrganizationName == input$org_selector) %>%
+      filter(OrganizationName %in% input$org_selector) %>%
       inner_join(csv_files()$Project %>%
                    mutate(`SO or SSO Project` = ProjectType %in% c(4, 6),
                           `Included Project` = ProjectID %in% general_detail()$ProjectID),

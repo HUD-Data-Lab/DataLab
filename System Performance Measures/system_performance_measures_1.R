@@ -40,8 +40,8 @@ negate_lot_blocks <- function(enrollment_table,
       ##  and following that up, what if they immediately re-enrolled? in that 
       ##  case I guess we'd definitely want to keep this, because it would be 
       ##  contiguous with another stay
-      (ExitDateAdj > report_start_date |
-         !is.na(original_enrollment_id)) &
+      # (ExitDateAdj > report_start_date |
+      #    !is.na(original_enrollment_id)) &
         (EntryDate < MoveInDateAdj |
            is.na(MoveInDateAdj))) %>%
     mutate(range = iv(EntryDate, 
@@ -191,7 +191,7 @@ make_spm1_dq_table <- function(date_table) {
 
 
 spm_1_enrollments <- active_enrollments %>%
-  filter(Method5 &
+  filter(PersonalID %in% active_enrollments$PersonalID[Method5] &
            ProjectType != 1) %>%
   full_join(bed_nights_ee_format %>%
               filter(original_enrollment_id %in% active_enrollments$EnrollmentID),
