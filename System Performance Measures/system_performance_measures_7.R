@@ -102,7 +102,8 @@ items_to_keep <- c(items_to_keep,
     ungroup()
   
   spm_7b1_dq <- df_7b.1_client.detail %>% 
-    select(PersonalID,EntryDate,ExitDate,ProjectType,leaver.stayer,Destination,Destination_category) %>% 
+    select(PersonalID, EntryDate, ExitDate, EnrollmentID, ProjectType,
+           leaver.stayer, Destination, Destination_category) %>% 
     filter(
       PersonalID %nin% df_7b.1_client.detail$PersonalID[df_7b.1_client.detail$ProjectType %in% c(3,9,10) 
                                                         & df_7b.1_client.detail$MoveInDate <= report_end_date], #removes clients whose most recent exit was 3,9,10 and moveindate <= report end date
@@ -149,7 +150,8 @@ items_to_keep <- c(items_to_keep,
            PersonalID %nin% df_7b.2_leaverLatestStay_u$PersonalID[df_7b.2_leaverLatestStay_u$Destination %in% c(206,225,215,24)]) #remove clients with ineligible exit
   
   spm_7b2_dq <- df_7b.2_stayer_u %>% 
-    select(PersonalID,EntryDate,ExitDate,ProjectType,Destination) %>%
+    select(PersonalID, EntryDate, ExitDate, EnrollmentID, ProjectType, 
+           Destination) %>%
     rbind(df_7b.2_leaver_u) %>% 
     mutate("spm.7b.2_leaver_qual" =  EntryDate <= report_end_date & ExitDate <= report_end_date,
            "spm.7b.2_stayer_qual"= EntryDate <= report_end_date & (is.na(ExitDate) | ExitDate > report_end_date),
