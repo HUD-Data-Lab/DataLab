@@ -1,0 +1,12 @@
+name: Decommissioned_PATH_Processor
+title: Decommissioned_PATH_Processor
+username: hud-data-lab
+account: hud-data-lab
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 12132407
+bundleId: 8705529
+url: https://hud-data-lab.shinyapps.io/Decommissioned_PATH_Processor/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
