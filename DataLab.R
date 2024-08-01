@@ -48,7 +48,7 @@ disability_table <- Disabilities %>%
              if_else(disability_name == "Both Alcohol and Drug Use Disorders", 2, 1)),
          indefinite_and_impairs = ((DisabilityResponse == 1 &
                                      DisabilityType %in% c(6, 8)) |
-                                     (DisabilityResponse %in% c(2, 3) &
+                                     (DisabilityResponse %in% 1:3 &
                                         DisabilityType %in% c(5, 7, 9, 10) &
                                         IndefiniteAndImpairs == 1))) %>%
   select(EnrollmentID, DataCollectionStage, InformationDate, disability_name, 
