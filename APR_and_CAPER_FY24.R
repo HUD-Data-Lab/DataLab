@@ -58,13 +58,22 @@
     )
   }
   
-  items_to_keep <- c("items_to_keep", ls())
-  
   Exit <- Exit %>%
     rename(exit_DateCreated = DateCreated)
   
   Enrollment <- Enrollment %>%
     rename(enroll_DateCreated = DateCreated)
+  
+  annual_assessment_dates <- Enrollment %>% #What is this trying to get?
+    group_by(HouseholdID) %>%
+    mutate(start_for_annual = max(EntryDate[RelationshipToHoH == 1]), #Max entry date for each head of household
+           years_in_project = trunc((start_for_annual %--% report_end_date) / years(1))) %>% # What does %--% do?
+    filter(years_in_project > 0) %>%
+    mutate(annual_due = start_for_annual %m+% years(years_in_project)) %>%
+    select(HouseholdID, annual_due) %>%
+    distinct()
+  
+  items_to_keep <- c("items_to_keep", ls())
   
   } # End of metric-specific environment setup chunk
     
@@ -95,15 +104,6 @@
       
       # get additional client information (age for reporting)
       client_plus <- add_client_info(recent_program_enrollment)  #View(add_client_info) Getting a warning about mac(age, na.rm=TRUE) is returning -inf
-      
-      annual_assessment_dates <- Enrollment %>% #What is this trying to get?
-        group_by(HouseholdID) %>%
-        mutate(start_for_annual = max(EntryDate[RelationshipToHoH == 1]), #Max entry date for each head of household
-               years_in_project = trunc((start_for_annual %--% report_end_date) / years(1))) %>% # What does %--% do?
-        filter(years_in_project > 0) %>%
-        mutate(annual_due = start_for_annual %m+% years(years_in_project)) %>%
-        select(HouseholdID, annual_due) %>%
-        distinct()
       
       household_info <- get_household_info(all_program_enrollments,
                                            return_type = "household")
