@@ -263,8 +263,7 @@ make_spm_4_table <- function(income_data,
   later_income_column <- paste0("E_", income_column)
   
   calculations <- income_data %>%
-    filter(!is.na(S_calculated_total_income) &
-             !is.na(E_calculated_total_income)) %>%
+    filter(!is.na(S_calculated_total_income)) %>%
     select(PersonalID, {{start_income_column}}, {{later_income_column}}) %>%
     summarise(total_people = n_distinct(PersonalID, na.rm = TRUE),
               people_increased = n_distinct(PersonalID[get(start_income_column)
