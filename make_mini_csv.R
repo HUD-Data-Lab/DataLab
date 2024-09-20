@@ -49,10 +49,21 @@ for (file in names(hmis_csvs_fy24)){
                                      colnames(data)))
   } 
   
+  if("UserID" %in% colnames(data)) {
+    data <- data %>%
+      mutate(UserID = 1)
+  }
+  
   assign(file, data)
   
   file.remove(paste0(file, ".csv"))
 }
+
+User <- User %>%
+  slice_head(n = 1)
+
+CurrentLivingSituation <- CurrentLivingSituation %>%
+  slice_head(n = 0)
 
 new_orgs <- Organization %>%
   slice_head(n = 5)
