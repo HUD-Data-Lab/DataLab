@@ -826,69 +826,7 @@
         Q9b <- rbind(Q9b, rate_of_engagement)
         
       }
-      
-      # Q10a checked
-      {
-        Q10a_detail <- recent_program_enrollment %>%
-          select(all_of(standard_detail_columns)) %>%
-          left_join(Client %>%
-                      select(PersonalID, all_of(names(gender_columns)), GenderNone),
-                    by = "PersonalID")
 
-        Q10a <- Q10a_detail %>%
-          create_gender_groups(.)
-      }
-      
-      
-      # Q10d checked / Grant Updated ----
-      #Updated the column headers to match age categories
-
-      {
-        Q10d_detail <- recent_program_enrollment %>%
-          select(all_of(standard_detail_columns), "age", "detailed_age_group") %>%
-          left_join(Client %>%
-                      select(PersonalID, all_of(names(gender_columns)), GenderNone),
-                    by = "PersonalID") %>%
-          mutate(Q10d_age_group = case_when(
-            detailed_age_group %in% c("Under 5", "5-12", "13-17") ~ "Under18",
-            detailed_age_group %in% c("25-34", "35-44", "45-54", "55-64") ~ "25-64",
-            TRUE ~ detailed_age_group)) 
-        
-        Q10d_setup <- gender_info %>%
-          full_join(Q10d_detail,
-                    by = all_of(names(gender_columns)),
-                    multiple = "all") %>%
-          mutate(across(
-            all_of(names(gender_columns)),
-            ~ as.numeric(.)),
-            gender_count = rowSums(across(all_of(names(gender_columns))),
-                                   na.rm = TRUE),
-            gender_tabulation = case_when(
-              gender_count %in% 1:2 ~ gender_name_list,
-              gender_count > 2 ~ "More than 2 Gender Identities Selected",
-              GenderNone %in% c(8, 9) ~ "Client Doesn’t Know/Prefers Not to Answer",
-              TRUE ~ "Data Not Collected")) 
-        
-        Q10d <- data.frame(
-          gender_tabulation = c(gender_info$gender_name_list, 
-                                "More than 2 Gender Identities Selected",
-                                "Client Doesn’t Know/Prefers Not to Answer",
-                                "Data Not Collected")) %>%
-          full_join(
-            Q10d_setup %>%
-              group_by(gender_tabulation) %>%
-              summarise(Total = n_distinct(PersonalID, na.rm = TRUE),
-                        Under.Age.18 = n_distinct(PersonalID[Q10d_age_group == "Under18"], na.rm = TRUE),
-                        Age.18.to.24 = n_distinct(PersonalID[Q10d_age_group == "18-24"], na.rm = TRUE),
-                        Age.25.to.64 = n_distinct(PersonalID[Q10d_age_group == "25-64"], na.rm = TRUE),
-                        Age.65.and.over = n_distinct(PersonalID[Q10d_age_group == "65+"], na.rm = TRUE),
-                        Client.Does.Not.Know.or.Prefers.Not.to.Answer = n_distinct(PersonalID[Q10d_age_group == "Client.Does.Not.Know.or.Declined"], na.rm = TRUE),
-                        Data.Not.Collected = n_distinct(PersonalID[Q10d_age_group == "Data.Not.Collected"], na.rm = TRUE)),
-            by = "gender_tabulation") %>%
-          ifnull(., 0) %>%
-          adorn_totals("row")
-        
-      }
       
       # Q11 checked
       {
@@ -1987,23 +1925,7 @@
           return_household_groups(., Response, moving_on_assistance$Response) %>%
           ifnull(., 0)
       }
-      
-      #Q24c checked
-      {
-        Q24c_detail <- recent_program_enrollment %>%
-          filter(ProjectType == 3) %>%
-          keep_adults_and_hoh_only() %>%
-          select(c(all_of(housing_program_detail_columns), 
-                   "SexualOrientation")) 
-        
-        Q24c <- Q24c_detail %>%
-          inner_join(sexual_orientation_columns, 
-                    by = c("SexualOrientation" = "value")) %>%
-          return_household_groups(., name, 
-                                  unique(sexual_orientation_columns$name)) %>%
-          adorn_totals("row") %>%
-          ifnull(., 0)
-      }
+
       
       #Q24d checked
       {
@@ -2113,18 +2035,6 @@
           ifnull(., 0)
       }
       
-      # Q25c checked
-      {
-        Q25c_detail <- recent_veteran_enrollment %>%
-          select(c(all_of(standard_detail_columns))) %>%
-          left_join(Client %>%
-                      select(PersonalID, all_of(names(gender_columns)), GenderNone),
-                    by = "PersonalID") 
-        
-        Q25c <- Q25c_detail %>%
-          create_gender_groups(.) %>%
-          select(-With.Only.Children)
-      }
       
       # Q25d checked
       {
@@ -2205,18 +2115,7 @@
           adorn_totals("row") %>%
           ifnull(., 0)
       }
-      
-      # Q26c checked
-      {
-        Q26c_detail <- recent_chronic_enrollment %>%
-          select(c(all_of(standard_detail_columns))) %>%
-          left_join(Client %>%
-                      select(PersonalID, all_of(names(gender_columns)), GenderNone),
-                    by = "PersonalID") 
-        
-        Q26c <- Q26c_detail %>%
-          create_gender_groups(.)
-      }
+
       
       # Q26d checked
       {
@@ -2312,17 +2211,6 @@
           ifnull(., 0)
       }
       
-      # Q27c checked
-      {
-        Q27c_detail <- recent_youth_enrollment %>%
-          select(c(all_of(standard_detail_columns))) %>%
-          left_join(Client %>%
-                      select(PersonalID, all_of(names(gender_columns)), GenderNone),
-                    by = "PersonalID") 
-        
-        Q27c <- Q27c_detail %>%
-          create_gender_groups(.)
-      }
       
       # Q27d checked
       {

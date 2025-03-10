@@ -633,33 +633,6 @@ create_age_groups <- function(filtered_recent_program_enrollment,
 }
 
 
-# create gender group table
-create_gender_groups <- function(filtered_recent_program_enrollment) {
-  
- filtered_recent_program_enrollment %>%
-    left_join(gender_info,
-              by = all_of(names(gender_columns))) %>%
-    mutate(across(
-      all_of(names(gender_columns)),
-      ~ as.numeric(.)),
-      gender_count = rowSums(across(all_of(names(gender_columns))),
-                              na.rm = TRUE),
-      gender_tabulation = case_when(
-        gender_count %in% 1:2 ~ gender_name_list,
-        gender_count > 2 ~ "More than 2 Gender Identities Selected",
-        GenderNone %in% c(8, 9) ~ "Client Doesn’t Know/Prefers Not to Answer",
-        TRUE ~ "Data Not Collected"
-      )
-    ) %>%
-    return_household_groups(., gender_tabulation, 
-                            c(gender_info$gender_name_list, 
-                              "More than 2 Gender Identities Selected",
-                              "Client Doesn’t Know/Prefers Not to Answer",
-                              "Data Not Collected")) %>%
-    adorn_totals("row")
-}
-
-
 # create benefit group table
 create_benefit_groups <- function(included_enrollments) {
   for(period in benefit_entry_annual_exit) {
@@ -1279,11 +1252,6 @@ add_client_info <- function(filtered_enrollments) { #Create function to add clie
     filter(EnrollmentID %in% filtered_enrollments$EnrollmentID) %>%
     select(PersonalID, age, age_group, detailed_age_group, VeteranStatus, 
            youth_household, youth, has_children, new_veteran_status, DOB
-           # ,
-           # Woman, Man, NonBinary, CulturallySpecific, Transgender, 
-           # Questioning, DifferentIdentity, GenderNone, AmIndAKNative,
-           # Asian, BlackAfAmerican, HispanicLatinaeo, MidEastNAfrican,
-           # NativeHIPacific, White, RaceNone
            )
 }
 
@@ -1459,23 +1427,6 @@ create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Cl
            HispanicLatinaeo, MidEastNAfrican,
            NativeHIPacific, White, RaceNone, dq_flag)
   
-  DQ1_gender <- DQ1_data %>%
-    mutate(dq_flag = case_when(
-      GenderNone %in% c(8, 9) ~ "Client.Does.Not.Know.or.Prefers.Not.to.Answer",
-      GenderNone == 99 |
-        (Woman == 0 &
-           Man == 0 &
-           NonBinary == 0 &
-           CulturallySpecific == 0 &
-           Transgender == 0 &
-           Questioning == 0 &
-           !(DifferentIdentity == 1 &
-               !is.na(DifferentIdentityText))) ~ "Information.Missing",
-      TRUE ~ "OK")) %>%
-    select(PersonalID, Woman, Man, NonBinary, CulturallySpecific, Transgender, 
-           Questioning, DifferentIdentity, DifferentIdentityText, GenderNone, 
-           dq_flag)
-  
   columns <- c("DataElement", "Client.Does.Not.Know.or.Prefers.Not.to.Answer", 
                "Information.Missing", "Data.Issues", "OK")
   
@@ -1485,7 +1436,7 @@ create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Cl
   DQ1_detail <- filtered_enrollments %>%
     select(all_of(standard_detail_columns))
   
-  elements <- list("Name", "SSN", "DOB", "Race", "Gender")
+  elements <- list("Name", "SSN", "DOB", "Race")
   
   for (element in elements) {
     table <- get(paste0("DQ1_", tolower(element))) #this loop creates the table for the data-elements
