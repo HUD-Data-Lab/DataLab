@@ -67,9 +67,11 @@ CurrentLivingSituation <- CurrentLivingSituation %>%
 
 new_orgs <- Organization %>%
   slice_head(n = 5)
+  # slice_head(n = 1)
 
 selection <- Project %>% 
   filter(ProjectType %in% c(0, 2, 3, 13)) %>%
+  # filter(ProjectType == 4) %>%
   select(ProjectID, ProjectName, ProjectType) %>% 
   left_join(Enrollment %>%
               # left_join(get_enrollments %>% 
@@ -84,14 +86,17 @@ selection <- Project %>%
   filter(enrollments >= 20) %>%
   ungroup() %>%
   group_by(ProjectType) %>%
-  slice_head(n = 5) %>%
+  # slice_head(n = 5) %>%
+  slice_head(n = 1) %>%
   ungroup() %>%
   # arrange(ProjectName) %>%
   mutate(new_OrganizationID = rep(new_orgs$OrganizationID, 4),
+  # mutate(new_OrganizationID = new_orgs$OrganizationID,
          project_type_string = case_when(
            ProjectType == 0 ~ "ES",
            ProjectType == 2 ~ "TH",
            ProjectType == 3 ~ "PSH",
+           ProjectType == 4 ~ "SO",
            ProjectType == 13 ~ "RRH")) %>%
   left_join(Organization %>%
               select(OrganizationID, OrganizationName),
@@ -138,5 +143,5 @@ if (!dir.exists(paste0(folder_name, "/HMIS CSVs"))) {
   dir.create(paste0(folder_name, "/HMIS CSVs"))
 }
 
-write_csvs_for(Project$ProjectID, zip_title = "Mini Zip Set",
+write_csvs_for(Project$ProjectID, zip_title = "Mini Zip Set - One SO",
                write_to <- paste0(folder_name, "/HMIS CSVs"))

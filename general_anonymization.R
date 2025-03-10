@@ -18,10 +18,10 @@ source("DataLab_Lists.R")
 unhashed_data <- file.choose()
 # save_to <- choose.dir()
 
-for (file in names(hmis_csvs)){
+for (file in names(hmis_csvs_fy24)){
   
   data <- read_csv(archive_read(unhashed_data, paste0(file, ".csv")), 
-                   col_types = get(file, hmis_csvs)) 
+                   col_types = get(file, hmis_csvs_fy24)) 
   
   if ("CoCCode" %in% colnames(data)) {
     data <- data %>%
@@ -57,7 +57,7 @@ for (file in names(hmis_csvs)){
              DateCreated = as.POSIXct(ExitDate + days_to_shift)) %>%
       select(-days_to_shift)
   }
-  
+
   assign(file, data)
   
   # write.csv(data, file = paste0(save_to, "\\", file, ".csv"), row.names = FALSE)
@@ -65,8 +65,8 @@ for (file in names(hmis_csvs)){
 }
 
 # start_date <- min(Exit$ExitDate)
-start_date <- ymd("2019-10-1")
-end_date <- ymd("2022-9-30")
+start_date <- ymd("2021-10-1")
+end_date <- ymd("2024-9-30")
 
 Export$ExportDate <- Sys.time()
 Export$ExportStartDate <- start_date
@@ -160,10 +160,7 @@ activity_information <- active_enrollments %>%
 Project <- trunc_userid(Project) %>%
   filter(ProjectID %in% activity_information$ProjectID &
            (!is.na(ProjectType) | 
-              ContinuumProject == 0)) %>%
-  mutate(TrackingMethod = case_when(
-    ProjectID == 93 ~ 3,
-    TRUE ~ TrackingMethod))
+              ContinuumProject == 0)) 
 
 max_org_length <- min(26, nrow(Organization))
 
@@ -199,7 +196,7 @@ Project <- Project %>%
             by = "OrganizationID") %>%
   mutate(
     project_type_string = case_when(
-      ProjectType == 1 ~ "ES",
+      ProjectType %in% c(0, 1) ~ "ES",
       ProjectType == 2 ~ "TH",
       ProjectType == 3 ~ "PSH",
       ProjectType == 4 ~ "SO",
@@ -267,8 +264,7 @@ Funder <- trunc_userid(Funder) %>%
 
 Funder$GrantID <- stri_rand_strings(nrow(Funder), 6, pattern = "[A-Z]")
 
-Inventory <- trunc_userid(Inventory) %>%
-  filter(ProjectID %in% Project$ProjectID) 
+ 
 
 Client <- trunc_userid(Client) %>%
   filter(PersonalID %in% Enrollment$PersonalID)
@@ -299,10 +295,18 @@ IncomeBenefits <- trunc_userid(IncomeBenefits) %>%
   mutate(OtherBenefitsSourceIdentify = NA)
 
 for (simple_table in c("Exit", "Disabilities", "EmploymentEducation",
-                       "EnrollmentCoC", "Event", "HealthAndDV",
-                       "YouthEducationStatus")) {
-  data <- trunc_userid(get(simple_table)) %>%
-    filter(EnrollmentID %in% Enrollment$EnrollmentID) 
+                       "Event", "HealthAndDV", "Inventory",
+                       "YouthEducationStatus", "HMISParticipation",
+                       "CEParticipation")) {
+  data <- trunc_userid(get(simple_table))
+  
+  if ("EnrollmentID" %in% colnames(data)) {
+    data <- data %>%
+      filter(EnrollmentID %in% Enrollment$EnrollmentID) 
+  } else {
+    data <- data %>%
+      filter(ProjectID %in% Project$ProjectID)
+  }
   
   assign(simple_table, data)
 }
@@ -409,15 +413,15 @@ CurrentLivingSituation <- CurrentLivingSituation %>%
   mutate(VerifiedBy = ProjectName) %>%
     select(-ProjectName)
 
-# # write to zipped folder
-# {
-#   for (file in names(hmis_csvs)) {
-#     write.csv(get(file), file.path(paste0("created_files/", file, ".csv")), 
-#               row.names=FALSE, na="")
-#   }
-#   
-#   archive_write_dir(paste0("DataLab - All Hashed CSVs.zip"),
-#                     paste0(getwd(), "/created_files"))
-#   
-#   unlink(paste0(getwd(), "/created_files/*"))
-# }
+# write to zipped folder
+{
+  for (file in names(hmis_csvs_fy24)) {
+    write.csv(get(file), file.path(paste0("created_files/", file, ".csv")),
+              row.names=FALSE, na="")
+  }
+
+  archive_write_dir(paste0("DataLab - All Hashed CSVs.zip"),
+                    paste0(getwd(), "/created_files"))
+
+  unlink(paste0(getwd(), "/created_files/*"))
+}
