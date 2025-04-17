@@ -1021,15 +1021,16 @@ create_inactive_table <- function(dq_enrollments,
   )
   
   activity_type_header <- if_else(activity_type == "contact",
-                                  "Contact (Adults and Heads of Household in Street Outreach or ES – NBN)",
+                                  "Contact (Adults and Heads of Household in Street Outreach or PATH-funded SSO)",
                                   "Bed Night (All clients in ES – NBN)")
   
   dq_enrollments %>%
     filter(is.na(ExitDate) &
              trunc((EntryDate %--% report_end_date) / days(1)) >= 90 &
              ((ProjectType == 1) |
-                (activity_type == "contact" &
-                   ProjectType == 4))) %>%
+                (activity_type == "contact" & 
+                   ProjectType == 6 &
+                   ProjectID %in% Funder$ProjectID[Funder$Funder == 21]))) %>%
     left_join(activity_events %>%
                 select(c("EnrollmentID", all_of(included_activity_type))) %>%
                 `colnames<-`(c("EnrollmentID", "included_activity_type")),
@@ -1490,7 +1491,7 @@ create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Cl
   
   DQ1[DQ1$DataElement == "Overall Score", c("Client.Does.Not.Know.or.Prefers.Not.to.Answer",
                                             "Information.Missing")] <- NA
-  DQ1$Data.Issues[4:6] <- NA
+  DQ1$Data.Issues[4:5] <- NA
   
   DQ1_results <- list()
   DQ1_results[[1]] <- DQ1
