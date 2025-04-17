@@ -30,7 +30,7 @@ if (kit_type == "old_kit") {
     report_start_date <- lookback_stop_date
     report_end_date <- lookback_stop_date %m+% years(8) %m-% days(1)
   } else {
-    report_start_date <- ymd("2021-10-1")
-    report_end_date <- ymd("2022-9-30")
+    report_start_date <- ymd("2023-10-1")
+    report_end_date <- ymd("2024-9-30")
   }
 }

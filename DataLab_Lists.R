@@ -57,6 +57,36 @@ hmis_csvs_fy24 <- list(Export = "cicccccccTDDccciiic",
                        Event = "cccDiiiciDTTcTc",
                        YouthEducationStatus = "cccDiiiiTTcTc")
 
+
+# ------------------------------------------------------------------------------
+# --------------------- FY24 HMIS CSV File List With Types ---------------------
+# ------------------------------------------------------------------------------
+
+hmis_csvs_fy26 <- list(Export = "cicccccccTDDccciiic",
+                       Organization = "ccicTTcTc",
+                       User = "ccccccTTTc",
+                       Project = "ccccDDiiiiiiiiTTcTc",
+                       Funder = "cciccDDTTcTc",
+                       ProjectCoC = "ccccccccciTTcTc",
+                       Inventory = "ccciiiiiiiiiiiiDDTTcTc",
+                       Affiliation = "cccTTcTc",
+                       HMISParticipation = "cciDDTTcTc",
+                       CEParticipation = "cciiiiiiDDTTcTc",
+                       Client = "ccccciciDiiiiiiiiiiciiiiiiiiiiiiiTTcTc",
+                       Enrollment = "cccDciciiiiiDiiiDDDiiiiiDiiiiiiiiiiiiiiiciiiiiiiiiiiiiiiiiiiiiiicTTcTc",
+                       Exit = "cccDiiciiiiiiiiiiiiiiiiiiiiiiiiiDiiiiiiTTcTc",
+                       IncomeBenefits = "cccDididididididididididididididididciiiiiiiciiiiiiiiiiiiiiiiiiiiciiiiiiTTcTc",
+                       HealthAndDV = "cccDiiiiiiiDiTTcTc",
+                       EmploymentEducation = "cccDiiiiiiTTcTc",
+                       Disabilities = "cccDiiiiiiiiiiiTTcTc",
+                       Services = "cccDDiiccidDDiTTcTc",
+                       CurrentLivingSituation = "cccDiiciiiiicTTcTc",
+                       Assessment = "cccDciiiTTcTc",
+                       AssessmentQuestions = "ccccciccTTcTc",
+                       AssessmentResults = "ccccccTTcTc",
+                       Event = "cccDiiiciDTTcTc",
+                       YouthEducationStatus = "cccDiiiiTTcTc")
+
 # ------------------------------------------------------------------------------
 # ----------------------- Question List for APR --------------------------------
 # ------------------------------------------------------------------------------
