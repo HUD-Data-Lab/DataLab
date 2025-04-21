@@ -700,11 +700,21 @@ CSV_columns <- read_csv("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/
 # used in:
 #   APR/CAPER - 
 
-possible_languages <- 
-  # read_excel("HMIS-C4-Translation-Assistance-Needed-Supplement-2024.xlsx",
-  #            range = "A1:B328")
-  read_csv("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/SupplementalTables/HMIS-C4-Translation-Assistance-Needed-Supplement-2024.csv",
-                               col_select = 1:2, col_types = "nc")
+# possible_languages <- 
+#   # read_excel("HMIS-C4-Translation-Assistance-Needed-Supplement-2024.xlsx",
+#   #            range = "A1:B328")
+#   read_csv("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/SupplementalTables/HMIS-C4-Translation-Assistance-Needed-Supplement-2024.csv",
+#                                col_select = c("Response Option Number", 
+#                                               "Response Option Name" ), 
+#            col_types = "nc") %>%
+#   filter(!is.na(`Response Option Number`))
+
+possible_languages <- read.csv("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/SupplementalTables/HMIS-C4-Translation-Assistance-Needed-Supplement-2024.csv",
+                               colClasses = c("integer", "character")) %>%
+  `colnames<-`(c("Response Option Number", "Response Option Name")) %>%
+  select("Response Option Number", "Response Option Name") %>%
+  filter(!is.na(`Response Option Number`))
+  
 
 
 # ------------------------------------------------------------------------------

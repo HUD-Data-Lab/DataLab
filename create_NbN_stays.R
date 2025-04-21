@@ -54,5 +54,8 @@ NbN_services$DateUpdated <- as.POSIXct(paste(NbN_services$DateUpdated, "2pm"), f
 
 Services$ServicesID <- as.integer(Services$ServicesID) 
 Services <- trunc_userid(Services) %>%
-  filter(EnrollmentID %in% Enrollment$EnrollmentID) %>%
-  full_join(NbN_services, by = colnames(NbN_services))
+  full_join(NbN_services, by = colnames(NbN_services)) %>%
+  filter(EnrollmentID %in% Enrollment$EnrollmentID)
+
+Project <- Project %>%
+  mutate(ProjectType = if_else(ProjectID %in% NbN_projects, 1, ProjectType))

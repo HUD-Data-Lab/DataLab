@@ -34,7 +34,7 @@
       # 1554, #DataLab - RRH CoC I", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
       # 1555 #, #"DataLab - RRH CoC II", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
       # 1060#,	#"DataLab - RRH ESG I",
-      # 1419,	#"DataLab - SO ESG",
+      # 1419#,	#"DataLab - SO ESG",
       # 1615#,	#"DataLab - SSO CoC",
       # 388#,	#"DataLab - TH CoC"
       1343, 1492
@@ -734,7 +734,8 @@
           left_join(CurrentLivingSituation %>%
                       select(-c(PersonalID, ExportID)) %>%
                       rename(CLS_InformationDate = InformationDate,
-                             CLS = CurrentLivingSituation), by = "EnrollmentID") %>%
+                             CLS = CurrentLivingSituation), by = "EnrollmentID",
+                    multiple = "all") %>%
           filter(CLS_InformationDate >= report_start_date &
                    CLS_InformationDate <= report_end_date &
                    (CLS_InformationDate <= DateOfEngagement |
@@ -745,7 +746,8 @@
           left_join(CurrentLivingSituation %>%
                       select(-ExportID) %>%
                       rename(CLS_InformationDate = InformationDate,
-                             CLS = CurrentLivingSituation), by = "EnrollmentID") %>%
+                             CLS = CurrentLivingSituation), by = "EnrollmentID",
+                    multiple = "all") %>%
           filter(CLS_InformationDate >= EntryDate &
                    (CLS_InformationDate <= ExitDate |
                       is.na(ExitDate)) &
@@ -1849,7 +1851,8 @@
       Q23e_calcs <- race_list_expanded %>% 
         as.data.frame(nm = "race_tabulation") %>% 
         left_join(Q23e_detail,
-                  by = "race_tabulation") %>%
+                  by = "race_tabulation",
+                  multiple = "all") %>%
         group_by(race_tabulation, APR_LocationGroup) %>%
           summarise(measure = n_distinct(PersonalID, na.rm = TRUE)) %>%
         ungroup()  %>% 
@@ -1934,7 +1937,8 @@
           select(c(all_of(housing_program_detail_columns), 
                    "PreferredLanguage")) %>%
           left_join(possible_languages, 
-                     by = c("PreferredLanguage" = "Response Option Number")) %>%
+                     by = c("PreferredLanguage" = "Response Option Number"),
+                    multiple = "all") %>%
           filter(PreferredLanguage == 21 |
                    !is.na(`Response Option Name`))
         

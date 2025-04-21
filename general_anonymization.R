@@ -195,6 +195,7 @@ Project <- Project %>%
               select(OrganizationID, OrganizationName, OrganizationCommonName),
             by = "OrganizationID") %>%
   mutate(
+    RRHSubType = if_else(ProjectID == 1815, 1, RRHSubType),
     project_type_string = case_when(
       ProjectType %in% c(0, 1) ~ "ES",
       ProjectType == 2 ~ "TH",
@@ -256,6 +257,7 @@ Funder <- trunc_userid(Funder) %>%
   # this is to create additional CoC-funded projects
   `colnames<-`(c(paste0(colnames(Funder), "_1"))) %>%
   mutate(Funder_1 = case_when(
+      Funder_1 == 2188 ~ as.integer(5),
       ProjectID_1 == 1615 ~ as.integer(4),
       ProjectID_1 == 1647 ~ as.integer(11),
       TRUE ~ Funder_1),
@@ -306,6 +308,11 @@ for (simple_table in c("Exit", "Disabilities", "EmploymentEducation",
   } else {
     data <- data %>%
       filter(ProjectID %in% Project$ProjectID)
+  }
+  
+  if (simple_table == "Exit") {
+    data <- data %>%
+      filter(ExitDate <= end_date)
   }
   
   assign(simple_table, data)
@@ -420,7 +427,7 @@ CurrentLivingSituation <- CurrentLivingSituation %>%
               row.names=FALSE, na="")
   }
 
-  archive_write_dir(paste0("DataLab - All Hashed CSVs.zip"),
+  archive_write_dir(paste0("Data Lab - Anonymized Zips ", Sys.Date(), ".zip"),
                     paste0(getwd(), "/created_files"))
 
   unlink(paste0(getwd(), "/created_files/*"))

@@ -267,7 +267,8 @@ get_annual_id <- function(enrollments, assessments, assessment_identifier) {
     inner_join(assessments %>%
                  filter(DataCollectionStage == 5) %>%
                  select(EnrollmentID, InformationDate, {{assessment_identifier}}),
-               by = c("EnrollmentID" = "EnrollmentID")) %>%
+               by = c("EnrollmentID" = "EnrollmentID"),
+               multiple = "all") %>%
     inner_join(annual_assessment_dates, by = "HouseholdID") %>%
     filter(trunc((annual_due %--% InformationDate) / days(1)) >= -30 &
              trunc((annual_due %--% InformationDate) / days(1)) <= 30) %>%
@@ -1015,10 +1016,8 @@ create_inactive_table <- function(dq_enrollments,
     stop("The argument \"activity_type\" can only be \"bed night\" or \"contact\"")
   }
   
-  included_activity_type <- intersect(
-    c("InformationDate", "DateProvided"),
-    colnames(activity_events)
-  )
+  included_activity_type <- if_else(activity_type == "bed night",
+                                    "DateProvided", "InformationDate")
   
   activity_type_header <- if_else(activity_type == "contact",
                                   "Contact (Adults and Heads of Household in Street Outreach or PATH-funded SSO)",
@@ -1124,15 +1123,15 @@ write_csvs_for <- function(project_ids, zip_title, write_to) {
                 mutate(
                   across(colnames(data)[str_locate_all(pattern = "T",
                                                        get(file,
-                                                           hmis_csvs_fy24))[[1]][,1]],
+                                                           hmis_csvs_fy26))[[1]][,1]],
                          ~ format(., format = "%Y-%m-%d %H:%M:%S")),
                   across(colnames(data)[str_locate_all(pattern = "D",
                                                        get(file,
-                                                           hmis_csvs_fy24))[[1]][,1]],
+                                                           hmis_csvs_fy26))[[1]][,1]],
                          ~ format(., format = "%Y-%m-%d")),
                   across(colnames(data)[str_locate_all(pattern = "d",
                                                        get(file,
-                                                           hmis_csvs_fy24))[[1]][,1]],
+                                                           hmis_csvs_fy26))[[1]][,1]],
                          ~ if_else(. > 0, sprintf("%.2f", .), NA))),
               file.path(paste0("created_files/", file, ".csv")),
               row.names=FALSE, na = "",
