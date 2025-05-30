@@ -25,19 +25,17 @@
   # used for building and testing APR on specific projects or groups of projects. To run full test kit use full_project_list
   {
     project_list <- c(
-      # 1362#,	#"DataLab - ES-EE ESG I",
-      # 93#,	#"DataLab - ES-NbN ESG",
-      # 1409#,	"DataLab - HP ESG",
-      # 780#,	#"DataLab - PSH CoC I",
-     # 1428,	#"DataLab - RRH CoC I", #Commented out because Project ID did not exist
-     # 1495#,	#"DataLab - RRH CoC II", #Commented out because project ID did not exist
-      # 1554, #DataLab - RRH CoC I", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
-      # 1555 #, #"DataLab - RRH CoC II", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
-      # 1060#,	#"DataLab - RRH ESG I",
-      # 1419#,	#"DataLab - SO ESG",
-      # 1615#,	#"DataLab - SSO CoC",
-      # 388#,	#"DataLab - TH CoC"
-      1343, 1492
+      # 234	#"DataLab - ES-EE ESG I",
+      # 93	#"DataLab - ES-NbN ESG",
+      # 1304	#"DataLab - HP ESG",
+      # 1625	#"DataLab - PSH CoC I",
+      # 1343	#"DataLab - RRH CoC I",
+      # 1815	#"DataLab - RRH CoC II", # set this to RRH-SSO
+      # 1051	#"DataLab - RRH ESG I",
+      # 1647	#"DataLab - SO ESG",
+      # 1615	#"DataLab - SSO CoC",
+      # 389	#"DataLab - TH CoC" # update the funding source to 5
+      1814, 1815
     )
     }
   
@@ -45,13 +43,13 @@
   # used for running all reports for all projects. Use project_list for running specific projects.
   {
     full_project_list <- c(
-      234,	#"DataLab - ES-EE ESG I",
+      1362,	#"DataLab - ES-EE ESG I",
       93,	#"DataLab - ES-NbN ESG",
-      1002,	#"DataLab - HP ESG",
-      1625,	#"DataLab - PSH CoC I",
-      1343,	#"DataLab - RRH CoC I",
-      1492,	#"DataLab - RRH CoC II", # set this to RRH-SSO
-      1051,	#"DataLab - RRH ESG I",
+      1304,	#"DataLab - HP ESG",
+      1762,	#"DataLab - PSH CoC I",
+      1814,	#"DataLab - RRH CoC I",
+      1815,	#"DataLab - RRH CoC II", # set this to RRH-SSO
+      1330,	#"DataLab - RRH ESG I",
       1647,	#"DataLab - SO ESG",
       1615,	#"DataLab - SSO CoC",
       389	#"DataLab - TH CoC" # update the funding source to 5
@@ -853,7 +851,7 @@
         Q12 <- Q12_detail %>%
           ifnull(., 0) %>%
           left_join(race_info, #Race_info created from DataLab_lists.R line 261
-                    by = all_of(unname(race_columns))) %>% 
+                    by = (unname(race_columns))) %>% 
           mutate(across(
             all_of(unname(race_columns)),
             ~ as.numeric(.)),
@@ -1967,6 +1965,27 @@
           select(-`Response Option Name`) %>%
           adorn_totals("row") %>%
           ifnull(., 0)
+      }
+      
+      # Q24e
+      {
+        Q24e_detail <- recent_program_enrollment %>%
+          select(all_of(standard_detail_columns)) %>%
+          left_join(Client %>%
+                      select(PersonalID, Sex),
+                    by = "PersonalID") %>%
+          mutate(sex_label = case_when(Sex == 0 ~ sex_categories[1],
+                                       Sex == 1 ~ sex_categories[2],
+                                       Sex %in% c(8, 9) ~ sex_categories[3],
+                                       Sex == 99 ~ sex_categories[4])) %>%
+          filter(!is.na(sex_label))
+        
+        Q24e <- Q24e_detail %>% 
+          return_household_groups(., sex_label, sex_categories) %>% 
+          adorn_totals("row") %>% 
+          ifnull(., 0)
+        
+
       }
       
       

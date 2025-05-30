@@ -727,3 +727,14 @@ possible_languages <- read.csv("https://raw.githubusercontent.com/HUD-Data-Lab/D
 #                           sheet = "YouthEducationStatus")
 
 youth_education_labels <- read_csv("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/SupplementalTables/YouthEducationStatus.csv")
+
+# ------------------------------------------------------------------------------
+# ----------------------- Classification List: Sex -------------------------
+# ------------------------------------------------------------------------------
+# used in:
+#   APR/CAPER - Q24e
+
+sex_categories <- c("Female",
+                        "Male",
+                        "Client doesn’t know/Prefers Not to Answer",
+                        "Data not collected")

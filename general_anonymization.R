@@ -257,7 +257,7 @@ Funder <- trunc_userid(Funder) %>%
   # this is to create additional CoC-funded projects
   `colnames<-`(c(paste0(colnames(Funder), "_1"))) %>%
   mutate(Funder_1 = case_when(
-      Funder_1 == 2188 ~ as.integer(5),
+      FunderID_1 == 2188 ~ as.integer(5),
       ProjectID_1 == 1615 ~ as.integer(4),
       ProjectID_1 == 1647 ~ as.integer(11),
       TRUE ~ Funder_1),
