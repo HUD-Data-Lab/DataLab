@@ -1418,13 +1418,13 @@ create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Cl
         (AmIndAKNative == 0 &
            Asian == 0 &
            BlackAfAmerican == 0 &
-           HispanicLatinaeo == 0 &
+           HispanicLatinao == 0 &
            MidEastNAfrican == 0 &
            NativeHIPacific == 0 &
            White == 0) ~ "Information.Missing",
       TRUE ~ "OK")) %>%
     select(PersonalID, AmIndAKNative, Asian, BlackAfAmerican,
-           HispanicLatinaeo, MidEastNAfrican,
+           HispanicLatinao, MidEastNAfrican,
            NativeHIPacific, White, RaceNone, dq_flag)
   
   columns <- c("DataElement", "Client.Does.Not.Know.or.Prefers.Not.to.Answer", 
