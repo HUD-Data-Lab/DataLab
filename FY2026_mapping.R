@@ -9,7 +9,7 @@
 # GNU Affero General Public License for more details at
 # <https://www.gnu.org/licenses/>. 
 
-
+library(archive)
 source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/00_read_2024_csv.R")
 
 insert <- function(original_list, item, position) {
@@ -43,7 +43,8 @@ for (file in names(hmis_csvs_fy24)){
       mutate(Sex = as.integer(
         sample(c(0, 1, 8, 9, 99, NA), nrow(data), replace = TRUE,
                prob = c(25, 25, 5, 5, 5, 35)))) %>%
-      select(all_of(new_cols))
+      select(all_of(new_cols)) %>%
+      rename("HispanicLatinao" = "HispanicLatinaeo")
   }
   
   if (file == "Enrollment") {
@@ -73,6 +74,9 @@ for (file in names(hmis_csvs_fy24)){
   
 }
 
+if (!dir.exists("created_files")) {
+  dir.create("created_files")
+}
 
 # write to zipped folder
 {

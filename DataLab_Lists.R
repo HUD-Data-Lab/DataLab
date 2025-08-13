@@ -332,7 +332,7 @@ SubsidyName <- c(
 race_columns <- c(AmIndAKNative = "American Indian, Alaska Native, or Indigenous", 
                   Asian = "Asian or Asian American", 
                   BlackAfAmerican = "Black, African American, or African", 
-                  HispanicLatinaeo = "Hispanic/Latina/e/o", 
+                  HispanicLatinao = "Hispanic/Latina/o", 
                   MidEastNAfrican = "Middle Eastern & North African", 
                   NativeHIPacific = "Native Hawaiian or Pacific Islander", 
                   White = "White")

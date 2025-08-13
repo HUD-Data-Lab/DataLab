@@ -860,16 +860,16 @@
             race_tabulation = case_when(
               race_count %in% 1:2 ~ race_name_list,
               race_count > 2 &
-                HispanicLatinaeo == 1 ~ "Multiracial – more than 2 races/ethnicity, with one being Hispanic/Latina/e/o",
-              race_count > 2 ~ "Multiracial – more than 2 races, where no option is Hispanic/Latina/e/o",
+                HispanicLatinao == 1 ~ "Multiracial – more than 2 races/ethnicity, with one being Hispanic/Latina/o",
+              race_count > 2 ~ "Multiracial – more than 2 races, where no option is Hispanic/Latina/o",
               RaceNone %in% c(8, 9) ~ "Client Doesn’t Know/Prefers Not to Answer",
               TRUE ~ "Data Not Collected"
             )
           ) %>%
           return_household_groups(., race_tabulation, 
                                   c(race_info$race_name_list, 
-                                    "Multiracial – more than 2 races/ethnicity, with one being Hispanic/Latina/e/o",
-                                    "Multiracial – more than 2 races, where no option is Hispanic/Latina/e/o",
+                                    "Multiracial – more than 2 races/ethnicity, with one being Hispanic/Latina/o",
+                                    "Multiracial – more than 2 races, where no option is Hispanic/Latina/o",
                                     "Client Doesn’t Know/Prefers Not to Answer",
                                     "Data Not Collected")) %>%
           adorn_totals("row")
@@ -1699,8 +1699,8 @@
             race_tabulation = case_when(
               race_count == 1 ~ race_name_list,
               race_count > 1 &
-                HispanicLatinaeo == 1 ~ "At Least 1 Race and Hispanic/Latina/e/o",
-              race_count > 1 ~ "Multi-racial (does not include Hispanic/Latina/e/o)",
+                HispanicLatinao == 1 ~ "At Least 1 Race and Hispanic/Latina/o",
+              race_count > 1 ~ "Multi-racial (does not include Hispanic/Latina/o)",
               TRUE ~ "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)"),
             include_type = case_when(
               MoveInDateAdj >= report_start_date & 
@@ -1754,8 +1754,8 @@
             race_tabulation = case_when(
               race_count == 1 ~ race_name_list,
               race_count > 1 &
-                HispanicLatinaeo == 1 ~ "At Least 1 Race and Hispanic/Latina/e/o",
-              race_count > 1 ~ "Multi-racial (does not include Hispanic/Latina/e/o)",
+                HispanicLatinao == 1 ~ "At Least 1 Race and Hispanic/Latina/o",
+              race_count > 1 ~ "Multi-racial (does not include Hispanic/Latina/o)",
               TRUE ~ "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)"),
             include_type = case_when(
               !is.na(MoveInDateAdj) &
@@ -1840,8 +1840,8 @@
           race_tabulation = case_when(
             race_count == 1 ~ race_name_list,
             race_count > 1 &
-              HispanicLatinaeo == 1 ~ "At Least 1 Race and Hispanic/Latina/e/o",
-            race_count > 1 ~ "Multi-racial (does not include Hispanic/Latina/e/o)",
+              HispanicLatinao == 1 ~ "At Least 1 Race and Hispanic/Latina/o",
+            race_count > 1 ~ "Multi-racial (does not include Hispanic/Latina/o)",
             TRUE ~ "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)")
         )
       
