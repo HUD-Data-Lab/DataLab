@@ -27,7 +27,7 @@
     project_list <- c(
       # 234	#"DataLab - ES-EE ESG I",
       # 93	#"DataLab - ES-NbN ESG",
-      # 1304	#"DataLab - HP ESG",
+      1304	#"DataLab - HP ESG",
       # 1625	#"DataLab - PSH CoC I",
       # 1343	#"DataLab - RRH CoC I",
       # 1815	#"DataLab - RRH CoC II", # set this to RRH-SSO
@@ -35,7 +35,7 @@
       # 1647	#"DataLab - SO ESG",
       # 1615	#"DataLab - SSO CoC",
       # 389	#"DataLab - TH CoC" # update the funding source to 5
-      1814, 1815
+      # 1814, 1815
     )
     }
   
@@ -1808,7 +1808,8 @@
                    "youth")) %>%
           filter(ProjectType != 12 & 
                    leaver & 
-                   Destination == 435) %>% 
+                   Destination == 435 &
+                   !is.na(DestinationSubsidyType)) %>% 
           left_join(subsidy_list, join_by(DestinationSubsidyType == Field))
         
         Q23d <- Q23d_detail %>% 
@@ -1896,7 +1897,8 @@
             HousingAssessment == 7 ~ assessment_outcomes[11],
             HousingAssessment == 10 ~ assessment_outcomes[12],
             HousingAssessment %in% c(8, 9) ~ assessment_outcomes[13],
-            HousingAssessment == 99 ~ assessment_outcomes[14])) 
+            HousingAssessment == 99 |
+              is.na(HousingAssessment) ~ assessment_outcomes[14])) 
         
         Q24a <- Q24a_detail %>%
           filter(!is.na(assessment_at_exit)) %>%
