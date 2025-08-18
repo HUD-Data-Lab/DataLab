@@ -30,6 +30,7 @@ for (file in names(hmis_csvs_fy24)){
   
   if (file == "Export") {
     data$ExportDate <- format.POSIXct(Sys.time(), "%Y-%m-%d %H:%M:%S")
+    data$CSVVersion <- "2026 v1.0"
   }
   
   if (file == "Client") {
@@ -73,6 +74,12 @@ for (file in names(hmis_csvs_fy24)){
   assign(file, data)
   
 }
+
+## added per Meradith's 8/15 email
+Exit <- Exit %>% 
+  mutate(DestinationSubsidyType = if_else(Destination == 435 & 
+                                            is.na(DestinationSubsidyType), 
+                                          420, DestinationSubsidyType))
 
 if (!dir.exists("created_files")) {
   dir.create("created_files")

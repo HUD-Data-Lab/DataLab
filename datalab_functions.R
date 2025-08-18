@@ -989,7 +989,8 @@ create_summary_table <- function(filtered_enrollments, column_name) {
               Number.of.stayers = uniqueN(na.omit(PersonalID[is.na(ExitDate)])),
               Number.of.adult.stayers = uniqueN(na.omit(PersonalID[age_group == "Adults" &
                                                              is.na(ExitDate)])),
-              Number.of.veterans = uniqueN(na.omit(PersonalID[new_veteran_status == 1])),
+              Number.of.veterans = uniqueN(na.omit(PersonalID[new_veteran_status == 1 &
+                                                                age_group == "Adults"])),
               Number.of.chronically.homeless.persons = uniqueN(na.omit(PersonalID[chronic == "Y"])),
               Number.of.youth.under.age.25 = uniqueN(na.omit(PersonalID[youth == 1])),
               Number.of.parenting.youth.under.age.25.with.children = uniqueN(na.omit(PersonalID[has_children == 1 & youth == 1])),

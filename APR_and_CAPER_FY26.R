@@ -26,8 +26,8 @@
   {
     project_list <- c(
       # 234	#"DataLab - ES-EE ESG I",
-      # 93	#"DataLab - ES-NbN ESG",
-      1304	#"DataLab - HP ESG",
+      93	#"DataLab - ES-NbN ESG",
+      # 1304	#"DataLab - HP ESG",
       # 1625	#"DataLab - PSH CoC I",
       # 1343	#"DataLab - RRH CoC I",
       # 1815	#"DataLab - RRH CoC II", # set this to RRH-SSO
@@ -407,7 +407,7 @@
       # Q6d
       {
         Entering.into.project.type <- c("ES-EE.ES-NbN.SH.Street.Outreach", "TH", 
-                                        "PH.all", "SSO.Day.Shelter.HP", "CE")
+                                        "PH.all", "CE", "SSO.Day.Shelter.HP")
         
         Q6d_detail <- recent_program_enrollment_dq %>% 
           filter(EntryDate >= mdy("10/1/2016") & #Just making a note that this date is hard coded ----
@@ -1881,24 +1881,29 @@
                    ProjectType == 12) %>%
           select(ProjectType, all_of(standard_detail_columns), 
                  HousingAssessment, SubsidyInformation) %>%
-          mutate(assessment_at_exit = case_when(
-            HousingAssessment == 1 ~
-              case_when(SubsidyInformation %in% 1:4 ~
-                          assessment_outcomes[SubsidyInformation]),
-            HousingAssessment == 2 ~
-              case_when(SubsidyInformation == 11 ~
-                          assessment_outcomes[5],
-                        SubsidyInformation == 12 ~
-                          assessment_outcomes[6]),
-            HousingAssessment == 3 ~ assessment_outcomes[7],
-            HousingAssessment == 4 ~ assessment_outcomes[8],
-            HousingAssessment == 5 ~ assessment_outcomes[9],
-            HousingAssessment == 6 ~ assessment_outcomes[10],
-            HousingAssessment == 7 ~ assessment_outcomes[11],
-            HousingAssessment == 10 ~ assessment_outcomes[12],
-            HousingAssessment %in% c(8, 9) ~ assessment_outcomes[13],
-            HousingAssessment == 99 |
-              is.na(HousingAssessment) ~ assessment_outcomes[14])) 
+          mutate(
+            assessment_at_exit = case_when(
+              HousingAssessment == 1 ~
+                case_when(SubsidyInformation %in% 1:4 ~
+                            assessment_outcomes[SubsidyInformation]),
+              HousingAssessment == 2 ~
+                case_when(SubsidyInformation == 11 ~
+                            assessment_outcomes[5],
+                          SubsidyInformation == 12 ~
+                            assessment_outcomes[6]),
+              HousingAssessment == 3 ~ assessment_outcomes[7],
+              HousingAssessment == 4 ~ assessment_outcomes[8],
+              HousingAssessment == 5 ~ assessment_outcomes[9],
+              HousingAssessment == 6 ~ assessment_outcomes[10],
+              HousingAssessment == 7 ~ assessment_outcomes[11],
+              HousingAssessment == 10 ~ assessment_outcomes[12],
+              HousingAssessment %in% c(8, 9) ~ assessment_outcomes[13],
+              HousingAssessment == 99 ~ assessment_outcomes[14]),
+            # putting errors in DNC per Meradith
+            assessment_at_exit = if_else(
+              is.na(assessment_at_exit), 
+              assessment_outcomes[14], 
+              assessment_at_exit)) 
         
         Q24a <- Q24a_detail %>%
           filter(!is.na(assessment_at_exit)) %>%
