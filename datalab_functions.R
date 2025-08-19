@@ -1058,13 +1058,9 @@ set_hud_format <- function(data_for_csv,
                  "Client Doesn't Know/Prefers Not To Answer",
                TRUE ~ get(first_col_name)))
   }
-  
-  if (first_col_name != "Data.Element") {
-    new_header <- names(data_for_csv)[2:length(data_for_csv)]
-  }
 
-  new_header[new_header == "Client.Does.Not.Know.or.Prefers.Not.to.Answer"] <- 
-    "Client Doesn't Know/Prefers Not To Answer" # Flagging this for follow-up: FY2024 removed refused ----
+  new_header <- names(data_for_csv)[2:length(data_for_csv)]
+  new_header[new_header == "Client.Does.Not.Know.or.Prefers.Not.to.Answer"] <- "Client Doesn't Know/Prefers Not To Answer" # Flagging this for follow-up: FY2024 removed refused ----
   
   if(for_datatable) {
     data_for_csv %>%
@@ -1433,11 +1429,11 @@ create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Cl
            HispanicLatinao, MidEastNAfrican,
            NativeHIPacific, White, RaceNone, dq_flag)
   
-  columns <- c("Data.Element", "Client.Does.Not.Know.or.Prefers.Not.to.Answer", 
+  columns <- c("DataElement", "Client.Does.Not.Know.or.Prefers.Not.to.Answer", 
                "Information.Missing", "Data.Issues", "OK")
   
   DQ1 <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), columns) %>%
-    mutate(across(Data.Element, factor)) 
+    mutate(across(DataElement, factor)) 
   
   DQ1_detail <- filtered_enrollments %>%
     select(all_of(standard_detail_columns))
@@ -1460,7 +1456,7 @@ create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Cl
       group_by(dq_flag) %>%
       summarise(Clients = n()) %>% 
       pivot_wider(names_from = "dq_flag", values_from = "Clients") %>%
-      mutate(Data.Element = element)
+      mutate(DataElement = element)
     
     DQ1 <- DQ1 %>%
       full_join(table, by = intersect(columns, colnames(table)))
@@ -1489,12 +1485,12 @@ create_dq_Q1 <- function(filtered_enrollments) {  # Changed all references of Cl
            Data.Issues = if_else(is.na(Data.Issues), 
                                  0, as.double(Data.Issues)),
            Total = `Client.Does.Not.Know.or.Prefers.Not.to.Answer` + Information.Missing + Data.Issues) %>%
-    add_row(Data.Element = "Overall Score", 
+    add_row(DataElement = "Overall Score", 
             `Client.Does.Not.Know.or.Prefers.Not.to.Answer` = 0, Information.Missing = 0, Data.Issues = 0, 
             Total = nrow(unique(error_clients))) %>%
     mutate("% of Issue Rate" = decimal_format(Total / Q5a$Count.of.Clients.for.DQ[1], 4)) #changed from ErrorRate to"% of Issue Rate"
   
-  DQ1[DQ1$Data.Element == "Overall Score", c("Client.Does.Not.Know.or.Prefers.Not.to.Answer",
+  DQ1[DQ1$DataElement == "Overall Score", c("Client.Does.Not.Know.or.Prefers.Not.to.Answer",
                                             "Information.Missing")] <- NA
   DQ1$Data.Issues[4:5] <- NA
   
