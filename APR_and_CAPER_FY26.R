@@ -1984,7 +1984,7 @@
           mutate(sex_label = case_when(Sex == 0 ~ sex_categories[1],
                                        Sex == 1 ~ sex_categories[2],
                                        Sex %in% c(8, 9) ~ sex_categories[3],
-                                       Sex == 99 ~ sex_categories[4])) %>%
+                                       TRUE ~ sex_categories[4])) %>%
           filter(!is.na(sex_label))
         
         Q24e <- Q24e_detail %>% 
