@@ -38,16 +38,15 @@ Q5M1_report <- active_enrollments %>%
 
 ### 5.2 (ES, SH, TH, PH) ----
 Q5M2_report <- active_enrollments %>%
-  filter(ProjectType %in% c(0, 1, 2, 8, 3, 9, 10, 13) & 
-           EntryDate >= report_start_date & 
-           EntryDate <= report_end_date) %>%
+  filter(ProjectType %in% c(0,1,2,8,3,9,10,13),
+         EntryDate >= report_start_date,
+         EntryDate <= report_end_date) %>%
   group_by(PersonalID) %>%
   arrange(EntryDate, EnrollmentID) %>%
   slice(1L) %>%
-  mutate(
-    client_lookbackdate = max( EntryDate %m-% days(730), lookback_stop_date )) %>% 
+  rename(client_startdate = EntryDate) %>%
+  mutate(client_lookbackdate = pmax(client_startdate - days(730), lookback_stop_date)) %>%
   ungroup() %>%
-  rename( "client_startdate" = "EntryDate") %>%
   select(PersonalID, client_startdate, client_lookbackdate)
 
 
@@ -65,15 +64,16 @@ spm_5.1_dq <- Q5M1_report %>%
                     client_lookbackdate <= capped_exit_date)) 
 
 spm_5.2_dq <- Q5M2_report %>%
-  left_join(enrollment_data %>%
-              mutate(
-                capped_exit_date = if_else(is.na(ExitDate), 
-                                           report_end_date,
-                                           ExitDate)) %>%
-              filter(ProjectType %in% c(0, 1, 2, 8, 3, 9, 10, 13)),
-            join_by(PersonalID,
-                    client_startdate > EntryDate,
-                    client_lookbackdate <= capped_exit_date))  
+  left_join(
+    enrollment_data %>%
+      mutate(
+        capped_exit_date = if_else(is.na(ExitDate), report_end_date, ExitDate)
+      ) %>%
+      filter(ProjectType %in% c(0,1,2,8,3,9,10,13)),
+    by = "PersonalID"
+  ) %>%
+  filter(EntryDate <= client_startdate &
+           capped_exit_date >= client_lookbackdate)
 
 ### counts of report persons ----
 Q5M1_C2 <- spm_5.1_dq %>%
