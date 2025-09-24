@@ -972,6 +972,7 @@
           filter(is.na(ExitDate)) %>%
           left_join(Q13c1_detail %>%
                       filter(DisabilityResponse != 0) %>%
+                      distinct(PersonalID, disability_name, .keep_all = TRUE) %>%
                       # earlier data lab logic did not account for the following step
                       group_by(PersonalID) %>%
                       summarise(disability_count = sum(disabilities)) %>%
