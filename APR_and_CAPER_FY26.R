@@ -1759,8 +1759,10 @@
               race_count > 1 ~ "Multi-racial (does not include Hispanic/Latina/o)",
               TRUE ~ "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)"),
             include_type = case_when(
-              !is.na(MoveInDateAdj) &
-                MoveInDateAdj <= report_end_date ~ "moved_in",
+              ProjectType %nin% c(3, 9, 13) |
+                (ProjectType %in% c(3, 9, 13) &
+                   !is.na(MoveInDateAdj) &
+                   MoveInDateAdj <= report_end_date) ~ "moved_in",
               TRUE ~ "not_yet_moved_in"))
         
       Q22g_calcs <- Q22g_detail %>% 
