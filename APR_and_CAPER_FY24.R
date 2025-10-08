@@ -20,7 +20,7 @@
     generate_new_kits <- TRUE
     run_locally <- TRUE
     
-    source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/DataLab.R")
+    source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/24_debug_DataLab.R")
   
   # used for building and testing APR on specific projects or groups of projects. To run full test kit use full_project_list
   {
