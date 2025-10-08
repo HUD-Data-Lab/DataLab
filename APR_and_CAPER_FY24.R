@@ -20,7 +20,7 @@
     generate_new_kits <- TRUE
     run_locally <- TRUE
     
-    source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/DataLab.R")
+    source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/24_debug_DataLab.R")
   
   # used for building and testing APR on specific projects or groups of projects. To run full test kit use full_project_list
   {
@@ -34,10 +34,11 @@
       # 1554, #DataLab - RRH CoC I", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
       # 1555 #, #"DataLab - RRH CoC II", -- Added on 7.24 because test kit data had a different Project ID for RRH CoC Projects
       # 1060#,	#"DataLab - RRH ESG I",
-      # 1419,	#"DataLab - SO ESG",
+      # 1419#,	#"DataLab - SO ESG",
       # 1615#,	#"DataLab - SSO CoC",
       # 388#,	#"DataLab - TH CoC"
-      1343, 1492
+      # 1343, 1492
+      1647
     )
     }
   
