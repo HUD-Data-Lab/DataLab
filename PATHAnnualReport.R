@@ -16,7 +16,8 @@ source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/DataLab.R")
 generate_new_kits <- TRUE
 run_locally <- TRUE
 
-for (organization in c(47, 106, 109)) {
+for (organization in c(234, 453, 97)) {
+# for (organization in c(47, 106, 109)) {
 # for (organization in c(473, 1153)) {
   relevant_projects <- Funder %>%
     filter(Funder == 21 &
@@ -463,39 +464,8 @@ for (organization in c(47, 106, 109)) {
              stayer, leaver) %>%
       left_join(Client %>%
                   select(PersonalID, DOB, DOBDataQuality, VeteranStatus,
-                         all_of(names(gender_columns)), GenderNone, 
-                         all_of(unname(race_columns)), RaceNone),
+                         all_of(unname(race_columns)), RaceNone, Sex),
                 by = "PersonalID")
-    
-    # Q26a
-    gender_table <- as.data.frame(c(unname(gender_columns),
-                                    names_for_1.8[3:5]))  %>%
-      `colnames<-`(c("col_b")) %>%
-      full_join(
-        Q26a_e_detail %>% 
-          select(PersonalID, all_of(names(gender_columns)), GenderNone) %>%
-          ##  this bit sets GenderNone to 99 if there are no responses at all
-          mutate(GenderNone = if_else(
-            rowSums(across(c(all_of(names(gender_columns)), GenderNone)),
-                    na.rm = TRUE) == 0, 
-            99, GenderNone)) %>% 
-          gather(ind, value, -PersonalID) %>%
-          filter(value > 0) %>%
-          full_join(stack(gender_columns),
-                    by = "ind") %>%
-          mutate(col_b = case_when(
-            value == 1 |
-              is.na(value) ~ values,
-            TRUE ~ convert_list_1.8(value))) %>%
-          group_by(col_b) %>%
-          summarise(individuals = n_distinct(PersonalID,
-                                             na.rm = TRUE)),
-        by = "col_b") %>%
-      rbind(c("Total",
-              n_distinct(Q26a_e_detail$PersonalID,
-                         na.rm = TRUE))) %>% 
-      mutate(col_a = case_when(
-        col_b == unname(gender_columns)[1] ~ "26a. Gender"), .before = col_b)
     
     # Q26b
     age_groups <- c("17 and under", "18 – 23", "24 – 30", "31 – 40",
@@ -787,9 +757,27 @@ for (organization in c(47, 106, 109)) {
         col_b == "Yes" ~ "26k. Survivor of Domestic Violence (adults only)"), 
         .before = col_b)
     
+    # Q26l
+    sex_groups <- c("Female", "Male", "Not available")
+    
+    sex_table <- as.data.frame(c(sex_groups)) %>%
+      `colnames<-`(c("col_b")) %>%
+      full_join(Q26a_e_detail %>%
+                  mutate(
+                    col_b = case_when(
+                      Sex == 0 ~ sex_groups[1],
+                      Sex == 1 ~ sex_groups[2],
+                      TRUE ~ sex_groups[3])) %>%
+                  group_by(col_b) %>%
+                  summarise(individuals = n_distinct(PersonalID,
+                                                     na.rm = TRUE)),
+                by = "col_b") %>%
+      adorn_totals() %>% 
+      mutate(col_a = case_when(
+        col_b == sex_groups[1] ~ "26l. Sex"), .before = col_b)
+    
     # combine all
-    Q26 <- gender_table %>%
-      rbind(age_table) %>%
+    Q26 <- age_table %>%
       rbind(race_table) %>%
       rbind(veteran_table) %>%
       rbind(cooccurring_disorder_table) %>%
@@ -798,6 +786,7 @@ for (organization in c(47, 106, 109)) {
       rbind(length_of_stay_table) %>%
       rbind(chronicity_table) %>%
       rbind(dv_table) %>%
+      rbind(sex_table) %>%
       mutate(
         individuals = ifnull(individuals, 0))  %>%
       `colnames<-`(c(" ", "  ",
