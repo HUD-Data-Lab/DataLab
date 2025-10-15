@@ -1024,13 +1024,22 @@ create_inactive_table <- function(dq_enrollments,
                                   "Contact (Adults and Heads of Household in Street Outreach or PATH-funded SSO)",
                                   "Bed Night (All clients in ES – NBN)")
   
+  if ("DateProvided" %in% colnames(activity_events)) {
+    activity_events <- activity_events %>%
+      filter(trunc((DateProvided %--% report_end_date) / days(1)) <= 90)
+  } else {
+    activity_events <- activity_events %>%
+      filter(trunc((InformationDate %--% report_end_date) / days(1)) <= 90)
+  }
+  
   dq_enrollments %>%
     filter(is.na(ExitDate) &
              trunc((EntryDate %--% report_end_date) / days(1)) >= 90 &
              ((ProjectType == 1) |
                 (activity_type == "contact" & 
-                   ProjectType == 6 &
-                   ProjectID %in% Funder$ProjectID[Funder$Funder == 21]))) %>%
+                   (ProjectType == 4 |
+                      (ProjectType == 6 &
+                         ProjectID %in% Funder$ProjectID[Funder$Funder == 21]))))) %>%
     left_join(activity_events %>%
                 select(c("EnrollmentID", all_of(included_activity_type))) %>%
                 `colnames<-`(c("EnrollmentID", "included_activity_type")),
@@ -1075,70 +1084,73 @@ set_hud_format <- function(data_for_csv,
 # write csvs for projects
 write_csvs_for <- function(project_ids, zip_title, write_to) {
   
-  if(missing(zip_title)) {
-    zip_title <- Project$ProjectName[Project$ProjectID %in% project_ids][1]
-  } 
-  
-  enrollment_info <- get("Enrollment") %>%
-    filter(ProjectID %in% project_ids) %>%
-    select(EnrollmentID, PersonalID, UserID)
-  
-  org_info <- get("Project")%>%
-    filter(ProjectID %in% project_ids) %>%
-    select(OrganizationID)
-  
-  for (file in names(hmis_csvs_fy24)) {
+  for (project_id in project_ids) {
     
-    data <- get(file)
+    if(missing(zip_title)) {
+      zip_title <- Project$ProjectName[Project$ProjectID == project_id][1]
+    } 
     
-    if ("ProjectID" %in% colnames(data)) {
-      data <- data %>%
-        filter(ProjectID %in% project_ids)
-    } else if ("EnrollmentID" %in% colnames(data)) {
-      data <- data %>%
-        filter(EnrollmentID %in% enrollment_info$EnrollmentID)
-    } else if ("PersonalID" %in% colnames(data)) {
-      data <- data %>%
-        filter(PersonalID %in% enrollment_info$PersonalID)
-    } else if ("OrganizationID" %in% colnames(data)) {
-      data <- data %>%
-        filter(OrganizationID %in% org_info$OrganizationID)
-    } else if ("UserID" %in% colnames(data)) {
-      data <- data %>%
-        filter(UserID %in% enrollment_info$UserID)
-    } else if (file != "Export") {
-      stop(paste(file))
-    }
+    enrollment_info <- get("Enrollment") %>%
+      filter(ProjectID == project_id) %>%
+      select(EnrollmentID, PersonalID, UserID)
     
-    if ("enroll_DateCreated" %in% colnames(data)) {
-      data <- data %>%
-        rename(DateCreated = enroll_DateCreated)
-    }
+    org_info <- get("Project")%>%
+      filter(ProjectID == project_id) %>%
+      select(OrganizationID)
     
-    if ("exit_DateCreated" %in% colnames(data)) {
-      data <- data %>%
-        rename(DateCreated = exit_DateCreated)
+    for (file in names(hmis_csvs_fy24)) {
       
-    }
-    
-    write.csv(data %>%
-                mutate(
-                  across(colnames(data)[str_locate_all(pattern = "T",
-                                                       get(file,
-                                                           hmis_csvs_fy26))[[1]][,1]],
-                         ~ format(., format = "%Y-%m-%d %H:%M:%S")),
-                  across(colnames(data)[str_locate_all(pattern = "D",
-                                                       get(file,
-                                                           hmis_csvs_fy26))[[1]][,1]],
-                         ~ format(., format = "%Y-%m-%d")),
-                  across(colnames(data)[str_locate_all(pattern = "d",
-                                                       get(file,
-                                                           hmis_csvs_fy26))[[1]][,1]],
-                         ~ if_else(. > 0, sprintf("%.2f", .), NA))),
-              file.path(paste0("created_files/", file, ".csv")),
-              row.names=FALSE, na = "",
-              quote = which(as.character(lapply(get(file), class)) %nin%
-                              c("integer", "numeric")))
+      data <- get(file)
+      
+      if ("ProjectID" %in% colnames(data)) {
+        data <- data %>%
+          filter(ProjectID == project_id)
+      } else if ("EnrollmentID" %in% colnames(data)) {
+        data <- data %>%
+          filter(EnrollmentID %in% enrollment_info$EnrollmentID)
+      } else if ("PersonalID" %in% colnames(data)) {
+        data <- data %>%
+          filter(PersonalID %in% enrollment_info$PersonalID)
+      } else if ("OrganizationID" %in% colnames(data)) {
+        data <- data %>%
+          filter(OrganizationID %in% org_info$OrganizationID)
+      } else if ("UserID" %in% colnames(data)) {
+        data <- data %>%
+          filter(UserID %in% enrollment_info$UserID)
+      } else if (file != "Export") {
+        stop(paste(file))
+      }
+      
+      if ("enroll_DateCreated" %in% colnames(data)) {
+        data <- data %>%
+          rename(DateCreated = enroll_DateCreated)
+      }
+      
+      if ("exit_DateCreated" %in% colnames(data)) {
+        data <- data %>%
+          rename(DateCreated = exit_DateCreated)
+        
+      }
+      
+      write.csv(data %>%
+                  mutate(
+                    across(colnames(data)[str_locate_all(pattern = "T",
+                                                         get(file,
+                                                             hmis_csvs_fy26))[[1]][,1]],
+                           ~ format(., format = "%Y-%m-%d %H:%M:%S")),
+                    across(colnames(data)[str_locate_all(pattern = "D",
+                                                         get(file,
+                                                             hmis_csvs_fy26))[[1]][,1]],
+                           ~ format(., format = "%Y-%m-%d")),
+                    across(colnames(data)[str_locate_all(pattern = "d",
+                                                         get(file,
+                                                             hmis_csvs_fy26))[[1]][,1]],
+                           ~ if_else(. > 0, sprintf("%.2f", .), NA))),
+                file.path(paste0("created_files/", file, ".csv")),
+                row.names=FALSE, na = "",
+                quote = which(as.character(lapply(get(file), class)) %nin%
+                                c("integer", "numeric")))
+  }
   }
   
   general_wd <- getwd()
@@ -1189,7 +1201,9 @@ create_time_to_move_in <- function(filtered_enrollments) {
 # make table for 'time homeless before housing' questions
 create_time_prior_to_housing <- function(filtered_enrollments) {
   filtered_enrollments %>%
-    filter(ProjectType %in% c(0, 1, 2, 3, 8, 9, 13)) %>%
+    filter(ProjectType %in% c(0, 1, 2, 3, 8, 9, 13) &
+             !(age < 18 &
+                 EntryDate > HoH_EntryDate)) %>%
     mutate(housing_date = case_when(
       ProjectType %nin% c(3, 9, 13) ~ EntryDate,
       TRUE ~ MoveInDateAdj),

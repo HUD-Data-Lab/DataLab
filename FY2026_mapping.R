@@ -49,7 +49,14 @@ for (file in names(hmis_csvs_fy24)){
   }
   
   if (file == "Enrollment") {
-    new_cols <- current_columns[current_columns %nin% c("SexualOrientation", "SexualOrientationOther")]
+    new_cols <- current_columns[current_columns %nin% c("SexualOrientation", 
+                                                        "SexualOrientationOther",
+                                                        "TranslationNeeded",
+                                                        "PreferredLanguage",
+                                                        "PreferredLanguageDifferent",
+                                                        "LastPermanentStreet",
+                                                        "LastPermanentCity",
+                                                        "LastPermanentZIP")]
     new_cols <- insert(new_cols, "MentalHealthConsultation", 62)
     
     data <- data %>%
@@ -60,14 +67,6 @@ for (file in names(hmis_csvs_fy24)){
                                     Enrollment$ProjectID %in%
                                     Funder$ProjectID[Funder$Funder %in% c(33, 37:42, 45)]] ~ 
           sample(c(NA, 1:4), nrow(data), replace = TRUE)))) %>%
-      select(all_of(new_cols))
-  }
-  
-  if (file == "Services") {
-    new_cols <- insert(current_columns, "InformationDate", 4)
-    
-    data <- data %>%
-      mutate(InformationDate = DateProvided) %>%
       select(all_of(new_cols))
   }
   

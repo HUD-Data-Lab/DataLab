@@ -25,17 +25,17 @@
   # used for building and testing APR on specific projects or groups of projects. To run full test kit use full_project_list
   {
     project_list <- c(
-      # 234	#"DataLab - ES-EE ESG I",
-      93	#"DataLab - ES-NbN ESG",
+      # 1362	#"DataLab - ES-EE ESG I",
+      # 93	#"DataLab - ES-NbN ESG",
       # 1304	#"DataLab - HP ESG",
-      # 1625	#"DataLab - PSH CoC I",
-      # 1343	#"DataLab - RRH CoC I",
+      # 1762	#"DataLab - PSH CoC I",
+      # 1343,	#"DataLab - RRH CoC I",
       # 1815	#"DataLab - RRH CoC II", # set this to RRH-SSO
       # 1051	#"DataLab - RRH ESG I",
       # 1647	#"DataLab - SO ESG",
       # 1615	#"DataLab - SSO CoC",
       # 389	#"DataLab - TH CoC" # update the funding source to 5
-      # 1814, 1815
+      1814, 1821
     )
     }
   
@@ -43,16 +43,16 @@
   # used for running all reports for all projects. Use project_list for running specific projects.
   {
     full_project_list <- c(
-      1362,	#"DataLab - ES-EE ESG I",
+      414,	#"DataLab - ES-EE ESG I",
       93,	#"DataLab - ES-NbN ESG",
       1304,	#"DataLab - HP ESG",
-      1762,	#"DataLab - PSH CoC I",
+      1765,	#"DataLab - PSH CoC I",
       1814,	#"DataLab - RRH CoC I",
-      1815,	#"DataLab - RRH CoC II", # set this to RRH-SSO
+      1821,	#"DataLab - RRH CoC II", # set this to RRH-SSO
       1330,	#"DataLab - RRH ESG I",
-      1647,	#"DataLab - SO ESG",
+      1827,	#"DataLab - SO ESG",
       1615,	#"DataLab - SSO CoC",
-      389	#"DataLab - TH CoC" # update the funding source to 5
+      1453	#"DataLab - TH CoC"
     )
   }
   
@@ -92,7 +92,10 @@
                   by = "ProjectID") %>%
         left_join(Exit %>%
                     select(-PersonalID), # Are we removing personalID to avoid the duplication problem? (i.e., PersonalID.X and PersonalID.Y)
-                  by = "EnrollmentID")
+                  by = "EnrollmentID") %>%
+        filter(EntryDate <= report_end_date &
+                 (is.na(ExitDate) |
+                    ExitDate >= report_start_date))
       
       recent_program_enrollment <- all_program_enrollments %>%
         group_by(PersonalID) %>%
@@ -1793,7 +1796,7 @@
       # Q23c checked
       {
         Q23c_detail <- recent_program_enrollment %>%
-          filter(!is.na(ExitDate)) %>%
+          filter(leaver) %>%
           select(ProjectType, all_of(standard_detail_columns), Destination,
                  new_veteran_status, youth)
         
@@ -1937,46 +1940,6 @@
           ifnull(., 0)
       }
 
-      
-      #Q24d checked
-      {
-        Q24d_detail <- recent_program_enrollment %>%
-          filter(RelationshipToHoH == 1) %>%
-          select(c(all_of(housing_program_detail_columns), 
-                   "PreferredLanguage")) %>%
-          left_join(possible_languages, 
-                     by = c("PreferredLanguage" = "Response Option Number"),
-                    multiple = "all") %>%
-          filter(PreferredLanguage == 21 |
-                   !is.na(`Response Option Name`))
-        
-        preferred_languages <- Q24d_detail %>%
-          filter(!is.na(`Response Option Name`)) %>%
-          group_by(`Response Option Name`, PreferredLanguage) %>%
-          summarise(count = n_distinct(PersonalID)) %>%
-          ungroup() %>%
-          arrange(desc(count), `Response Option Name`) %>%
-          slice_head(n = 20)
-        
-        different_language <- Q24d_detail %>%
-          filter(PreferredLanguage == 21) %>%
-          summarise(count = n_distinct(PersonalID)) %>%
-          mutate(`Response Option Name` = "Different Preferred Language",
-                 PreferredLanguage = 21)
-        
-        Q24d <- preferred_languages %>%
-            full_join(different_language,
-                      by = colnames(preferred_languages)) %>%
-          rename(
-            # "Language Response (Top 20 Languages Selected)" = `Response Option Name`,
-            "Language Response (Top 20 Languages Selected)" = PreferredLanguage,
-            "Total Persons Requiring Translation Assistance" = count) %>%
-          # remove below line when Sage is updated
-          select(-`Response Option Name`) %>%
-          adorn_totals("row") %>%
-          ifnull(., 0)
-      }
-      
       # Q24e
       {
         Q24e_detail <- recent_program_enrollment %>%
@@ -2595,10 +2558,11 @@
         dir.create(paste0(folder_name, "/Reports"))
       }
       
-      if (projects_included != "Multiple Projects") {
-        write_csvs_for(project_list, zip_title = projects_included,
-                       write_to <- paste0(folder_name, "/HMIS CSVs"))
-      }
+#      if (projects_included != "Multiple Projects") {
+        write_csvs_for(project_list, 
+                       #zip_title = projects_included,
+                       write_to = paste0(folder_name, "/HMIS CSVs"))
+#      }
       
       if(APR_relevant) {
         for (question in APR_files) {

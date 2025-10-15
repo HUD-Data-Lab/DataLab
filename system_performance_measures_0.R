@@ -10,22 +10,14 @@
 # <https://www.gnu.org/licenses/>. 
 
 library(plyr)
+library(dplyr)
 library(lubridate)    ## used anywhere we do date math
 library(ivs)          ## used in spm 14
 library(writexl)
 
-kit_type <- "new_kit"
-
-if (kit_type == "new_kit") {
-  lookback_stop_date <- ymd("2014-10-1")
-} else {
-  lookback_stop_date <- ymd("2012-10-1")
-}
-
 source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/00_read_hmis_csv.R")
 
-report_start_date <- ymd("2021-10-1")
-report_end_date <- ymd("2022-9-30")
+lookback_stop_date <- as.Date(report_start_date - years(7))
 
 project_CoC_information <- ProjectCoC %>%
   mutate(relevant_to_CoC = 

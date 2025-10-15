@@ -129,7 +129,11 @@ make_spm1_dq_table <- function(date_table) {
              client_end_date - days(365) > DOB |
                is.na(DOB) ~ client_end_date - days(365),
              TRUE ~ DOB)) %>%
-    filter(report_start_date < client_end_date) %>%
+    filter(report_start_date < client_end_date &
+             # added 10/10/25 to catch a person who was enrolled prior to the 
+             # end of the report period even though they weren't born until
+             # the next month
+             client_start_date < client_end_date) %>%
     ungroup() %>%
     select(PersonalID, client_start_date, client_end_date) %>%
     distinct() 
