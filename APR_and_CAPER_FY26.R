@@ -566,7 +566,9 @@
         Q6f_detail <- recent_program_enrollment_dq %>%
           filter(is.na(ExitDate) &
                    trunc((EntryDate %--% report_end_date) / days(1)) >= 90 &
-                   (ProjectType %in% c(0, 1, 4))) %>%
+                   (ProjectType %in% c(0, 1, 4) |
+                      (ProjectType == 6 &
+                         ProjectID %in% Funder$ProjectID[Funder$Funder == 21]))) %>%
           select(all_of(standard_detail_columns)) %>%
           left_join(most_recent_CLS %>%
                       select(EnrollmentID, InformationDate),
