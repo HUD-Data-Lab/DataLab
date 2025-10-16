@@ -35,13 +35,13 @@ negate_lot_blocks <- function(enrollment_table,
   keep_ranges <- enrollments_to_keep %>%
     filter(
       EntryDate < ExitDateAdj &
-      ##  QA this pair of conditions--if someone exits on the report start date,
-      ##  then by definition wouldn't they have no bed night in the report range?
-      ##  and following that up, what if they immediately re-enrolled? in that 
-      ##  case I guess we'd definitely want to keep this, because it would be 
-      ##  contiguous with another stay
-      # (ExitDateAdj > report_start_date |
-      #    !is.na(original_enrollment_id)) &
+        ##  QA this pair of conditions--if someone exits on the report start date,
+        ##  then by definition wouldn't they have no bed night in the report range?
+        ##  and following that up, what if they immediately re-enrolled? in that 
+        ##  case I guess we'd definitely want to keep this, because it would be 
+        ##  contiguous with another stay
+        # (ExitDateAdj > report_start_date |
+        #    !is.na(original_enrollment_id)) &
         (EntryDate < MoveInDateAdj |
            is.na(MoveInDateAdj))) %>%
     mutate(range = iv(EntryDate, 
@@ -273,7 +273,7 @@ spm_1a <-
     summarise(clients = n(),
               average_lot = round(mean(days), 2),
               median_lot = round(median(days), 2))
-}
+  }
 
 # SPM 1b2
 {

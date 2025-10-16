@@ -31,7 +31,7 @@ project_CoC_information <- ProjectCoC %>%
 
 relevant_household_ids <- Enrollment %>%
   inner_join(project_CoC_information,
-            by = "ProjectID") %>%
+             by = "ProjectID") %>%
   filter(RelationshipToHoH == 1 &
            (str_sub(relevant_CoC, 4, 6) == str_sub(EnrollmentCoC, 4, 6) |
               (is.na(EnrollmentCoC) & num_of_CoCs == 1))) %>%

@@ -17,8 +17,8 @@ generate_new_kits <- TRUE
 run_locally <- TRUE
 
 for (organization in c(234, 453, 97)) {
-# for (organization in c(47, 106, 109)) {
-# for (organization in c(473, 1153)) {
+  # for (organization in c(47, 106, 109)) {
+  # for (organization in c(473, 1153)) {
   relevant_projects <- Funder %>%
     filter(Funder == 21 &
              ProjectID %in% Project$ProjectID[Project$ProjectType %in% c(4, 6) &
@@ -817,7 +817,7 @@ for (organization in c(234, 453, 97)) {
     if (!dir.exists(paste0(folder_name, "/HMIS CSVs"))) {
       dir.create(paste0(folder_name, "/HMIS CSVs"))
     }
-      
+    
     if (!dir.exists(paste0(folder_name, "/Reports"))) {
       dir.create(paste0(folder_name, "/Reports"))
     }

@@ -21,60 +21,60 @@
     run_locally <- TRUE
     
     source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/DataLab.R")
-  
-  # used for building and testing APR on specific projects or groups of projects. To run full test kit use full_project_list
-  {
-    project_list <- c(
-      # 1362	#"DataLab - ES-EE ESG I",
-      # 93	#"DataLab - ES-NbN ESG",
-      # 1304	#"DataLab - HP ESG",
-      # 1762	#"DataLab - PSH CoC I",
-      # 1343,	#"DataLab - RRH CoC I",
-      # 1815	#"DataLab - RRH CoC II", # set this to RRH-SSO
-      # 1051	#"DataLab - RRH ESG I",
-      # 1647	#"DataLab - SO ESG",
-      # 1615	#"DataLab - SSO CoC",
-      # 389	#"DataLab - TH CoC" # update the funding source to 5
-      1814, 1821
-    )
-    }
-  
-  
-  # used for running all reports for all projects. Use project_list for running specific projects.
-  {
-    full_project_list <- c(
-      414,	#"DataLab - ES-EE ESG I",
-      93,	#"DataLab - ES-NbN ESG",
-      1304,	#"DataLab - HP ESG",
-      1765,	#"DataLab - PSH CoC I",
-      1814,	#"DataLab - RRH CoC I",
-      1821,	#"DataLab - RRH CoC II", # set this to RRH-SSO
-      1330,	#"DataLab - RRH ESG I",
-      1827,	#"DataLab - SO ESG",
-      1615,	#"DataLab - SSO CoC",
-      1453	#"DataLab - TH CoC"
-    )
-  }
-  
-  Exit <- Exit %>%
-    rename(exit_DateCreated = DateCreated)
-  
-  Enrollment <- Enrollment %>%
-    rename(enroll_DateCreated = DateCreated)
-  
-  annual_assessment_dates <- Enrollment %>% #What is this trying to get?
-    group_by(HouseholdID) %>%
-    mutate(start_for_annual = max(EntryDate[RelationshipToHoH == 1]), #Max entry date for each head of household
-           years_in_project = trunc((start_for_annual %--% report_end_date) / years(1))) %>% # What does %--% do?
-    filter(years_in_project > 0) %>%
-    mutate(annual_due = start_for_annual %m+% years(years_in_project)) %>%
-    select(HouseholdID, annual_due) %>%
-    distinct()
-  
-  items_to_keep <- c("items_to_keep", ls())
-  
-  } # End of metric-specific environment setup chunk
     
+    # used for building and testing APR on specific projects or groups of projects. To run full test kit use full_project_list
+    {
+      project_list <- c(
+        # 1362	#"DataLab - ES-EE ESG I",
+        # 93	#"DataLab - ES-NbN ESG",
+        # 1304	#"DataLab - HP ESG",
+        # 1762	#"DataLab - PSH CoC I",
+        # 1343,	#"DataLab - RRH CoC I",
+        # 1815	#"DataLab - RRH CoC II", # set this to RRH-SSO
+        # 1051	#"DataLab - RRH ESG I",
+        # 1647	#"DataLab - SO ESG",
+        # 1615	#"DataLab - SSO CoC",
+        # 389	#"DataLab - TH CoC" # update the funding source to 5
+        1814, 1821
+      )
+    }
+    
+    
+    # used for running all reports for all projects. Use project_list for running specific projects.
+    {
+      full_project_list <- c(
+        414,	#"DataLab - ES-EE ESG I",
+        93,	#"DataLab - ES-NbN ESG",
+        1304,	#"DataLab - HP ESG",
+        1765,	#"DataLab - PSH CoC I",
+        1814,	#"DataLab - RRH CoC I",
+        1821,	#"DataLab - RRH CoC II", # set this to RRH-SSO
+        1330,	#"DataLab - RRH ESG I",
+        1827,	#"DataLab - SO ESG",
+        1615,	#"DataLab - SSO CoC",
+        1453	#"DataLab - TH CoC"
+      )
+    }
+    
+    Exit <- Exit %>%
+      rename(exit_DateCreated = DateCreated)
+    
+    Enrollment <- Enrollment %>%
+      rename(enroll_DateCreated = DateCreated)
+    
+    annual_assessment_dates <- Enrollment %>% #What is this trying to get?
+      group_by(HouseholdID) %>%
+      mutate(start_for_annual = max(EntryDate[RelationshipToHoH == 1]), #Max entry date for each head of household
+             years_in_project = trunc((start_for_annual %--% report_end_date) / years(1))) %>% # What does %--% do?
+      filter(years_in_project > 0) %>%
+      mutate(annual_due = start_for_annual %m+% years(years_in_project)) %>%
+      select(HouseholdID, annual_due) %>%
+      distinct()
+    
+    items_to_keep <- c("items_to_keep", ls())
+    
+  } # End of metric-specific environment setup chunk
+  
   
   # loop for running all
   for(project_id in full_project_list) {
@@ -85,46 +85,46 @@
       
       # run this chunk to define global variables for use in individual metric testing (i.e. does not include all questions)
       {
-      all_program_enrollments <- Enrollment %>% 
-        filter(ProjectID %in% project_list) %>% #filter by projectID in Project list.
-        left_join(Project %>%
-                    select(ProjectID, ProjectType, ProjectName),
-                  by = "ProjectID") %>%
-        left_join(Exit %>%
-                    select(-PersonalID), # Are we removing personalID to avoid the duplication problem? (i.e., PersonalID.X and PersonalID.Y)
-                  by = "EnrollmentID") %>%
-        filter(EntryDate <= report_end_date &
-                 (is.na(ExitDate) |
-                    ExitDate >= report_start_date))
-      
-      recent_program_enrollment <- all_program_enrollments %>%
-        group_by(PersonalID) %>%
-        arrange(desc(EntryDate)) %>% #arrange by most recent entry date  
-        slice(1L) %>% #what does 1L do?
-        ungroup() 
-      
-      # get additional client information (age for reporting)
-      client_plus <- add_client_info(recent_program_enrollment)  #View(add_client_info) Getting a warning about mac(age, na.rm=TRUE) is returning -inf
-      
-      household_info <- get_household_info(all_program_enrollments,
-                                           return_type = "household")
-      
-      recent_program_enrollment <- recent_program_enrollment %>%
-        left_join(client_plus, by = "PersonalID") %>%
-        left_join(household_info, by = "HouseholdID") %>%
-        mutate(MoveInDateAdj = case_when(
-          !is.na(HoH_HMID) &
-            HoH_HMID >= DOB &
-            HoH_HMID >= EntryDate &
-            (HoH_HMID <= ExitDate |
-               is.na(ExitDate)) ~ HoH_HMID,
-          !is.na(HoH_HMID) &
-            (HoH_HMID <= ExitDate |
-               is.na(ExitDate)) ~ EntryDate),
-          leaver = ExitDate >= report_start_date &
-            ExitDate <= report_end_date & 
-            !is.na(ExitDate)) %>%
-        add_chronicity_data(.)
+        all_program_enrollments <- Enrollment %>% 
+          filter(ProjectID %in% project_list) %>% #filter by projectID in Project list.
+          left_join(Project %>%
+                      select(ProjectID, ProjectType, ProjectName),
+                    by = "ProjectID") %>%
+          left_join(Exit %>%
+                      select(-PersonalID), # Are we removing personalID to avoid the duplication problem? (i.e., PersonalID.X and PersonalID.Y)
+                    by = "EnrollmentID") %>%
+          filter(EntryDate <= report_end_date &
+                   (is.na(ExitDate) |
+                      ExitDate >= report_start_date))
+        
+        recent_program_enrollment <- all_program_enrollments %>%
+          group_by(PersonalID) %>%
+          arrange(desc(EntryDate)) %>% #arrange by most recent entry date  
+          slice(1L) %>% #what does 1L do?
+          ungroup() 
+        
+        # get additional client information (age for reporting)
+        client_plus <- add_client_info(recent_program_enrollment)  #View(add_client_info) Getting a warning about mac(age, na.rm=TRUE) is returning -inf
+        
+        household_info <- get_household_info(all_program_enrollments,
+                                             return_type = "household")
+        
+        recent_program_enrollment <- recent_program_enrollment %>%
+          left_join(client_plus, by = "PersonalID") %>%
+          left_join(household_info, by = "HouseholdID") %>%
+          mutate(MoveInDateAdj = case_when(
+            !is.na(HoH_HMID) &
+              HoH_HMID >= DOB &
+              HoH_HMID >= EntryDate &
+              (HoH_HMID <= ExitDate |
+                 is.na(ExitDate)) ~ HoH_HMID,
+            !is.na(HoH_HMID) &
+              (HoH_HMID <= ExitDate |
+                 is.na(ExitDate)) ~ EntryDate),
+            leaver = ExitDate >= report_start_date &
+              ExitDate <= report_end_date & 
+              !is.na(ExitDate)) %>%
+          add_chronicity_data(.)
       }
       
       
@@ -138,7 +138,7 @@
         
         Q4a <- program_information_table(project_list, #View(program_information_table) #Should RRH Subtype and CES Access be 0=No? or leave as NA?
                                          recent_program_enrollment)
-        }
+      }
       
       # Q5
       # Q5a
@@ -155,7 +155,7 @@
                                     "APR") %>%
           select(c(all_of(standard_detail_columns), #standard_detail_columns are created in DataLab_Lists.R
                    all_of(demographic_detail_columns),
-                          number_of_days)) %>%
+                   number_of_days)) %>%
           mutate(IncludedInDQ = EnrollmentID %in% recent_program_enrollment_dq$EnrollmentID)
         
         Q5a <- create_summary_table(recent_program_enrollment_dq, "Count.of.Clients.for.DQ") %>% #View(create_summary_table)
@@ -201,7 +201,7 @@
           group_by(EnrollmentID) %>%
           summarise(InformationDate = max(InformationDate)) %>%
           ungroup()
-          
+        
         recent_disability_check <- Disabilities %>%
           inner_join(recent_disability_date, 
                      by = colnames(recent_disability_date)) %>%
@@ -275,7 +275,7 @@
                           TRUE ~ Total / Q5a$Count.of.Clients.for.DQ[1]), 4)), #Refer to DQ check on Q5a
                     by = "Group")  %>%
           ifnull(., 0)
-          
+        
       }
       
       # Q6c
@@ -414,7 +414,7 @@
         
         Q6d_detail <- recent_program_enrollment_dq %>% 
           filter(EntryDate >= mdy("10/1/2016") & #Just making a note that this date is hard coded ----
-                   ProjectType %in% c(0, 1, 2, 3, 4, 6, 8, 9, 10, 11, 12, 13, 14)) %>%
+                 ProjectType %in% c(0, 1, 2, 3, 4, 6, 8, 9, 10, 11, 12, 13, 14)) %>%
           keep_adults_and_hoh_only() %>% #View(keep_adults_and_hoh_only)
           select(c("ProjectType", all_of(standard_detail_columns), 
                    all_of(lot_homeless_detail_columns))) %>%
@@ -831,7 +831,7 @@
         Q9b <- rbind(Q9b, rate_of_engagement)
         
       }
-
+      
       
       # Q11 checked
       {
@@ -844,7 +844,7 @@
         Q11 <- Q11_detail %>%
           create_age_groups(.)
       }
-       
+      
       # Q12 checked
       {
         Q12_detail <- recent_program_enrollment %>%
@@ -861,7 +861,7 @@
             all_of(unname(race_columns)),
             ~ as.numeric(.)),
             race_count = rowSums(across(all_of(unname(race_columns))),
-                                   na.rm = TRUE),
+                                 na.rm = TRUE),
             race_tabulation = case_when(
               race_count %in% 1:2 ~ race_name_list,
               race_count > 2 &
@@ -927,8 +927,8 @@
                        select(EnrollmentID, last_date) %>%
                        distinct() %>%
                        inner_join(disability_table, 
-                                 by = c("EnrollmentID", "last_date" = "InformationDate"),
-                                 multiple = "all"), 
+                                  by = c("EnrollmentID", "last_date" = "InformationDate"),
+                                  multiple = "all"), 
                      by ="EnrollmentID",
                      multiple = "all")
         
@@ -1114,12 +1114,12 @@
                  Income.at.Latest.Annual.Assessment.for.Stayers = annualIncome,
                  Income.at.Exit.for.Leavers = exitIncome) %>%
           adorn_totals("row", name = "Total adults")
-
+        
         #Recode attempt: Error because Q16$total_income_group is an ordered factor
         #Q16.2 <- as.data.frame(Q16)
         #Q16.2[Q16.2 == "No Annual Required"] <- "Number of adult stayers not yet required to have an annual assessment"
         
-       
+        
       }
       
       # Q17 checked
@@ -1362,7 +1362,7 @@
                      paste(HouseholdID, ExitDate) %in% paste(
                        all_program_enrollments$HouseholdID[all_program_enrollments$RelationshipToHoH == 1],
                        all_program_enrollments$ExitDate[all_program_enrollments$RelationshipToHoH == 1])) %>%
-          select(EnrollmentID, all_of(benefit_list), BenefitsFromAnySource)
+            select(EnrollmentID, all_of(benefit_list), BenefitsFromAnySource)
           
           Q20a_detail <- Q20a_detail %>%
             left_join(data %>%
@@ -1659,8 +1659,8 @@
           select(c("ProjectType", all_of(housing_program_detail_columns), "age",
                    "HoH_EntryDate", "DateToStreetESSH", "HoH_ADHS")) %>%
           create_time_prior_to_housing() %>%
-        mutate(days_prior_to_housing = case_when(is.na(housing_date) ~ "Not yet moved into housing",
-                                                TRUE ~ days_prior_to_housing))
+          mutate(days_prior_to_housing = case_when(is.na(housing_date) ~ "Not yet moved into housing",
+                                                   TRUE ~ days_prior_to_housing))
         
         homeless_to_housed_groups <- length_of_time_groups("days_prior_to_housing", "days_prior_to_housing")
         
@@ -1736,7 +1736,7 @@
                  across(everything(), as.character)) %>%
           pivot_longer(!race_tabulation, names_to = "measure", values_to = "value") %>% 
           pivot_wider(names_from = "race_tabulation", values_from = "value")
-      
+        
       }
       
       # Q22g - checked
@@ -1770,29 +1770,29 @@
                    MoveInDateAdj <= report_end_date) ~ "moved_in",
               TRUE ~ "not_yet_moved_in"))
         
-      Q22g_calcs <- Q22g_detail %>% 
-        group_by(race_tabulation) %>%
-        summarise(
-          Persons.Moved.Into.Housing = n_distinct(PersonalID[include_type == "moved_in"], 
-                                                  na.rm = TRUE),
-          Persons.Not.Yet.Moved.Into.Housing = n_distinct(PersonalID[include_type == "not_yet_moved_in"], 
-                                                      na.rm = TRUE),
-          Average.time.to.Move.In =  mean(number_of_days[include_type == "moved_in"], 
-                                          na.rm = TRUE), 
-          Median.time.to.Move.In = median(number_of_days[include_type == "moved_in"], 
-                                          na.rm = TRUE)) %>% 
-        ungroup() 
-      
-      Q22g <- race_list_expanded %>% 
-        as.data.frame(nm = "race_tabulation") %>% 
-        left_join(Q22g_calcs,
-                  by = "race_tabulation") %>% 
-        ifnull(., 0) %>%
-        mutate(Average.time.to.Move.In = sprintf('%.4f', Average.time.to.Move.In),
-               Median.time.to.Move.In = sprintf('%.4f', Median.time.to.Move.In),
-               across(everything(), as.character)) %>%
-        pivot_longer(!race_tabulation, names_to = "measure", values_to = "value") %>% 
-        pivot_wider(names_from = "race_tabulation", values_from = "value")
+        Q22g_calcs <- Q22g_detail %>% 
+          group_by(race_tabulation) %>%
+          summarise(
+            Persons.Moved.Into.Housing = n_distinct(PersonalID[include_type == "moved_in"], 
+                                                    na.rm = TRUE),
+            Persons.Not.Yet.Moved.Into.Housing = n_distinct(PersonalID[include_type == "not_yet_moved_in"], 
+                                                            na.rm = TRUE),
+            Average.time.to.Move.In =  mean(number_of_days[include_type == "moved_in"], 
+                                            na.rm = TRUE), 
+            Median.time.to.Move.In = median(number_of_days[include_type == "moved_in"], 
+                                            na.rm = TRUE)) %>% 
+          ungroup() 
+        
+        Q22g <- race_list_expanded %>% 
+          as.data.frame(nm = "race_tabulation") %>% 
+          left_join(Q22g_calcs,
+                    by = "race_tabulation") %>% 
+          ifnull(., 0) %>%
+          mutate(Average.time.to.Move.In = sprintf('%.4f', Average.time.to.Move.In),
+                 Median.time.to.Move.In = sprintf('%.4f', Median.time.to.Move.In),
+                 across(everything(), as.character)) %>%
+          pivot_longer(!race_tabulation, names_to = "measure", values_to = "value") %>% 
+          pivot_wider(names_from = "race_tabulation", values_from = "value")
       }
       
       # Q23c checked
@@ -1828,58 +1828,58 @@
       
       # Q23e checked
       {
-      Q23e_detail <- recent_program_enrollment %>% 
-        # leavers in range
-        filter(leaver) %>% 
-        select(., c(all_of(housing_program_detail_columns), "Destination")) %>%
-        # get APR destination categories 
-        left_join(select(ResidenceUses, c("Location", "APR_LocationOrder", "APR_LocationGroup")) ,
-                  join_by(Destination == Location)) %>%
-        # get race data 
-        left_join(Client %>%
-                    select(PersonalID, all_of(unname(race_columns)), RaceNone),
-                  by = "PersonalID") %>% 
-        left_join(race_info, #Race_info created from DataLab_lists.R line 261
-                  by = all_of(unname(race_columns))) %>% 
-        mutate(across(
-          all_of(unname(race_columns)),
-          ~ as.numeric(.)),
-          race_count = rowSums(across(all_of(unname(race_columns))),
-                               na.rm = TRUE),
-          race_tabulation = case_when(
-            race_count == 1 ~ race_name_list,
-            race_count > 1 &
-              HispanicLatinao == 1 ~ "At Least 1 Race and Hispanic/Latina/o",
-            race_count > 1 ~ "Multi-racial (does not include Hispanic/Latina/o)",
-            TRUE ~ "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)")
-        )
-      
-      # Gets counts by destination and race/ethn category
-      Q23e_calcs <- race_list_expanded %>% 
-        as.data.frame(nm = "race_tabulation") %>% 
-        left_join(Q23e_detail,
-                  by = "race_tabulation",
-                  multiple = "all") %>%
-        group_by(race_tabulation, APR_LocationGroup) %>%
+        Q23e_detail <- recent_program_enrollment %>% 
+          # leavers in range
+          filter(leaver) %>% 
+          select(., c(all_of(housing_program_detail_columns), "Destination")) %>%
+          # get APR destination categories 
+          left_join(select(ResidenceUses, c("Location", "APR_LocationOrder", "APR_LocationGroup")) ,
+                    join_by(Destination == Location)) %>%
+          # get race data 
+          left_join(Client %>%
+                      select(PersonalID, all_of(unname(race_columns)), RaceNone),
+                    by = "PersonalID") %>% 
+          left_join(race_info, #Race_info created from DataLab_lists.R line 261
+                    by = all_of(unname(race_columns))) %>% 
+          mutate(across(
+            all_of(unname(race_columns)),
+            ~ as.numeric(.)),
+            race_count = rowSums(across(all_of(unname(race_columns))),
+                                 na.rm = TRUE),
+            race_tabulation = case_when(
+              race_count == 1 ~ race_name_list,
+              race_count > 1 &
+                HispanicLatinao == 1 ~ "At Least 1 Race and Hispanic/Latina/o",
+              race_count > 1 ~ "Multi-racial (does not include Hispanic/Latina/o)",
+              TRUE ~ "Unknown (Doesn’t Know, Prefers not to Answer, Data not Collected)")
+          )
+        
+        # Gets counts by destination and race/ethn category
+        Q23e_calcs <- race_list_expanded %>% 
+          as.data.frame(nm = "race_tabulation") %>% 
+          left_join(Q23e_detail,
+                    by = "race_tabulation",
+                    multiple = "all") %>%
+          group_by(race_tabulation, APR_LocationGroup) %>%
           summarise(measure = n_distinct(PersonalID, na.rm = TRUE)) %>%
-        ungroup()  %>% 
-        pivot_wider(names_from = "race_tabulation", values_from = "measure") %>%
-        filter(!is.na(APR_LocationGroup)) %>%
-        mutate(APR_LocationGroup = paste(APR_LocationGroup, "Situations"))
-      
-      Q23e <- Q23c %>%
-        select(LocationDescription, Total) %>%
-        filter(str_detect(LocationDescription, "Subtotal")) %>%
-        mutate(LocationDescription = str_replace(LocationDescription, 
-                                                 "Subtotal", "Situations"),
-               Total = as.numeric(Total)) %>%
-        left_join(Q23e_calcs, 
-                  by = c("LocationDescription" = "APR_LocationGroup")) %>% 
-        untabyl() %>%
-        adorn_totals("row") %>%
-        ifnull(., 0) %>% 
-        select(c("LocationDescription", "Total", all_of(race_list_expanded)))
-      
+          ungroup()  %>% 
+          pivot_wider(names_from = "race_tabulation", values_from = "measure") %>%
+          filter(!is.na(APR_LocationGroup)) %>%
+          mutate(APR_LocationGroup = paste(APR_LocationGroup, "Situations"))
+        
+        Q23e <- Q23c %>%
+          select(LocationDescription, Total) %>%
+          filter(str_detect(LocationDescription, "Subtotal")) %>%
+          mutate(LocationDescription = str_replace(LocationDescription, 
+                                                   "Subtotal", "Situations"),
+                 Total = as.numeric(Total)) %>%
+          left_join(Q23e_calcs, 
+                    by = c("LocationDescription" = "APR_LocationGroup")) %>% 
+          untabyl() %>%
+          adorn_totals("row") %>%
+          ifnull(., 0) %>% 
+          select(c("LocationDescription", "Total", all_of(race_list_expanded)))
+        
       }
       
       # Q24a checked
@@ -1941,7 +1941,7 @@
           return_household_groups(., Response, moving_on_assistance$Response) %>%
           ifnull(., 0)
       }
-
+      
       # Q24e
       {
         Q24e_detail <- recent_program_enrollment %>%
@@ -1960,7 +1960,7 @@
           adorn_totals("row") %>% 
           ifnull(., 0)
         
-
+        
       }
       
       
@@ -2069,7 +2069,7 @@
           ifnull(., 0)
       }
       
-
+      
       #-------------------------------------------------------------
       #------------------- Chronic Questions -----------------------
       #-------------------------------------------------------------
@@ -2113,7 +2113,7 @@
           adorn_totals("row") %>%
           ifnull(., 0)
       }
-
+      
       
       # Q26d checked
       {
@@ -2257,19 +2257,19 @@
         
         Q27f1[42, 2:6] <- c(decimal_format(as.numeric(Q27f1[42, 2:6]), 4))
       }
+      
+      # Q27f2 checked
+      {
+        Q27f2_detail <- Q23d_detail %>%
+          filter(youth == 1)
         
-        # Q27f2 checked
-        {
-          Q27f2_detail <- Q23d_detail %>%
-            filter(youth == 1)
-          
-          Q27f2 <- Q27f2_detail %>%
-            return_household_groups(., Response, subsidy_list$Response) %>% 
-            adorn_totals("row") %>% 
-            ifnull(., 0)
-        }
-        
-        
+        Q27f2 <- Q27f2_detail %>%
+          return_household_groups(., Response, subsidy_list$Response) %>% 
+          adorn_totals("row") %>% 
+          ifnull(., 0)
+      }
+      
+      
       
       # Q27g checked
       # label for A17 specifies adults like the other uses of this logic, but
@@ -2347,18 +2347,18 @@
         average_time_to_house <- Q27k_detail %>%
           summarise(housing_length_group = "Average length of time to housing",
                     Total = round(mean(days_to_house, na.rm = TRUE), 0),
-                  Without.Children = round(mean(
-                    days_to_house[household_type == "AdultsOnly"],
-                    na.rm = TRUE), 0),
-                  With.Children.And.Adults = round(mean(
-                    days_to_house[household_type == "AdultsAndChildren"],
-                    na.rm = TRUE), 0),
-                  With.Only.Children = round(mean(
-                    days_to_house[household_type == "ChildrenOnly"],
-                    na.rm = TRUE), 0),
-                  Unknown.Household.Type = round(mean(
-                    days_to_house[household_type == "Unknown"],
-                    na.rm = TRUE), 0))
+                    Without.Children = round(mean(
+                      days_to_house[household_type == "AdultsOnly"],
+                      na.rm = TRUE), 0),
+                    With.Children.And.Adults = round(mean(
+                      days_to_house[household_type == "AdultsAndChildren"],
+                      na.rm = TRUE), 0),
+                    With.Only.Children = round(mean(
+                      days_to_house[household_type == "ChildrenOnly"],
+                      na.rm = TRUE), 0),
+                    Unknown.Household.Type = round(mean(
+                      days_to_house[household_type == "Unknown"],
+                      na.rm = TRUE), 0))
         
         exited_without_move_in_data <- recent_youth_enrollment %>%
           filter(ProjectType %in% c(3, 13) &
@@ -2462,7 +2462,7 @@
                       filter(DataCollectionStage == 3) %>%
                       setNames(paste0("exit_", colnames(youth_education_27m))),
                     by = c("EnrollmentID" = "exit_EnrollmentID"))
-       
+        
         current_school_attend <- youth_education_27m %>%
           group_by(CurrentSchoolAttend) %>%
           summarise(
@@ -2512,7 +2512,7 @@
                       )), 
                     by = c("Value", "Question")) %>%
           full_join(total_ed,
-                by = colnames(total_ed)) %>%
+                    by = colnames(total_ed)) %>%
           select(Response, At.Project.Start, At.Project.Exit) %>%
           ifnull(., 0)
         
@@ -2560,11 +2560,11 @@
         dir.create(paste0(folder_name, "/Reports"))
       }
       
-#      if (projects_included != "Multiple Projects") {
-        write_csvs_for(project_list, 
-                       #zip_title = projects_included,
-                       write_to = paste0(folder_name, "/HMIS CSVs"))
-#      }
+      #      if (projects_included != "Multiple Projects") {
+      write_csvs_for(project_list, 
+                     #zip_title = projects_included,
+                     write_to = paste0(folder_name, "/HMIS CSVs"))
+      #      }
       
       if(APR_relevant) {
         for (question in APR_files) {
