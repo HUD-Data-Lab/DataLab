@@ -32,10 +32,4 @@ for (file in names(hmis_csvs_fy26)){
   file.remove(paste0(file, ".csv"))
 }
 
-Enrollment <- Enrollment %>%
-  # select(-c("TranslationNeeded", "PreferredLanguage", "PreferredLanguageDifferent"))
-  select(-c("LastPermanentStreet", "LastPermanentCity", "LastPermanentZIP" ))
-Services <- Services %>%
-  select(-InformationDate)
-
 source("https://raw.githubusercontent.com/HUD-Data-Lab/DataLab/main/DataLab_hc_variables.R")
