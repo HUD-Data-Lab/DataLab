@@ -44,9 +44,9 @@ is_hashed <- function() {
   )
 }
 
-isFY2024Export <- function() {
+isFY2026Export <- function() {
   return(
-    grepl("2024", as.character(importFile("Export")$CSVVersion))
+    grepl("2026", as.character(importFile("Export")$CSVVersion))
   )
 }
 

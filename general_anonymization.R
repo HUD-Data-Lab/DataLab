@@ -250,7 +250,9 @@ Enrollment <- trunc_userid(Enrollment) %>%
            ProjectID %in% Project$ProjectID) %>%
   mutate(LastPermanentStreet = NA,
          LastPermanentCity = NA,
-         LastPermanentZIP = NA)
+         LastPermanentZIP = NA,
+        EnrollmentCoC = case_when(
+        grepl("[[:digit:]]", EnrollmentCoC) ~ gsub("[[:alpha:]]", "X", EnrollmentCoC)))
 
 Funder <- trunc_userid(Funder) %>%
   filter(ProjectID %in% Project$ProjectID) %>%
